@@ -8,6 +8,56 @@ let mainWindow = null;
 let activeProcess = null;
 const JOBS_DIR = 'D:\\opencode stuff\\job-agents';
 const TRACKER_PATH = path.join(JOBS_DIR, 'job_applications_tracker.csv');
+const ROUTER_TOKEN = 'sk-25a6421c7e67b2b5-edzmhl-9843071e';
+const ROUTER_PORT = 20128;
+
+// Helper: Check if 9router is listening
+function isRouterAlive() {
+  return new Promise((resolve) => {
+    const req = http.request(
+      {
+        host: '127.0.0.1',
+        port: ROUTER_PORT,
+        path: '/v1/models',
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${ROUTER_TOKEN}` },
+        timeout: 1500
+      },
+      (res) => {
+        resolve(res.statusCode === 200 || res.statusCode === 401);
+      }
+    );
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.end();
+  });
+}
+
+// Helper: Spawn 9router in the background if offline
+function startRouterBackground() {
+  try {
+    const proc = spawn('cmd.exe', ['/c', '9router -n --skip-update'], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true
+    });
+    proc.unref();
+  } catch (e) {
+    console.error('Failed to spawn 9router:', e);
+  }
+}
+
+async function ensureRouter() {
+  const alive = await isRouterAlive();
+  if (!alive) {
+    startRouterBackground();
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 600));
+      if (await isRouterAlive()) return true;
+    }
+  }
+  return true;
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -37,7 +87,10 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  createWindow();
+  await ensureRouter();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -73,7 +126,7 @@ function parseTrackerCsv() {
 ipcMain.handle('get-tracker-data', async () => {
   try {
     const rows = parseTrackerCsv();
-    return { ok: true, rows: rows.reverse() }; // Newest first
+    return { ok: true, rows: rows.reverse() };
   } catch (e) {
     return { ok: false, error: e.message, rows: [] };
   }
@@ -117,8 +170,25 @@ ipcMain.handle('run-task', async (event, { scriptName, args = [] }) => {
   });
 });
 
+// IPC: Router Status & Self-Healing
+ipcMain.handle('check-router-status', async () => {
+  const alive = await isRouterAlive();
+  return { ok: true, alive, port: ROUTER_PORT, model: 'Fable5' };
+});
+
+ipcMain.handle('restart-router', async () => {
+  startRouterBackground();
+  for (let i = 0; i < 6; i++) {
+    await new Promise((r) => setTimeout(r, 500));
+    if (await isRouterAlive()) return { ok: true };
+  }
+  return { ok: await isRouterAlive() };
+});
+
 // IPC: Call Local AI Router (Fable5 @ localhost:20128)
 ipcMain.handle('call-ai', async (event, { prompt, systemPrompt }) => {
+  await ensureRouter();
+
   return new Promise((resolve) => {
     const defaultSys = 'You are JobPilot AI, an elite career strategist and recruitment copilot for Vansh Sharma (MCA in AI and Data Science, Class of 2026, 0 to 2 YOE). Specialize in ATS resume tailoring, tech screening responses, cold outreach to recruiters, and interview preparation. Deliver punchy, structured, professional answers. Never use em-dashes or en-dashes.';
     const payload = JSON.stringify({
@@ -131,12 +201,12 @@ ipcMain.handle('call-ai', async (event, { prompt, systemPrompt }) => {
     });
 
     const req = http.request(
-      'http://127.0.0.1:20128/v1/chat/completions',
+      `http://127.0.0.1:${ROUTER_PORT}/v1/chat/completions`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer sk-local-router',
+          'Authorization': `Bearer ${ROUTER_TOKEN}`,
           'Content-Length': Buffer.byteLength(payload)
         },
         timeout: 45000
@@ -147,6 +217,10 @@ ipcMain.handle('call-ai', async (event, { prompt, systemPrompt }) => {
         res.on('end', () => {
           try {
             const data = JSON.parse(body);
+            if (data.error) {
+              resolve({ ok: false, error: data.error.message || JSON.stringify(data.error) });
+              return;
+            }
             const reply = data?.choices?.[0]?.message?.content || body;
             resolve({ ok: true, reply });
           } catch (e) {
@@ -156,8 +230,17 @@ ipcMain.handle('call-ai', async (event, { prompt, systemPrompt }) => {
       }
     );
 
-    req.on('error', (err) => {
-      resolve({ ok: false, error: 'Router connection failed: ' + err.message });
+    req.on('error', async (err) => {
+      // If refused, attempt immediate kickstart once
+      if (err.code === 'ECONNREFUSED') {
+        startRouterBackground();
+        resolve({
+          ok: false,
+          error: '9router on port 20128 was offline. Auto-launching 9router now. Please send your question again in 3 seconds.'
+        });
+      } else {
+        resolve({ ok: false, error: 'Router connection error: ' + err.message });
+      }
     });
 
     req.on('timeout', () => {

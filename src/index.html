@@ -273,9 +273,16 @@
       <!-- ==================== VIEW 4: AI COPILOT ==================== -->
       <section class="view-panel view-copilot" id="view-copilot">
 
-        <div>
-          <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px;">AI Career Strategist & Interview Wingman</div>
-          <div style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">Powered by Fable5 on Local Model Router (Port 20128 : Unlimited Tokens)</div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px;">AI Career Strategist & Interview Wingman</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">Powered by Fable5 on Local Model Router (Port 20128 : Unlimited Tokens)</div>
+          </div>
+          <div id="router-badge" style="display: flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 5px 12px; border-radius: 9999px; font-size: 11px; color: #10b981; font-weight: 700;">
+            <span class="pulse-green"></span>
+            <span id="router-badge-text">Fable5 Connected</span>
+          </div>
+        </div>
 
           <div class="copilot-presets">
             <div class="preset-chip" onclick="setCopilotPrompt('Analyze market compensation and standard CTC for Fresher AI Engineer and Python Developer roles in Gurgaon and Bengaluru.')">💰 Salary Benchmarks</div>
@@ -664,9 +671,9 @@
       document.getElementById('copilot-text').value = p;
     }
 
-    async function sendCopilotQuery() {
+    async function sendCopilotQuery(customText) {
       const input = document.getElementById('copilot-text');
-      const text = input.value.trim();
+      const text = customText || input.value.trim();
       if (!text) return;
 
       const stream = document.getElementById('copilot-stream');
@@ -674,11 +681,11 @@
       uEl.className = 'user-bubble';
       uEl.innerText = text;
       stream.appendChild(uEl);
-      input.value = '';
+      if (!customText) input.value = '';
 
       const aEl = document.createElement('div');
       aEl.className = 'ai-bubble';
-      aEl.innerText = 'Consulting Fable5 model...';
+      aEl.innerHTML = '<span style="color: #a78bfa;">Thinking with Fable5 on Local Router...</span>';
       stream.appendChild(aEl);
       stream.scrollTop = stream.scrollHeight;
 
@@ -691,15 +698,43 @@
             .replace(/\n/g, '<br>')
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         } else {
-          aEl.innerText = '[Error]: ' + res.error;
+          aEl.innerHTML = '<span style="color: #ef4444;">[Router Notice] ' + res.error + '</span><br><br>' +
+            '<button style="background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 6px; padding: 5px 12px; font-size: 11px; font-weight: 700; cursor: pointer;" onclick="retryQuery(' + JSON.stringify(text).replace(/"/g, '&quot;') + ')">⚡ Retry with Fable5</button>';
         }
       }
       stream.scrollTop = stream.scrollHeight;
     }
 
+    function retryQuery(text) {
+      sendCopilotQuery(text);
+    }
+
+    async function checkRouter() {
+      if (window.jobPilotApi && window.jobPilotApi.checkRouterStatus) {
+        const res = await window.jobPilotApi.checkRouterStatus();
+        const badge = document.getElementById('router-badge');
+        const badgeText = document.getElementById('router-badge-text');
+        if (badge && badgeText) {
+          if (res.alive) {
+            badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            badge.style.background = 'rgba(16, 185, 129, 0.12)';
+            badge.style.color = '#10b981';
+            badgeText.innerText = 'Fable5 Live (20128)';
+          } else {
+            badge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+            badge.style.background = 'rgba(239, 68, 68, 0.12)';
+            badge.style.color = '#ef4444';
+            badgeText.innerText = 'Router Reconnecting...';
+          }
+        }
+      }
+    }
+
     // Init
     loadStats();
+    checkRouter();
     setInterval(loadStats, 6000);
+    setInterval(checkRouter, 5000);
   </script>
 </body>
 </html>
