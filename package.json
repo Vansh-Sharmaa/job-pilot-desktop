@@ -1,0 +1,24 @@
+{
+  "name": "job-pilot-desktop",
+  "version": "1.0.0",
+  "description": "Next-Gen AI Developer & Autonomous Job Hunting Workspace",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "keywords": [
+    "ai-agent",
+    "job-automation",
+    "workspace",
+    "electron",
+    "fable5",
+    "naukri",
+    "linkedin"
+  ],
+  "author": "Vansh Sharma",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^34.5.8"
+  }
+}

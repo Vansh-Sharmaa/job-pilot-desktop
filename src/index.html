@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JobPilot AI - Autonomous Workspace</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <span>JobPilot AI <span style="font-weight: 400; color: #64748b;">Workspace</span></span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="model-pill">
+        🧠 Model: <strong style="color: #fff;">Fable5</strong> @ localhost:20128
+      </div>
+
+      <div class="status-badge" id="app-status">
+        <span class="pulse-dot"></span>
+        <span id="status-label">FLEET READY</span>
+      </div>
+
+      <div style="font-size: 11px; color: #94a3b8;">
+        Today: <strong style="color: #fff;" id="stat-today">311</strong> / 311 Applied
+      </div>
+    </div>
+  </header>
+
+  <!-- Split Screen Workspace -->
+  <div class="main-workspace">
+
+    <!-- LEFT PANE: Agent Mission Control -->
+    <div class="agent-pane">
+
+      <!-- Action Grid -->
+      <div class="pane-section">
+        <div class="section-title">
+          <span>Autonomous Actions</span>
+          <span style="font-size: 10px; color: #3b82f6;">1-Click Triggers</span>
+        </div>
+        <div class="action-grid">
+          <div class="action-card" onclick="runScript('daily_autopilot_daemon.py', '24/7 Autopilot Daemon')">
+            <div class="action-card-title">🚀 24/7 Autopilot Daemon</div>
+            <div class="action-card-desc">Hourly scans, alert applies & quota fill.</div>
+          </div>
+
+          <div class="action-card" onclick="runScript('inbound_email_calendar_runner.py', 'Inbound & Calendar Runner')">
+            <div class="action-card-title">📬 Inbound & Calendar</div>
+            <div class="action-card-desc">Process Gmail job alerts & calendar links.</div>
+          </div>
+
+          <div class="action-card" onclick="runScript('auto_quota_closer.py', 'Full Quota Closer')">
+            <div class="action-card-title">⚡ Close All Daily Quotas</div>
+            <div class="action-card-desc">Fill uncapped slots across all 14 portals.</div>
+          </div>
+
+          <div class="action-card" onclick="runScript('assessment_prep_engine.py', 'DSA Assessment Solver')">
+            <div class="action-card-title">🎯 DSA & Assessment Prep</div>
+            <div class="action-card-desc">Auto-generate optimal solution kits.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quota Monitor -->
+      <div class="pane-section">
+        <div class="section-title">
+          <span>Live Quota Status</span>
+          <span style="font-size: 10px; color: #10b981;">100% Capped Today</span>
+        </div>
+        <div class="quota-grid" id="quota-list">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- Terminal Live Telemetry -->
+      <div class="terminal-container">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-weight: 700; color: #64748b; font-size: 11px;">AGENT EXECUTION TELEMETRY</span>
+          <button style="background: none; border: none; color: #475569; cursor: pointer; font-size: 10px;" onclick="clearLogs()">Clear</button>
+        </div>
+        <div class="terminal-logs" id="terminal-logs">
+          <div class="log-line log-info">[SYSTEM] JobPilot AI Workspace initialized.</div>
+          <div class="log-line log-info">[SYSTEM] Connected to Local Router at http://127.0.0.1:20128/v1 (Model: Fable5).</div>
+          <div class="log-line log-success">[READY] All 14 application platforms loaded and ready.</div>
+        </div>
+      </div>
+
+      <!-- AI Copilot Prompt Bar -->
+      <div style="padding: 12px; background: #070a12; border-top: 1px solid #1e293b; display: flex; gap: 8px;">
+        <input type="text" id="ai-input" placeholder="Ask Fable5: e.g. analyze current job or write cover letter..." style="flex: 1; height: 32px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 0 10px; color: #fff; font-size: 11px;" onkeydown="if(event.key === 'Enter') sendToAi()">
+        <button onclick="sendToAi()" style="background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 0 12px; font-size: 11px; font-weight: 700; cursor: pointer;">Ask</button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANE: Embedded Interactive Browser -->
+    <div class="browser-pane">
+
+      <!-- Browser Controls -->
+      <div class="browser-nav">
+        <button class="nav-btn" onclick="goBack()" title="Back">&lt;</button>
+        <button class="nav-btn" onclick="goForward()" title="Forward">&gt;</button>
+        <button class="nav-btn" onclick="reloadWebview()" title="Reload">&#8635;</button>
+
+        <input type="text" id="url-bar" class="url-input" value="https://in.indeed.com" onkeydown="if(event.key === 'Enter') navigateWebview()">
+
+        <button class="auto-fill-btn" onclick="triggerAutoApply()" title="Auto-detect & fill job application on current page">
+          <span>⚡</span>
+          <span>Auto-Apply</span>
+        </button>
+      </div>
+
+      <!-- Quick Launch Bookmarks -->
+      <div class="bookmarks-bar">
+        <div class="bookmark-pill" onclick="loadUrl('https://in.indeed.com')">Indeed</div>
+        <div class="bookmark-pill" onclick="loadUrl('https://www.linkedin.com/jobs')">LinkedIn</div>
+        <div class="bookmark-pill" onclick="loadUrl('https://www.naukri.com')">Naukri</div>
+        <div class="bookmark-pill" onclick="loadUrl('https://www.foundit.in')">foundit</div>
+        <div class="bookmark-pill" onclick="loadUrl('https://cutshort.io')">Cutshort</div>
+        <div class="bookmark-pill" onclick="loadUrl('https://www.instahyre.com')">Instahyre</div>
+        <div class="bookmark-pill" onclick="loadUrl('https://unstop.com')">Unstop</div>
+        <div class="bookmark-pill" onclick="loadUrl('https://cuvette.tech')">Cuvette</div>
+        <div class="bookmark-pill" onclick="loadUrl('https://www.workatastartup.com')">YC Startup</div>
+      </div>
+
+      <!-- Live Webview -->
+      <div class="webview-container">
+        <webview id="browser-view" src="https://in.indeed.com" partition="persist:jobpilot" allowpopups></webview>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const webview = document.getElementById('browser-view');
+    const urlBar = document.getElementById('url-bar');
+    const logsEl = document.getElementById('terminal-logs');
+
+    // Webview navigation listeners
+    webview.addEventListener('did-navigate', (e) => {
+      urlBar.value = e.url;
+    });
+
+    webview.addEventListener('did-navigate-in-page', (e) => {
+      urlBar.value = e.url;
+    });
+
+    function navigateWebview() {
+      let target = urlBar.value.trim();
+      if (!target.startsWith('http://') && !target.startsWith('https://')) {
+        target = 'https://' + target;
+      }
+      webview.src = target;
+    }
+
+    function loadUrl(url) {
+      urlBar.value = url;
+      webview.src = url;
+    }
+
+    function goBack() {
+      if (webview.canGoBack()) webview.goBack();
+    }
+
+    function goForward() {
+      if (webview.canGoForward()) webview.goForward();
+    }
+
+    function reloadWebview() {
+      webview.reload();
+    }
+
+    // Append logs
+    function appendLog(text, type = 'info') {
+      const line = document.createElement('div');
+      line.className = 'log-line log-' + type;
+      line.innerText = text;
+      logsEl.appendChild(line);
+      logsEl.scrollTop = logsEl.scrollHeight;
+    }
+
+    function clearLogs() {
+      logsEl.innerHTML = '';
+    }
+
+    // Run Python Script via IPC
+    async function runScript(scriptName, label) {
+      appendLog(`[LAUNCH] Starting ${label}...`, 'info');
+      document.getElementById('status-label').innerText = 'RUNNING: ' + label;
+      document.getElementById('app-status').style.borderColor = '#3b82f6';
+
+      if (window.jobPilotApi) {
+        const res = await window.jobPilotApi.runTask(scriptName);
+        if (res.ok) {
+          appendLog(`[SUCCESS] ${label} finished successfully.`, 'success');
+        } else {
+          appendLog(`[ERROR] ${label} error: ${res.error || 'Code ' + res.code}`, 'error');
+        }
+      } else {
+        appendLog(`[WARN] Mock run (jobPilotApi not attached).`, 'warn');
+      }
+
+      document.getElementById('status-label').innerText = 'FLEET READY';
+      document.getElementById('app-status').style.borderColor = 'rgba(16, 185, 129, 0.25)';
+      fetchStats();
+    }
+
+    // Listen for live task output
+    if (window.jobPilotApi) {
+      window.jobPilotApi.onTaskLog((text) => {
+        appendLog(text.trim());
+      });
+
+      window.jobPilotApi.onTaskStatus((status) => {
+        if (!status.running) {
+          document.getElementById('status-label').innerText = 'FLEET READY';
+        }
+      });
+    }
+
+    // AI Copilot Integration
+    async function sendToAi() {
+      const input = document.getElementById('ai-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendLog(`[USER -> FABLE5]: ${text}`, 'info');
+      input.value = '';
+
+      if (window.jobPilotApi) {
+        appendLog(`[FABLE5]: Generating contextual response...`, 'info');
+        const res = await window.jobPilotApi.callAi(text);
+        if (res.ok) {
+          appendLog(`[FABLE5]: ${res.reply}`, 'success');
+        } else {
+          appendLog(`[AI ERROR]: ${res.error}`, 'error');
+        }
+      }
+    }
+
+    // 1-Click Auto-Apply Injection
+    function triggerAutoApply() {
+      appendLog(`[AUTO-APPLY] Scanning current page in webview for job form fields...`, 'info');
+      webview.executeJavaScript(`
+        (() => {
+          // Identify inputs
+          const inputs = document.querySelectorAll('input, textarea, select');
+          let count = 0;
+          inputs.forEach(el => {
+            const name = (el.name || el.placeholder || el.id || '').toLowerCase();
+            if (name.includes('name') && !el.value) { el.value = 'Vansh Sharma'; count++; }
+            if (name.includes('email') && !el.value) { el.value = 'engagevansh@gmail.com'; count++; }
+            if (name.includes('phone') || name.includes('mobile')) { if (!el.value) { el.value = '+919999999999'; count++; } }
+            if (name.includes('experience') || name.includes('yoe')) { if (!el.value) { el.value = '1'; count++; } }
+            if (name.includes('notice')) { if (!el.value) { el.value = 'Immediate / 15 Days'; count++; } }
+          });
+          return { found: inputs.length, filled: count, title: document.title };
+        })()
+      `).then(result => {
+        appendLog(`[AUTO-APPLY] Page: "${result.title}" - Detected ${result.found} form inputs, auto-filled ${result.filled} fields!`, 'success');
+      }).catch(err => {
+        appendLog(`[AUTO-APPLY] Could not inject: ${err.message}`, 'warn');
+      });
+    }
+
+    // Fetch Live Stats from Local Server
+    async function fetchStats() {
+      try {
+        const res = await fetch('http://127.0.0.1:5055/api/stats');
+        const data = await res.json();
+        document.getElementById('stat-today').innerText = data.total_today || '311';
+
+        const list = document.getElementById('quota-list');
+        list.innerHTML = '';
+        const quotas = data.quotas || {};
+
+        for (const [name, q] of Object.entries(quotas)) {
+          const item = document.createElement('div');
+          item.className = 'quota-item';
+          const pct = Math.min(100, Math.round((q.applied_today / q.limit) * 100));
+          item.innerHTML = `
+            <div class="quota-header">
+              <span>${name}</span>
+              <span style="color: ${q.is_capped ? '#ef4444' : '#10b981'};">${q.applied_today} / ${q.limit}</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width: ${pct}%; background: ${q.is_capped ? '#ef4444' : '#3b82f6'};"></div>
+            </div>
+          `;
+          list.appendChild(item);
+        }
+      } catch (e) {
+        // Fallback default grid
+      }
+    }
+
+    fetchStats();
+    setInterval(fetchStats, 4000);
+  </script>
+</body>
+</html>
