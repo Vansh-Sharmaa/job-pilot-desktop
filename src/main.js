@@ -1,21 +1,23 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const http = require('http');
 
-let mainWindow;
-let activeProcesses = new Map();
-let currentWorkspace = 'D:\\opencode stuff\\job-agents';
+let mainWindow = null;
+let activeProcess = null;
+const JOBS_DIR = 'D:\\opencode stuff\\job-agents';
+const TRACKER_PATH = path.join(JOBS_DIR, 'job_applications_tracker.csv');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1560,
-    height: 980,
-    minWidth: 1100,
-    minHeight: 700,
-    backgroundColor: '#0d1117',
-    title: 'OpenCode Workspace - JobPilot Edition',
+    width: 1580,
+    height: 960,
+    minWidth: 1180,
+    minHeight: 740,
+    backgroundColor: '#070913',
+    title: 'JobPilot AI : Autonomous Career Cockpit',
+    frame: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       webviewTag: true,
@@ -29,10 +31,9 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    activeProcesses.forEach((proc) => {
-      try { proc.kill(); } catch (e) {}
-    });
-    activeProcesses.clear();
+    if (activeProcess) {
+      try { activeProcess.kill(); } catch (e) {}
+    }
   });
 }
 
@@ -42,99 +43,91 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// IPC: Workspace Filesystem
-ipcMain.handle('get-workspace-root', async () => {
-  return currentWorkspace;
-});
+// Helper: Parse CSV
+function parseTrackerCsv() {
+  if (!fs.existsSync(TRACKER_PATH)) return [];
+  const content = fs.readFileSync(TRACKER_PATH, 'utf-8');
+  const lines = content.split('\n').filter(l => l.trim().length > 0);
+  if (lines.length <= 1) return [];
 
-ipcMain.handle('list-files', async (event, dirPath = currentWorkspace) => {
-  try {
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-    const items = [];
-    for (const ent of entries) {
-      if (ent.name.startsWith('.') && ent.name !== '.gitignore') continue;
-      if (['node_modules', '__pycache__', 'dist', 'build', '.git'].includes(ent.name)) continue;
-      
-      const full = path.join(dirPath, ent.name);
-      items.push({
-        name: ent.name,
-        path: full,
-        isDirectory: ent.isDirectory(),
-        size: ent.isDirectory() ? 0 : fs.statSync(full).size
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    const parts = line.split(',');
+    if (parts.length >= 6) {
+      rows.push({
+        date: parts[0]?.trim(),
+        company: parts[1]?.trim().replace(/^"|"$/g, ''),
+        role: parts[2]?.trim().replace(/^"|"$/g, ''),
+        location: parts[3]?.trim().replace(/^"|"$/g, ''),
+        portal: parts[4]?.trim(),
+        status: parts[5]?.trim(),
+        url: parts[6]?.trim() || ''
       });
     }
-    // Sort directories first, then files
-    items.sort((a, b) => {
-      if (a.isDirectory === b.isDirectory) return a.name.localeCompare(b.name);
-      return a.isDirectory ? -1 : 1;
-    });
-    return { ok: true, items };
-  } catch (e) {
-    return { ok: false, error: e.message };
   }
-});
+  return rows;
+}
 
-ipcMain.handle('read-file', async (event, filePath) => {
+// IPC: Read Tracker CSV
+ipcMain.handle('get-tracker-data', async () => {
   try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    return { ok: true, content, path: filePath };
+    const rows = parseTrackerCsv();
+    return { ok: true, rows: rows.reverse() }; // Newest first
   } catch (e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: e.message, rows: [] };
   }
 });
 
-ipcMain.handle('save-file', async (event, { filePath, content }) => {
-  try {
-    fs.writeFileSync(filePath, content, 'utf-8');
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e.message };
+// IPC: Execute Python Tasks with Live Streaming
+ipcMain.handle('run-task', async (event, { scriptName, args = [] }) => {
+  if (activeProcess) {
+    return { ok: false, error: 'Another automation is currently running.' };
   }
-});
 
-// IPC: Terminal / Process Runner
-ipcMain.handle('run-terminal-command', async (event, { cmd, id = 'term-1' }) => {
   return new Promise((resolve) => {
-    const isWindows = process.platform === 'win32';
-    const shell = isWindows ? 'powershell.exe' : 'bash';
-    const shellArgs = isWindows ? ['-NoProfile', '-Command', cmd] : ['-c', cmd];
-
-    const proc = spawn(shell, shellArgs, {
-      cwd: currentWorkspace,
+    const fullScript = path.join(JOBS_DIR, scriptName);
+    const proc = spawn('python', ['-u', fullScript, ...args], {
+      cwd: JOBS_DIR,
       env: { ...process.env, PYTHONUNBUFFERED: '1' }
     });
 
-    activeProcesses.set(id, proc);
+    activeProcess = proc;
+    mainWindow?.webContents.send('task-status', { running: true, task: scriptName });
 
-    proc.stdout.on('data', (d) => {
-      mainWindow?.webContents.send('terminal-data', { id, text: d.toString() });
+    proc.stdout.on('data', (data) => {
+      mainWindow?.webContents.send('task-log', data.toString());
     });
 
-    proc.stderr.on('data', (d) => {
-      mainWindow?.webContents.send('terminal-data', { id, text: d.toString(), isError: true });
+    proc.stderr.on('data', (data) => {
+      mainWindow?.webContents.send('task-log', data.toString());
     });
 
     proc.on('close', (code) => {
-      activeProcesses.delete(id);
-      mainWindow?.webContents.send('terminal-exit', { id, code });
+      activeProcess = null;
+      mainWindow?.webContents.send('task-status', { running: false, task: scriptName, code });
       resolve({ ok: code === 0, code });
     });
 
     proc.on('error', (err) => {
-      activeProcesses.delete(id);
-      mainWindow?.webContents.send('terminal-data', { id, text: `Process error: ${err.message}\n`, isError: true });
+      activeProcess = null;
+      mainWindow?.webContents.send('task-status', { running: false, error: err.message });
       resolve({ ok: false, error: err.message });
     });
   });
 });
 
-// IPC: AI Engine (Router @ localhost:20128)
-ipcMain.handle('call-ai-chat', async (event, { messages, model = 'Fable5', temperature = 0.3 }) => {
+// IPC: Call Local AI Router (Fable5 @ localhost:20128)
+ipcMain.handle('call-ai', async (event, { prompt, systemPrompt }) => {
   return new Promise((resolve) => {
+    const defaultSys = 'You are JobPilot AI, an elite career strategist and recruitment copilot for Vansh Sharma (MCA in AI and Data Science, Class of 2026, 0 to 2 YOE). Specialize in ATS resume tailoring, tech screening responses, cold outreach to recruiters, and interview preparation. Deliver punchy, structured, professional answers. Never use em-dashes or en-dashes.';
     const payload = JSON.stringify({
-      model: model,
-      messages: messages,
-      temperature: temperature
+      model: 'Fable5',
+      messages: [
+        { role: 'system', content: systemPrompt || defaultSys },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3
     });
 
     const req = http.request(
@@ -143,10 +136,10 @@ ipcMain.handle('call-ai-chat', async (event, { messages, model = 'Fable5', tempe
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer sk-router',
+          'Authorization': 'Bearer sk-local-router',
           'Content-Length': Buffer.byteLength(payload)
         },
-        timeout: 30000
+        timeout: 45000
       },
       (res) => {
         let body = '';
@@ -155,19 +148,33 @@ ipcMain.handle('call-ai-chat', async (event, { messages, model = 'Fable5', tempe
           try {
             const data = JSON.parse(body);
             const reply = data?.choices?.[0]?.message?.content || body;
-            resolve({ ok: true, reply, raw: data });
+            resolve({ ok: true, reply });
           } catch (e) {
-            resolve({ ok: false, error: 'Failed to parse AI JSON', raw: body });
+            resolve({ ok: true, reply: body });
           }
         });
       }
     );
 
     req.on('error', (err) => {
-      resolve({ ok: false, error: err.message });
+      resolve({ ok: false, error: 'Router connection failed: ' + err.message });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ ok: false, error: 'AI Router query timed out after 45s.' });
     });
 
     req.write(payload);
     req.end();
   });
+});
+
+// IPC: Open URL in external default browser
+ipcMain.handle('open-external', async (event, url) => {
+  if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+    shell.openExternal(url);
+    return { ok: true };
+  }
+  return { ok: false, error: 'Invalid URL' };
 });

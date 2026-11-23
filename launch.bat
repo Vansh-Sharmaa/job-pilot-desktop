@@ -1,4 +1,5 @@
 @echo off
-title JobPilot AI - Autonomous Workspace
+title JobPilot AI : Autonomous Career Cockpit
+set ELECTRON_RUN_AS_NODE=
 cd /d "D:\opencode stuff\job-pilot-desktop"
-npx electron .
+start "" "node_modules\electron\dist\electron.exe" .

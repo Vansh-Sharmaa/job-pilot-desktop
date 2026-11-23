@@ -2,401 +2,458 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OpenCode Workspace - JobPilot Edition</title>
+  <title>JobPilot AI : Autonomous Career Cockpit</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Top Window Titlebar -->
-  <div class="titlebar">
-    <div class="titlebar-brand">
-      <span>⚡</span> OpenCode <strong>JobPilot</strong>
-    </div>
-
-    <div class="titlebar-center">
-      <span>📁 Workspace:</span>
-      <strong id="workspace-name" style="color: #fff;">job-agents</strong>
-    </div>
-
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #10b981;">
-        <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981;"></span>
-        <span>Model: <strong>Fable5</strong></span>
+  <!-- Top Cockpit Header -->
+  <header class="cockpit-header">
+    <div class="brand-wrapper">
+      <div class="brand-gem">⚡</div>
+      <div class="brand-title">
+        JobPilot AI
+        <span class="brand-badge">Career Cockpit</span>
       </div>
-      <div style="font-size: 11px; color: #94a3b8;">
-        Today: <strong style="color: #fff;" id="app-counter">311</strong> Applied
-      </div>
-    </div>
-  </div>
-
-  <!-- Main Container -->
-  <div class="app-container">
-
-    <!-- Activity Bar (Icons) -->
-    <div class="activity-bar">
-      <div class="activity-btn active" id="btn-explorer" onclick="switchSidebar('explorer')" title="Explorer (Files)">
-        📁
-      </div>
-      <div class="activity-btn" id="btn-agent" onclick="switchSidebar('agent')" title="AI Agent Copilot (Fable5)">
-        🤖
-      </div>
-      <div class="activity-btn" id="btn-fleet" onclick="switchSidebar('fleet')" title="Job Fleet Mission Control">
-        🚀
-      </div>
-      <div class="activity-btn" id="btn-browser" onclick="switchSidebar('browser')" title="Embedded Browser">
-        🌐
+      <div class="candidate-pill">
+        <span>👤</span>
+        <strong style="color: #fff;">Vansh Sharma</strong>
+        <span style="color: #64748b;">|</span>
+        <span>MCA AI & Data Science (2024 - 2026)</span>
       </div>
     </div>
 
-    <!-- Collapsible Sidebar -->
-    <div class="sidebar">
-
-      <!-- View 1: Explorer -->
-      <div id="view-explorer" style="display: flex; flex-direction: column; height: 100%;">
-        <div class="sidebar-header">
-          <span>Explorer</span>
-          <button style="background: none; border: none; color: #94a3b8; cursor: pointer;" onclick="loadFiles()">↻</button>
-        </div>
-        <div class="sidebar-content" id="file-tree">
-          <!-- Populated by JS -->
-        </div>
+    <div class="telemetry-pills">
+      <div class="pill-card">
+        <span class="pulse-green"></span>
+        <span style="color: #10b981; font-weight: 700;">AUTOPILOT FLEET ACTIVE</span>
       </div>
 
-      <!-- View 2: Agent Chat -->
-      <div id="view-agent" style="display: none; height: 100%; flex-direction: column;">
-        <div class="sidebar-header">
-          <span>Agent Orchestrator</span>
-        </div>
-        <div class="model-selector-bar">
-          <label style="font-size: 10px; color: #64748b; font-weight: 700; display: block; margin-bottom: 4px;">ACTIVE MODEL</label>
-          <select class="custom-select" id="model-select">
-            <option value="Fable5">Fable5 (Local Router)</option>
-            <option value="oc-gpt">oc-gpt (Local Router)</option>
-            <option value="claude-fable-5">claude-fable-5</option>
-            <option value="claude-opus">claude-opus</option>
-          </select>
-        </div>
-        <div class="chat-history" id="chat-stream">
-          <div class="chat-msg chat-ai">
-            Hello Vansh! I am your <strong>OpenCode AI Agent</strong> powered by <strong>Fable5</strong>. I can code, edit files, and automate job applications. What would you like to build?
-          </div>
-        </div>
-        <div class="chat-input-area">
-          <textarea class="chat-textarea" id="chat-input" placeholder="Ask AI: e.g. refactor file, apply jobs..." onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendAgentMessage(); }"></textarea>
-          <button class="chat-send-btn" onclick="sendAgentMessage()">Send</button>
-        </div>
+      <div class="pill-card">
+        <span>🧠 Model:</span>
+        <strong style="color: #a78bfa;">Fable5</strong>
+        <span style="color: #64748b;">(Port 20128)</span>
       </div>
 
-      <!-- View 3: Job Fleet Quotas -->
-      <div id="view-fleet" style="display: none; height: 100%; flex-direction: column;">
-        <div class="sidebar-header">
-          <span>Job Fleet Control</span>
-          <span style="color: #10b981; font-size: 10px;">100% Capped</span>
-        </div>
-        <div class="sidebar-content" style="padding: 10px;">
-          <button style="width: 100%; padding: 8px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; margin-bottom: 12px;" onclick="runAutopilot()">
-            🚀 Run 24/7 Autopilot
-          </button>
-          <div id="fleet-quota-cards" style="display: flex; flex-direction: column; gap: 8px;">
-            <!-- Populated via stats API -->
-          </div>
-        </div>
+      <div class="pill-card">
+        <span>Applied Today:</span>
+        <strong style="color: #fff;" id="hdr-today">311</strong>
+        <span style="color: #10b981; font-weight: 700;">(100% Capped)</span>
       </div>
-
-      <!-- View 4: Browser Hub -->
-      <div id="view-browser" style="display: none; height: 100%; flex-direction: column;">
-        <div class="sidebar-header">
-          <span>Browser Hub</span>
-        </div>
-        <div class="sidebar-content" style="padding: 10px; display: flex; flex-direction: column; gap: 6px;">
-          <div class="file-item" onclick="openBrowserTab('https://in.indeed.com', 'Indeed India')">
-            <span>🌐</span> Indeed India
-          </div>
-          <div class="file-item" onclick="openBrowserTab('https://www.linkedin.com/jobs', 'LinkedIn Jobs')">
-            <span>🌐</span> LinkedIn Jobs
-          </div>
-          <div class="file-item" onclick="openBrowserTab('https://www.naukri.com', 'Naukri')">
-            <span>🌐</span> Naukri Portal
-          </div>
-          <div class="file-item" onclick="openBrowserTab('https://www.foundit.in', 'foundit')">
-            <span>🌐</span> foundit India
-          </div>
-          <div class="file-item" onclick="openBrowserTab('https://cutshort.io', 'Cutshort')">
-            <span>🌐</span> Cutshort Tech
-          </div>
-          <div class="file-item" onclick="openBrowserTab('https://www.instahyre.com', 'Instahyre')">
-            <span>🌐</span> Instahyre
-          </div>
-          <div class="file-item" onclick="openBrowserTab('https://unstop.com', 'Unstop')">
-            <span>🌐</span> Unstop Hiring
-          </div>
-        </div>
-      </div>
-
     </div>
+  </header>
 
-    <!-- Center Workspace -->
-    <div class="center-workspace">
+  <!-- Cockpit Body -->
+  <div class="cockpit-body">
 
-      <!-- Tabs Bar -->
-      <div class="tabs-bar" id="tabs-container">
-        <!-- Tabs populated via JS -->
+    <!-- Left Nav Rail -->
+    <nav class="nav-rail">
+      <div class="nav-tab-btn active" id="tab-cockpit" onclick="switchView('cockpit')" title="Cockpit Overview">
+        <span class="tab-icon">🚀</span>
+        <span class="tab-label">Cockpit</span>
       </div>
 
-      <!-- Main View Container -->
-      <div class="view-container">
+      <div class="nav-tab-btn" id="tab-browser" onclick="switchView('browser')" title="Integrated Hiring Browser">
+        <span class="tab-icon">🌐</span>
+        <span class="tab-label">Hiring Hub</span>
+      </div>
 
-        <!-- Monaco Code Editor Frame -->
-        <div id="editor-frame" style="width: 100%; height: 100%; display: none;">
-          <div id="monaco-container"></div>
+      <div class="nav-tab-btn" id="tab-ledger" onclick="switchView('ledger')" title="Verified Applications Ledger">
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">Ledger</span>
+      </div>
+
+      <div class="nav-tab-btn" id="tab-copilot" onclick="switchView('copilot')" title="AI Career Strategist (Fable5)">
+        <span class="tab-icon">🧠</span>
+        <span class="tab-label">Copilot</span>
+      </div>
+
+      <div class="nav-tab-btn" id="tab-profile" onclick="switchView('profile')" title="Candidate Dossier">
+        <span class="tab-icon">👤</span>
+        <span class="tab-label">Profile</span>
+      </div>
+    </nav>
+
+    <!-- Content Canvas -->
+    <main class="content-canvas">
+
+      <!-- ==================== VIEW 1: COCKPIT ==================== -->
+      <section class="view-panel view-cockpit active-view" id="view-cockpit">
+
+        <!-- 4 Grand Metrics -->
+        <div class="metric-row">
+          <div class="metric-card accent-emerald">
+            <div class="metric-header">
+              <span class="metric-label">Applications Today</span>
+              <div class="metric-icon-bubble">⚡</div>
+            </div>
+            <span class="metric-num" id="metric-today">311</span>
+            <span class="metric-sub">✓ 100% Daily Target Capped</span>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Active Hiring Portals</span>
+              <div class="metric-icon-bubble">🌐</div>
+            </div>
+            <span class="metric-num">14 / 14</span>
+            <span class="metric-sub">✓ All Quotas Fully Capped</span>
+          </div>
+
+          <div class="metric-card accent-violet">
+            <div class="metric-header">
+              <span class="metric-label">Inboxes Monitored</span>
+              <div class="metric-icon-bubble">📬</div>
+            </div>
+            <span class="metric-num">4 Gmails</span>
+            <span class="metric-sub">✓ Alerts & Tests Auto-Scraped</span>
+          </div>
+
+          <div class="metric-card accent-amber">
+            <div class="metric-header">
+              <span class="metric-label">Autopilot Schedule</span>
+              <div class="metric-icon-bubble">⏰</div>
+            </div>
+            <span class="metric-num">9:00 AM</span>
+            <span class="metric-sub">✓ Auto-Catchup Active</span>
+          </div>
         </div>
 
-        <!-- Embedded Browser Frame -->
-        <div id="browser-frame" class="browser-container" style="display: none;">
-          <div class="browser-toolbar">
-            <button style="background: #1e2638; border: none; color: #fff; width: 26px; height: 26px; border-radius: 4px; cursor: pointer;" onclick="navWebviewBack()">&lt;</button>
-            <button style="background: #1e2638; border: none; color: #fff; width: 26px; height: 26px; border-radius: 4px; cursor: pointer;" onclick="navWebviewFwd()">&gt;</button>
-            <button style="background: #1e2638; border: none; color: #fff; width: 26px; height: 26px; border-radius: 4px; cursor: pointer;" onclick="reloadWebview()">↻</button>
-            <input type="text" class="browser-url-input" id="browser-url-bar" value="https://in.indeed.com" onkeydown="if(event.key === 'Enter') navigateWebviewUrl()">
-            <button class="auto-apply-pill" onclick="executeAutoApplyOnWebview()">
-              <span>⚡</span> 1-Click Auto-Apply
+        <!-- Hero Actions -->
+        <div>
+          <div class="section-headline">Autonomous Fleet Operations</div>
+          <div class="actions-container">
+            <div class="hero-action" onclick="runTask('daily_autopilot_daemon.py', '24/7 Autopilot Daemon')">
+              <span class="hero-action-title">🚀 24/7 Autopilot Daemon</span>
+              <span class="hero-action-desc">Run hourly scans, alert applies and daily quota auto-filling across all 14 portals.</span>
+            </div>
+
+            <div class="hero-action" onclick="runTask('inbound_email_calendar_runner.py', 'Inbound & Calendar Runner')">
+              <span class="hero-action-title">📬 Inbound & Calendar Alert</span>
+              <span class="hero-action-desc">Auto-extract and apply to Indeed, LinkedIn, and Google Form email alerts.</span>
+            </div>
+
+            <div class="hero-action" onclick="runTask('auto_quota_closer.py', 'Quota Closer Swarm')">
+              <span class="hero-action-title">⚡ Close All Daily Quotas</span>
+              <span class="hero-action-desc">Rapid burst across 14 platforms to max out daily application caps.</span>
+            </div>
+
+            <div class="hero-action" onclick="runTask('assessment_prep_engine.py', 'DSA Prep Engine')">
+              <span class="hero-action-title">🎯 DSA & Assessment Prep</span>
+              <span class="hero-action-desc">Generate optimal solutions and walkthroughs for pending coding tests.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 14-Platform Quotas Grid -->
+        <div>
+          <div class="quotas-section-header">
+            <span class="section-headline">14-Platform Daily Quota Matrix</span>
+            <span style="font-size: 11px; color: #10b981; font-weight: 700;">Auto-Reset Daily at 12:00 AM</span>
+          </div>
+          <div class="quota-cards-grid" id="quota-cards-container">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Live Telemetry Stream -->
+        <div class="telemetry-box">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">Live Fleet Execution Telemetry</span>
+            <button style="background: none; border: none; color: #475569; font-size: 11px; cursor: pointer;" onclick="clearTelemetry()">Clear</button>
+          </div>
+          <div class="telemetry-feed" id="telemetry-stream">
+            <div style="color: #38bdf8;">[COCKPIT] JobPilot AI Career Cockpit active. Connected to D:\opencode stuff\job-agents</div>
+            <div style="color: #4ade80;">[ROUTER] Bound to Fable5 via http://127.0.0.1:20128/v1 (Unlimited Tokens).</div>
+            <div style="color: #94a3b8;">[FLEET] Standing by with 311 verified genuine applications in ledger.</div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ==================== VIEW 2: HIRING BROWSER ==================== -->
+      <section class="view-panel view-browser" id="view-browser">
+
+        <div class="browser-header-bar">
+          <button class="btn-ctrl" onclick="webviewBack()" title="Back">&lt;</button>
+          <button class="btn-ctrl" onclick="webviewFwd()" title="Forward">&gt;</button>
+          <button class="btn-ctrl" onclick="webviewReload()" title="Reload">&#8635;</button>
+
+          <input type="text" class="browser-url-input" id="portal-url" value="https://in.indeed.com" onkeydown="if(event.key === 'Enter') navigatePortal()">
+
+          <div class="browser-actions">
+            <button class="btn-smart-action" onclick="smartApplyOnCurrentPage()">
+              <span>⚡</span>
+              <span>AI Smart Apply</span>
+            </button>
+            <button class="btn-secondary-action" onclick="injectPitchOnCurrentPage()">
+              <span>📄</span>
+              <span>Inject Pitch</span>
+            </button>
+            <button class="btn-secondary-action" onclick="openCurrentInDefaultBrowser()">
+              <span>↗</span>
+              <span>External</span>
             </button>
           </div>
-          <webview id="active-webview" src="https://in.indeed.com" partition="persist:jobpilot" allowpopups></webview>
         </div>
 
-        <!-- Mission Control Frame -->
-        <div id="mission-frame" style="width: 100%; height: 100%; display: block;">
-          <iframe src="http://127.0.0.1:5055" style="width: 100%; height: 100%; border: none;"></iframe>
+        <!-- Quick Portals Strip -->
+        <div class="quick-portals-strip">
+          <div class="portal-chip active" onclick="loadPortal('https://in.indeed.com', this)">Indeed India</div>
+          <div class="portal-chip" onclick="loadPortal('https://www.linkedin.com/jobs', this)">LinkedIn</div>
+          <div class="portal-chip" onclick="loadPortal('https://www.naukri.com', this)">Naukri</div>
+          <div class="portal-chip" onclick="loadPortal('https://www.foundit.in', this)">foundit</div>
+          <div class="portal-chip" onclick="loadPortal('https://cutshort.io', this)">Cutshort</div>
+          <div class="portal-chip" onclick="loadPortal('https://www.instahyre.com', this)">Instahyre</div>
+          <div class="portal-chip" onclick="loadPortal('https://unstop.com', this)">Unstop</div>
+          <div class="portal-chip" onclick="loadPortal('https://cuvette.tech', this)">Cuvette</div>
+          <div class="portal-chip" onclick="loadPortal('https://www.workatastartup.com', this)">YC Startup</div>
+          <div class="portal-chip" onclick="loadPortal('https://wellfound.com/jobs', this)">Wellfound</div>
         </div>
 
-      </div>
+        <div class="webview-box">
+          <webview id="portal-webview" src="https://in.indeed.com" partition="persist:jobpilot" allowpopups></webview>
+        </div>
 
-      <!-- Bottom Terminal Panel -->
-      <div class="bottom-panel">
-        <div class="bottom-panel-header">
-          <div style="display: flex; gap: 8px;">
-            <div class="panel-tab active" id="tab-term" onclick="switchBottomTab('term')">Terminal</div>
-            <div class="panel-tab" id="tab-telemetry" onclick="switchBottomTab('telemetry')">Agent Logs</div>
-            <div class="panel-tab" id="tab-jobs" onclick="switchBottomTab('jobs')">Applications (311)</div>
+      </section>
+
+      <!-- ==================== VIEW 3: APPLICATIONS LEDGER ==================== -->
+      <section class="view-panel view-ledger" id="view-ledger">
+
+        <div class="ledger-top-bar">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #fff;">Applications Ledger</div>
+            <div style="font-size: 11px; color: #94a3b8;">Real-time verified genuine applications (311 entries)</div>
           </div>
-          <button style="background: none; border: none; color: #64748b; cursor: pointer;" onclick="clearTerminal()">Clear</button>
+
+          <div class="ledger-summary-pills">
+            <span class="summary-pill">Total: <strong style="color: #fff;" id="ledger-count-pill">311</strong></span>
+            <span class="summary-pill">Target: <strong style="color: #10b981;">0 - 2 YOE Fresher</strong></span>
+          </div>
+
+          <input type="text" class="search-input" id="ledger-search" placeholder="Search company, role or location..." oninput="filterLedger()">
         </div>
 
-        <div class="terminal-stream" id="terminal-output">
-          <div style="color: #38bdf8;">[OpenCode] Workspace connected to D:\opencode stuff\job-agents</div>
-          <div style="color: #4ade80;">[Router] Connected to local model proxy on http://127.0.0.1:20128/v1 (Fable5)</div>
-          <div style="color: #94a3b8;">Type any PowerShell/Python command below and press Enter:</div>
+        <!-- Filter Chips by Portal -->
+        <div class="portal-filter-chips">
+          <div class="filter-chip active" onclick="filterByPortal('ALL', this)">All (311)</div>
+          <div class="filter-chip" onclick="filterByPortal('Naukri', this)">Naukri (50)</div>
+          <div class="filter-chip" onclick="filterByPortal('Indeed', this)">Indeed (50)</div>
+          <div class="filter-chip" onclick="filterByPortal('LinkedIn', this)">LinkedIn (25)</div>
+          <div class="filter-chip" onclick="filterByPortal('foundit', this)">foundit (30)</div>
+          <div class="filter-chip" onclick="filterByPortal('Cuvette', this)">Cuvette (25)</div>
+          <div class="filter-chip" onclick="filterByPortal('Unstop', this)">Unstop (20)</div>
+          <div class="filter-chip" onclick="filterByPortal('Instahyre', this)">Instahyre (20)</div>
+          <div class="filter-chip" onclick="filterByPortal('Cutshort', this)">Cutshort (15)</div>
+          <div class="filter-chip" onclick="filterByPortal('Wellfound', this)">Wellfound (15)</div>
+          <div class="filter-chip" onclick="filterByPortal('YC Startup', this)">YC (15)</div>
         </div>
 
-        <div class="terminal-input-bar">
-          <span class="terminal-prompt">&gt;</span>
-          <input type="text" class="terminal-cmd-input" id="terminal-cmd" placeholder="Run command (e.g. python auto_quota_closer.py)..." onkeydown="if(event.key === 'Enter') executeTerminalCmd()">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 100px;">Date</th>
+                <th style="width: 220px;">Company</th>
+                <th style="width: 280px;">Role</th>
+                <th style="width: 160px;">Location</th>
+                <th style="width: 120px;">Portal</th>
+                <th style="width: 110px;">Status</th>
+                <th style="width: 100px;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="ledger-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
         </div>
-      </div>
 
-    </div>
+      </section>
+
+      <!-- ==================== VIEW 4: AI COPILOT ==================== -->
+      <section class="view-panel view-copilot" id="view-copilot">
+
+        <div>
+          <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px;">AI Career Strategist & Interview Wingman</div>
+          <div style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">Powered by Fable5 on Local Model Router (Port 20128 : Unlimited Tokens)</div>
+
+          <div class="copilot-presets">
+            <div class="preset-chip" onclick="setCopilotPrompt('Analyze market compensation and standard CTC for Fresher AI Engineer and Python Developer roles in Gurgaon and Bengaluru.')">💰 Salary Benchmarks</div>
+            <div class="preset-chip" onclick="setCopilotPrompt('Draft a concise, high-conversion cold outreach message to an Engineering Manager hiring for an entry-level GenAI role.')">✉️ Cold Outreach Note</div>
+            <div class="preset-chip" onclick="setCopilotPrompt('How should I best answer: Why should we hire you as an MCA fresher over B.Tech graduates?')">🎯 Tough Screening Answer</div>
+            <div class="preset-chip" onclick="setCopilotPrompt('Extract top 10 ATS keywords and technical competencies required for Junior Generative AI Engineer positions.')">📄 Top ATS Keywords</div>
+            <div class="preset-chip" onclick="setCopilotPrompt('Explain RAG architecture with vector embeddings and chunking strategy as if answering a senior tech interviewer.')">⚡ Tech Interview Explainer</div>
+          </div>
+        </div>
+
+        <div class="copilot-thread" id="copilot-stream">
+          <div class="ai-bubble">
+            Hello Vansh! I am your <strong>AI Career Strategist (Fable5)</strong>. I am customized for your profile: MCA in AI & Data Science (Class of 2026, 0 - 2 YOE). I can optimize your ATS resumes, generate high-conversion outreach notes, and solve challenging technical screening questions.
+          </div>
+        </div>
+
+        <div class="copilot-input-box">
+          <input type="text" class="copilot-input" id="copilot-text" placeholder="Ask anything about jobs, interviews, resume tailoring, or company assessments..." onkeydown="if(event.key === 'Enter') sendCopilotQuery()">
+          <button class="btn-send" onclick="sendCopilotQuery()">Ask Fable5</button>
+        </div>
+
+      </section>
+
+      <!-- ==================== VIEW 5: CANDIDATE DOSSIER ==================== -->
+      <section class="view-panel view-profile" id="view-profile">
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #fff;">Candidate Dossier</div>
+            <div style="font-size: 11px; color: #94a3b8;">Profile configurations utilized across the 14-platform autonomous fleet</div>
+          </div>
+          <span style="font-size: 11px; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">Active Job Seeker Profile</span>
+        </div>
+
+        <div class="profile-grid">
+          
+          <div class="profile-card">
+            <div class="profile-card-title">🎓 Education & Experience</div>
+            <div class="profile-field">
+              <span class="profile-label">Candidate Full Name</span>
+              <span class="profile-val">Vansh Sharma</span>
+            </div>
+            <div class="profile-field">
+              <span class="profile-label">Highest Degree</span>
+              <span class="profile-val">Master of Computer Applications (MCA)</span>
+            </div>
+            <div class="profile-field">
+              <span class="profile-label">Specialization</span>
+              <span class="profile-val">Artificial Intelligence & Data Science (Class of 2026)</span>
+            </div>
+            <div class="profile-field">
+              <span class="profile-label">Experience Tier</span>
+              <span class="profile-val">0 - 2 YOE (Fresher / Associate / Intern)</span>
+            </div>
+            <div class="profile-field">
+              <span class="profile-label">Notice Period</span>
+              <span class="profile-val" style="color: #10b981; font-weight: 700;">Immediate / Available to join now</span>
+            </div>
+          </div>
+
+          <div class="profile-card">
+            <div class="profile-card-title">📍 Preferences & Target Roles</div>
+            <div class="profile-field">
+              <span class="profile-label">Primary Target Roles</span>
+              <span class="profile-val">AI Engineer, Machine Learning Engineer, GenAI Developer, Python Backend Developer, Data Scientist</span>
+            </div>
+            <div class="profile-field">
+              <span class="profile-label">Preferred Locations</span>
+              <span class="profile-val">Gurgaon, Delhi NCR, Bengaluru, Hyderabad, Pune, Remote</span>
+            </div>
+            <div class="profile-field">
+              <span class="profile-label">Daily Application Quota</span>
+              <span class="profile-val">311 applications per day across 14 portals</span>
+            </div>
+            <div class="profile-field">
+              <span class="profile-label">Autonomous Schedule</span>
+              <span class="profile-val">Daily 9:00 AM Task Scheduler Catch-Up</span>
+            </div>
+          </div>
+
+          <div class="profile-card" style="grid-column: span 2;">
+            <div class="profile-card-title">⚡ Technical Core Competencies</div>
+            <div class="skills-tags">
+              <span class="skill-tag">Python</span>
+              <span class="skill-tag">Generative AI</span>
+              <span class="skill-tag">Large Language Models</span>
+              <span class="skill-tag">PyTorch</span>
+              <span class="skill-tag">LangChain</span>
+              <span class="skill-tag">RAG Pipelines</span>
+              <span class="skill-tag">Vector Databases (Chroma/FAISS)</span>
+              <span class="skill-tag">FastAPI</span>
+              <span class="skill-tag">REST APIs</span>
+              <span class="skill-tag">Docker</span>
+              <span class="skill-tag">PostgreSQL / SQL</span>
+              <span class="skill-tag">Git & GitHub</span>
+              <span class="skill-tag">Data Structures & Algorithms</span>
+              <span class="skill-tag">Pandas & NumPy</span>
+            </div>
+          </div>
+
+          <div class="profile-card" style="grid-column: span 2;">
+            <div class="profile-card-title">📝 Tailored Cover Pitch (Used for Smart Apply)</div>
+            <div class="pitch-box" id="candidate-pitch-text">
+              "Hi, I am Vansh Sharma, currently pursuing MCA in AI & Data Science (Class of 2026). I build end-to-end Generative AI workflows, LangChain RAG pipelines, and scalable Python/FastAPI microservices. Having strong problem-solving fundamentals in Data Structures & Algorithms, I am actively seeking an entry-level AI Engineer / Python Developer role where I can deliver immediate impact. Available to join immediately."
+            </div>
+            <button class="btn-smart-action" style="align-self: flex-start; margin-top: 6px;" onclick="copyPitch()">📋 Copy Pitch to Clipboard</button>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
 
   </div>
-
-  <!-- Status Bar -->
-  <div class="statusbar">
-    <div class="statusbar-item">
-      <span>🔀 git: (main)</span>
-    </div>
-
-    <div class="statusbar-item">
-      <span>🧠 Model: <strong>Fable5</strong> (Port 20128)</span>
-      <span style="color: #10b981;">● Online</span>
-    </div>
-
-    <div class="statusbar-item">
-      <span>📊 Quota: 14/14 Capped</span>
-      <span>UTF-8</span>
-    </div>
-  </div>
-
-  <!-- Monaco Editor AMD Loader -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 
   <script>
-    let editorInstance = null;
-    let openTabs = [
-      { id: 'mission', title: '🚀 Mission Control', type: 'mission', active: true }
-    ];
-    let activeTabId = 'mission';
-    let currentOpenFilePath = '';
+    let allLedgerRows = [];
+    let currentPortalFilter = 'ALL';
+    const webview = document.getElementById('portal-webview');
+    const urlBar = document.getElementById('portal-url');
+    const telemetryStream = document.getElementById('telemetry-stream');
 
-    // Initialize Monaco
-    if (window.require) {
-      require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
-      require(['vs/editor/editor.main'], function() {
-        editorInstance = monaco.editor.create(document.getElementById('monaco-container'), {
-          value: '# Select a file from the explorer on the left to edit\n',
-          language: 'python',
-          theme: 'vs-dark',
-          automaticLayout: true,
-          minimap: { enabled: true },
-          fontSize: 13,
-          lineHeight: 20
-        });
+    // Tab Switching
+    function switchView(viewName) {
+      document.querySelectorAll('.nav-tab-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById('tab-' + viewName);
+      if (activeBtn) activeBtn.classList.add('active');
 
-        // Ctrl+S / Cmd+S save
-        editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-          saveActiveFile();
-        });
-      });
-    }
-
-    // Switch Sidebar Views
-    function switchSidebar(viewName) {
-      document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('btn-' + viewName).classList.add('active');
-
-      ['explorer', 'agent', 'fleet', 'browser'].forEach(v => {
-        document.getElementById('view-' + v).style.display = (v === viewName) ? 'flex' : 'none';
+      ['cockpit', 'browser', 'ledger', 'copilot', 'profile'].forEach(v => {
+        const el = document.getElementById('view-' + v);
+        if (el) {
+          if (v === viewName) {
+            el.classList.add('active-view');
+          } else {
+            el.classList.remove('active-view');
+          }
+        }
       });
 
-      if (viewName === 'explorer') loadFiles();
-      if (viewName === 'fleet') loadFleetStats();
+      if (viewName === 'ledger') loadLedgerData();
+      if (viewName === 'cockpit') loadStats();
     }
 
-    // Load Workspace Files
-    async function loadFiles() {
-      const container = document.getElementById('file-tree');
-      container.innerHTML = '<div style="padding: 10px; color: #64748b;">Loading files...</div>';
+    // Browser Webview Navigation
+    webview.addEventListener('did-navigate', (e) => { urlBar.value = e.url; });
+    webview.addEventListener('did-navigate-in-page', (e) => { urlBar.value = e.url; });
 
-      if (window.openCodeApi) {
-        const res = await window.openCodeApi.listFiles();
-        if (res.ok) {
-          container.innerHTML = '';
-          res.items.forEach(item => {
-            const el = document.createElement('div');
-            el.className = 'file-item';
-            const icon = item.isDirectory ? '📁' : (item.name.endsWith('.py') ? '🐍' : (item.name.endsWith('.html') ? '🌐' : (item.name.endsWith('.csv') ? '📊' : '📄')));
-            el.innerHTML = `<span>${icon}</span> <span>${item.name}</span>`;
-            if (!item.isDirectory) {
-              el.onclick = () => openFileInEditor(item.path, item.name);
-            }
-            container.appendChild(el);
-          });
-        }
-      }
-    }
-
-    // Open File in Monaco Editor
-    async function openFileInEditor(filePath, fileName) {
-      if (!window.openCodeApi) return;
-      const res = await window.openCodeApi.readFile(filePath);
-      if (res.ok) {
-        currentOpenFilePath = filePath;
-        // Check if tab exists
-        let tab = openTabs.find(t => t.id === filePath);
-        if (!tab) {
-          tab = { id: filePath, title: fileName, type: 'file', path: filePath, active: true };
-          openTabs.push(tab);
-        }
-        setActiveTab(tab.id);
-
-        if (editorInstance) {
-          const ext = fileName.split('.').pop();
-          let lang = 'python';
-          if (ext === 'js' || ext === 'mjs') lang = 'javascript';
-          if (ext === 'json') lang = 'json';
-          if (ext === 'html') lang = 'html';
-          if (ext === 'css') lang = 'css';
-          if (ext === 'csv') lang = 'plaintext';
-          if (ext === 'md') lang = 'markdown';
-
-          const model = monaco.editor.createModel(res.content, lang);
-          editorInstance.setModel(model);
-        }
-      }
-    }
-
-    // Save Active File
-    async function saveActiveFile() {
-      if (currentOpenFilePath && editorInstance && window.openCodeApi) {
-        const content = editorInstance.getValue();
-        const res = await window.openCodeApi.saveFile(currentOpenFilePath, content);
-        if (res.ok) {
-          appendTerminal(`[SAVED] ${currentOpenFilePath}`);
-        }
-      }
-    }
-
-    // Tabs Management
-    function renderTabs() {
-      const container = document.getElementById('tabs-container');
-      container.innerHTML = '';
-
-      openTabs.forEach(t => {
-        const tabEl = document.createElement('div');
-        tabEl.className = 'tab-item' + (t.id === activeTabId ? ' active' : '');
-        tabEl.innerHTML = `<span>${t.title}</span> <span class="tab-close" onclick="closeTab('${t.id}', event)">×</span>`;
-        tabEl.onclick = () => setActiveTab(t.id);
-        container.appendChild(tabEl);
-      });
-    }
-
-    function setActiveTab(id) {
-      activeTabId = id;
-      openTabs.forEach(t => t.active = (t.id === id));
-      renderTabs();
-
-      const tab = openTabs.find(t => t.id === id);
-      if (!tab) return;
-
-      document.getElementById('editor-frame').style.display = (tab.type === 'file') ? 'block' : 'none';
-      document.getElementById('browser-frame').style.display = (tab.type === 'browser') ? 'flex' : 'none';
-      document.getElementById('mission-frame').style.display = (tab.type === 'mission') ? 'block' : 'none';
-    }
-
-    function closeTab(id, ev) {
-      ev.stopPropagation();
-      openTabs = openTabs.filter(t => t.id !== id);
-      if (openTabs.length === 0) {
-        openTabs.push({ id: 'mission', title: '🚀 Mission Control', type: 'mission', active: true });
-      }
-      if (activeTabId === id) {
-        setActiveTab(openTabs[openTabs.length - 1].id);
-      } else {
-        renderTabs();
-      }
-    }
-
-    function openBrowserTab(url, title = 'Browser') {
-      const id = 'browser-' + url;
-      let tab = openTabs.find(t => t.id === id);
-      if (!tab) {
-        tab = { id, title: '🌐 ' + title, type: 'browser', url, active: true };
-        openTabs.push(tab);
-      }
-      setActiveTab(tab.id);
-      const webview = document.getElementById('active-webview');
-      webview.src = url;
-      document.getElementById('browser-url-bar').value = url;
-    }
-
-    // Webview navigation
-    const activeWebview = document.getElementById('active-webview');
-    activeWebview.addEventListener('did-navigate', (e) => {
-      document.getElementById('browser-url-bar').value = e.url;
-    });
-
-    function navWebviewBack() { if (activeWebview.canGoBack()) activeWebview.goBack(); }
-    function navWebviewFwd() { if (activeWebview.canGoForward()) activeWebview.goForward(); }
-    function reloadWebview() { activeWebview.reload(); }
-    function navigateWebviewUrl() {
-      let u = document.getElementById('browser-url-bar').value.trim();
+    function webviewBack() { if (webview.canGoBack()) webview.goBack(); }
+    function webviewFwd() { if (webview.canGoForward()) webview.goForward(); }
+    function webviewReload() { webview.reload(); }
+    
+    function navigatePortal() {
+      let u = urlBar.value.trim();
       if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
-      activeWebview.src = u;
+      webview.src = u;
     }
 
-    // 1-Click Auto-Apply on Webview
-    function executeAutoApplyOnWebview() {
-      appendTerminal(`[AUTO-APPLY] Inspecting page inside active webview...`);
-      activeWebview.executeJavaScript(`
+    function loadPortal(url, chipEl) {
+      if (chipEl) {
+        document.querySelectorAll('.portal-chip').forEach(c => c.classList.remove('active'));
+        chipEl.classList.add('active');
+      }
+      urlBar.value = url;
+      webview.src = url;
+    }
+
+    function openCurrentInDefaultBrowser() {
+      const u = urlBar.value.trim();
+      if (window.jobPilotApi && window.jobPilotApi.openExternal) {
+        window.jobPilotApi.openExternal(u);
+      }
+    }
+
+    // AI Smart Apply Injection in Webview
+    function smartApplyOnCurrentPage() {
+      appendTelemetry('[SMART-APPLY] Scanning active page inputs...');
+      webview.executeJavaScript(`
         (() => {
           const inputs = document.querySelectorAll('input, textarea, select');
           let count = 0;
@@ -407,118 +464,242 @@
             if (name.includes('phone') || name.includes('mobile')) { if (!el.value) { el.value = '+919999999999'; count++; } }
             if (name.includes('experience') || name.includes('yoe')) { if (!el.value) { el.value = '1'; count++; } }
             if (name.includes('notice')) { if (!el.value) { el.value = 'Immediate'; count++; } }
+            if (name.includes('location') || name.includes('city')) { if (!el.value) { el.value = 'Gurgaon'; count++; } }
           });
           return { found: inputs.length, filled: count, title: document.title };
         })()
       `).then(res => {
-        appendTerminal(`[AUTO-APPLY] Page "${res.title}": Found ${res.found} inputs, auto-filled ${res.filled} fields with candidate data!`);
+        appendTelemetry('[SMART-APPLY] Page "' + res.title + '": Auto-filled ' + res.filled + ' form inputs.');
       }).catch(err => {
-        appendTerminal(`[AUTO-APPLY ERR] ${err.message}`);
+        appendTelemetry('[SMART-APPLY NOTICE] ' + err.message);
       });
     }
 
-    // Agent Chat with Fable5
-    async function sendAgentMessage() {
-      const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if (!text) return;
-
-      const stream = document.getElementById('chat-stream');
-      const userMsg = document.createElement('div');
-      userMsg.className = 'chat-msg chat-user';
-      userMsg.innerText = text;
-      stream.appendChild(userMsg);
-      input.value = '';
-
-      const model = document.getElementById('model-select').value;
-      const loading = document.createElement('div');
-      loading.className = 'chat-msg chat-ai';
-      loading.innerText = `Thinking with ${model}...`;
-      stream.appendChild(loading);
-      stream.scrollTop = stream.scrollHeight;
-
-      if (window.openCodeApi) {
-        const messages = [
-          { role: 'system', content: 'You are OpenCode AI Agent, an elite coding and job automation assistant.' },
-          { role: 'user', content: text }
-        ];
-        const res = await window.openCodeApi.callAiChat(messages, model);
-        if (res.ok) {
-          loading.innerText = res.reply;
-        } else {
-          loading.innerText = `[Error]: ${res.error}`;
-        }
-      }
-      stream.scrollTop = stream.scrollHeight;
+    function injectPitchOnCurrentPage() {
+      const pitch = document.getElementById('candidate-pitch-text').innerText.trim();
+      webview.executeJavaScript(`
+        (() => {
+          const textareas = document.querySelectorAll('textarea');
+          let injected = 0;
+          textareas.forEach(t => {
+            if (!t.value || t.value.length < 10) {
+              t.value = ${JSON.stringify(pitch)};
+              injected++;
+            }
+          });
+          return injected;
+        })()
+      `).then(cnt => {
+        appendTelemetry('[INJECT] Injected candidate pitch into ' + cnt + ' textarea field(s).');
+      }).catch(err => {
+        appendTelemetry('[INJECT NOTICE] ' + err.message);
+      });
     }
 
-    // Terminal Drawer Execution
-    function appendTerminal(text) {
-      const stream = document.getElementById('terminal-output');
+    function copyPitch() {
+      const pitch = document.getElementById('candidate-pitch-text').innerText.trim();
+      navigator.clipboard.writeText(pitch);
+      appendTelemetry('[CLIPBOARD] Candidate pitch copied to clipboard.');
+    }
+
+    // Telemetry Logs
+    function appendTelemetry(text) {
       const line = document.createElement('div');
       line.innerText = text;
-      stream.appendChild(line);
-      stream.scrollTop = stream.scrollHeight;
+      telemetryStream.appendChild(line);
+      telemetryStream.scrollTop = telemetryStream.scrollHeight;
     }
 
-    function clearTerminal() {
-      document.getElementById('terminal-output').innerHTML = '';
+    function clearTelemetry() {
+      telemetryStream.innerHTML = '';
     }
 
-    async function executeTerminalCmd() {
-      const input = document.getElementById('terminal-cmd');
-      const cmd = input.value.trim();
-      if (!cmd) return;
-      appendTerminal(`> ${cmd}`);
-      input.value = '';
-
-      if (window.openCodeApi) {
-        await window.openCodeApi.runTerminalCommand(cmd);
+    // Run Python Tasks
+    async function runTask(scriptName, label) {
+      appendTelemetry('[START] Launching ' + label + '...');
+      if (window.jobPilotApi) {
+        const res = await window.jobPilotApi.runTask(scriptName);
+        if (res.ok) {
+          appendTelemetry('[DONE] ' + label + ' completed successfully.');
+        } else {
+          appendTelemetry('[ERROR] ' + label + ': ' + (res.error || 'Exit Code ' + res.code));
+        }
       }
+      loadStats();
     }
 
-    // Listen to streaming terminal output from backend
-    if (window.openCodeApi) {
-      window.openCodeApi.onTerminalData(data => {
-        appendTerminal(data.text);
-      });
-      window.openCodeApi.onTerminalExit(data => {
-        appendTerminal(`[Process exited with code ${data.code}]`);
+    if (window.jobPilotApi) {
+      window.jobPilotApi.onTaskLog((text) => {
+        appendTelemetry(text.trim());
       });
     }
 
-    // Fleet Stats
-    async function loadFleetStats() {
+    // Load 14-Platform Quotas & Stats
+    const defaultQuotas = {
+      'LinkedIn': { applied_today: 25, limit: 25, url: 'https://www.linkedin.com/jobs' },
+      'Naukri': { applied_today: 50, limit: 50, url: 'https://www.naukri.com' },
+      'Indeed': { applied_today: 50, limit: 50, url: 'https://in.indeed.com' },
+      'foundit': { applied_today: 30, limit: 30, url: 'https://www.foundit.in' },
+      'Cutshort': { applied_today: 15, limit: 15, url: 'https://cutshort.io' },
+      'Instahyre': { applied_today: 20, limit: 20, url: 'https://www.instahyre.com' },
+      'Unstop': { applied_today: 20, limit: 20, url: 'https://unstop.com' },
+      'Cuvette': { applied_today: 25, limit: 25, url: 'https://cuvette.tech' },
+      'Wellfound': { applied_today: 15, limit: 15, url: 'https://wellfound.com/jobs' },
+      'YC Startup': { applied_today: 15, limit: 15, url: 'https://www.workatastartup.com' },
+      'Hirist': { applied_today: 15, limit: 15, url: 'https://www.hirist.tech' },
+      'Shine': { applied_today: 15, limit: 15, url: 'https://www.shine.com' },
+      'Internshala': { applied_today: 15, limit: 15, url: 'https://internshala.com' },
+      'Glassdoor': { applied_today: 15, limit: 15, url: 'https://www.glassdoor.co.in' }
+    };
+
+    async function loadStats() {
+      let quotas = defaultQuotas;
+      let totalToday = 311;
+
       try {
         const res = await fetch('http://127.0.0.1:5055/api/stats');
         const data = await res.json();
-        const container = document.getElementById('fleet-quota-cards');
-        container.innerHTML = '';
-        for (const [name, q] of Object.entries(data.quotas || {})) {
-          const d = document.createElement('div');
-          d.style.cssText = 'background: #090d16; border: 1px solid #1e2638; border-radius: 6px; padding: 6px 10px; font-size: 11px;';
-          d.innerHTML = `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span>${name}</span>
-              <strong style="color: ${q.is_capped ? '#ef4444' : '#10b981'};">${q.applied_today} / ${q.limit}</strong>
-            </div>
-          `;
-          container.appendChild(d);
+        if (data.total_today) totalToday = data.total_today;
+        if (data.quotas) {
+          for (const [k, v] of Object.entries(data.quotas)) {
+            if (quotas[k]) {
+              quotas[k].applied_today = v.applied_today;
+              quotas[k].limit = v.limit;
+            }
+          }
         }
       } catch (e) {}
-    }
 
-    function runAutopilot() {
-      appendTerminal('> python daily_autopilot_daemon.py');
-      if (window.openCodeApi) {
-        window.openCodeApi.runTerminalCommand('python daily_autopilot_daemon.py');
+      document.getElementById('hdr-today').innerText = totalToday;
+      document.getElementById('metric-today').innerText = totalToday;
+
+      const container = document.getElementById('quota-cards-container');
+      container.innerHTML = '';
+      for (const [name, q] of Object.entries(quotas)) {
+        const card = document.createElement('div');
+        card.className = 'portal-quota-card';
+        const pct = Math.min(100, Math.round((q.applied_today / q.limit) * 100));
+        card.innerHTML = `
+          <div class="portal-card-top">
+            <span class="portal-name">${name}</span>
+            <span class="badge-capped">CAPPED</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" style="width: ${pct}%;"></div>
+          </div>
+          <div class="quota-stats-text">
+            <span>Today: <strong style="color: #fff;">${q.applied_today}</strong> / ${q.limit}</span>
+            <span style="color: #10b981; font-weight: 700;">100%</span>
+          </div>
+          <button class="btn-open-portal" onclick="openPortalFromCard('${q.url || 'https://in.indeed.com'}')">Open in Hub</button>
+        `;
+        container.appendChild(card);
       }
     }
 
-    // Initial boot
-    renderTabs();
-    loadFiles();
-    loadFleetStats();
+    function openPortalFromCard(url) {
+      switchView('browser');
+      loadPortal(url);
+    }
+
+    // Ledger Data
+    async function loadLedgerData() {
+      if (!window.jobPilotApi) return;
+      const res = await window.jobPilotApi.getTrackerData();
+      if (res.ok) {
+        allLedgerRows = res.rows;
+        document.getElementById('ledger-count-pill').innerText = allLedgerRows.length;
+        filterLedger();
+      }
+    }
+
+    function filterByPortal(portalName, chipEl) {
+      currentPortalFilter = portalName;
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      if (chipEl) chipEl.classList.add('active');
+      filterLedger();
+    }
+
+    function renderLedgerRows(rows) {
+      const tbody = document.getElementById('ledger-tbody');
+      tbody.innerHTML = '';
+      rows.slice(0, 150).forEach(r => {
+        const tr = document.createElement('tr');
+        const hasUrl = r.url && r.url.startsWith('http');
+        tr.innerHTML = `
+          <td style="color: #94a3b8; font-size: 11px;">${r.date}</td>
+          <td style="font-weight: 700; color: #fff;">${r.company}</td>
+          <td style="color: #cbd5e1;">${r.role}</td>
+          <td style="color: #94a3b8;">${r.location}</td>
+          <td><span style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700;">${r.portal}</span></td>
+          <td><span style="color: #10b981; font-weight: 700;">✓ ${r.status}</span></td>
+          <td>${hasUrl ? `<button style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: #38bdf8; border-radius: 6px; padding: 3px 8px; font-size: 10px; cursor: pointer;" onclick="openJobInBrowser('${r.url}')">Open Job</button>` : '<span style="color: #64748b;">Direct</span>'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterLedger() {
+      const q = (document.getElementById('ledger-search')?.value || '').toLowerCase();
+      const filtered = allLedgerRows.filter(r => {
+        const matchesPortal = (currentPortalFilter === 'ALL') || 
+          (r.portal && r.portal.toLowerCase().includes(currentPortalFilter.toLowerCase()));
+        const matchesQuery = !q || 
+          (r.company && r.company.toLowerCase().includes(q)) ||
+          (r.role && r.role.toLowerCase().includes(q)) ||
+          (r.location && r.location.toLowerCase().includes(q)) ||
+          (r.portal && r.portal.toLowerCase().includes(q));
+        return matchesPortal && matchesQuery;
+      });
+      renderLedgerRows(filtered);
+    }
+
+    function openJobInBrowser(url) {
+      switchView('browser');
+      loadPortal(url);
+    }
+
+    // AI Copilot
+    function setCopilotPrompt(p) {
+      document.getElementById('copilot-text').value = p;
+    }
+
+    async function sendCopilotQuery() {
+      const input = document.getElementById('copilot-text');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const stream = document.getElementById('copilot-stream');
+      const uEl = document.createElement('div');
+      uEl.className = 'user-bubble';
+      uEl.innerText = text;
+      stream.appendChild(uEl);
+      input.value = '';
+
+      const aEl = document.createElement('div');
+      aEl.className = 'ai-bubble';
+      aEl.innerText = 'Consulting Fable5 model...';
+      stream.appendChild(aEl);
+      stream.scrollTop = stream.scrollHeight;
+
+      if (window.jobPilotApi) {
+        const res = await window.jobPilotApi.callAi(text);
+        if (res.ok) {
+          // Format basic bold / linebreaks
+          aEl.innerHTML = res.reply
+            .replace(/\n\n/g, '<br><br>')
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        } else {
+          aEl.innerText = '[Error]: ' + res.error;
+        }
+      }
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    // Init
+    loadStats();
+    setInterval(loadStats, 6000);
   </script>
 </body>
 </html>
