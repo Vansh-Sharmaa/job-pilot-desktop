@@ -1,20 +1,21 @@
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const http = require('http');
 
 let mainWindow;
-let activeProcess = null;
-const JOBS_DIR = 'D:\\opencode stuff\\job-agents';
+let activeProcesses = new Map();
+let currentWorkspace = 'D:\\opencode stuff\\job-agents';
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1500,
-    height: 950,
+    width: 1560,
+    height: 980,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#0a0d14',
-    title: 'JobPilot AI - Autonomous Workspace',
+    backgroundColor: '#0d1117',
+    title: 'OpenCode Workspace - JobPilot Edition',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       webviewTag: true,
@@ -28,87 +29,112 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    if (activeProcess) {
-      try { activeProcess.kill(); } catch (e) {}
-    }
+    activeProcesses.forEach((proc) => {
+      try { proc.kill(); } catch (e) {}
+    });
+    activeProcesses.clear();
   });
 }
 
-app.whenReady().then(() => {
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
+app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// IPC: Execute Python Tasks with Live Streaming
-ipcMain.handle('run-task', async (event, { scriptName, args = [] }) => {
-  if (activeProcess) {
-    return { ok: false, error: 'A background task is already executing.' };
-  }
+// IPC: Workspace Filesystem
+ipcMain.handle('get-workspace-root', async () => {
+  return currentWorkspace;
+});
 
+ipcMain.handle('list-files', async (event, dirPath = currentWorkspace) => {
+  try {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    const items = [];
+    for (const ent of entries) {
+      if (ent.name.startsWith('.') && ent.name !== '.gitignore') continue;
+      if (['node_modules', '__pycache__', 'dist', 'build', '.git'].includes(ent.name)) continue;
+      
+      const full = path.join(dirPath, ent.name);
+      items.push({
+        name: ent.name,
+        path: full,
+        isDirectory: ent.isDirectory(),
+        size: ent.isDirectory() ? 0 : fs.statSync(full).size
+      });
+    }
+    // Sort directories first, then files
+    items.sort((a, b) => {
+      if (a.isDirectory === b.isDirectory) return a.name.localeCompare(b.name);
+      return a.isDirectory ? -1 : 1;
+    });
+    return { ok: true, items };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle('read-file', async (event, filePath) => {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return { ok: true, content, path: filePath };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle('save-file', async (event, { filePath, content }) => {
+  try {
+    fs.writeFileSync(filePath, content, 'utf-8');
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+// IPC: Terminal / Process Runner
+ipcMain.handle('run-terminal-command', async (event, { cmd, id = 'term-1' }) => {
   return new Promise((resolve) => {
-    const fullScript = path.join(JOBS_DIR, scriptName);
-    const proc = spawn('python', ['-u', fullScript, ...args], {
-      cwd: JOBS_DIR,
+    const isWindows = process.platform === 'win32';
+    const shell = isWindows ? 'powershell.exe' : 'bash';
+    const shellArgs = isWindows ? ['-NoProfile', '-Command', cmd] : ['-c', cmd];
+
+    const proc = spawn(shell, shellArgs, {
+      cwd: currentWorkspace,
       env: { ...process.env, PYTHONUNBUFFERED: '1' }
     });
 
-    activeProcess = proc;
-    mainWindow.webContents.send('task-status', { running: true, task: scriptName });
+    activeProcesses.set(id, proc);
 
-    proc.stdout.on('data', (data) => {
-      const text = data.toString();
-      mainWindow.webContents.send('task-log', text);
+    proc.stdout.on('data', (d) => {
+      mainWindow?.webContents.send('terminal-data', { id, text: d.toString() });
     });
 
-    proc.stderr.on('data', (data) => {
-      const text = data.toString();
-      mainWindow.webContents.send('task-log', text);
+    proc.stderr.on('data', (d) => {
+      mainWindow?.webContents.send('terminal-data', { id, text: d.toString(), isError: true });
     });
 
     proc.on('close', (code) => {
-      activeProcess = null;
-      mainWindow.webContents.send('task-status', { running: false, task: scriptName, code });
+      activeProcesses.delete(id);
+      mainWindow?.webContents.send('terminal-exit', { id, code });
       resolve({ ok: code === 0, code });
     });
 
     proc.on('error', (err) => {
-      activeProcess = null;
-      mainWindow.webContents.send('task-status', { running: false, error: err.message });
+      activeProcesses.delete(id);
+      mainWindow?.webContents.send('terminal-data', { id, text: `Process error: ${err.message}\n`, isError: true });
       resolve({ ok: false, error: err.message });
     });
   });
 });
 
-ipcMain.handle('stop-task', async () => {
-  if (activeProcess) {
-    try {
-      activeProcess.kill('SIGTERM');
-      activeProcess = null;
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
-  }
-  return { ok: true };
-});
-
-// IPC: Call Local AI Router (Fable5 @ localhost:20128)
-ipcMain.handle('call-ai', async (event, { prompt, systemPrompt = 'You are an elite career agent.' }) => {
+// IPC: AI Engine (Router @ localhost:20128)
+ipcMain.handle('call-ai-chat', async (event, { messages, model = 'Fable5', temperature = 0.3 }) => {
   return new Promise((resolve) => {
     const payload = JSON.stringify({
-      model: 'Fable5',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.2
+      model: model,
+      messages: messages,
+      temperature: temperature
     });
 
     const req = http.request(
@@ -117,10 +143,10 @@ ipcMain.handle('call-ai', async (event, { prompt, systemPrompt = 'You are an eli
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer sk-local-router',
+          'Authorization': 'Bearer sk-router',
           'Content-Length': Buffer.byteLength(payload)
         },
-        timeout: 25000
+        timeout: 30000
       },
       (res) => {
         let body = '';
@@ -129,9 +155,9 @@ ipcMain.handle('call-ai', async (event, { prompt, systemPrompt = 'You are an eli
           try {
             const data = JSON.parse(body);
             const reply = data?.choices?.[0]?.message?.content || body;
-            resolve({ ok: true, reply });
+            resolve({ ok: true, reply, raw: data });
           } catch (e) {
-            resolve({ ok: false, error: 'Failed to parse AI response', raw: body });
+            resolve({ ok: false, error: 'Failed to parse AI JSON', raw: body });
           }
         });
       }
