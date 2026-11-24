@@ -2013,54 +2013,33 @@
         const targetUrl = portal.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
 
         if (!extStatus || !extStatus.connected) {
-          showToast('Launching Chrome with JobPilot extension auto-enabled...');
-          logRadarTelemetry('ENGINE:CHROME', `Auto-launching Chrome with JobPilot agent loaded on ${portal.name}...`);
+          showToast('Launching Chrome with JobPilot Autonomous Agent...');
+          logRadarTelemetry('ENGINE:CHROME', `Auto-launching Chrome with JobPilot autonomous agent loaded on ${portal.name}...`);
 
           if (window.jobPilotApi && window.jobPilotApi.launchChromeAgent) {
-            await window.jobPilotApi.launchChromeAgent({ url: targetUrl, action: 'autofill' });
-            logRadarTelemetry('SUCCESS', `Chrome window launched with JobPilot extension. Autofill command queued.`);
+            await window.jobPilotApi.launchChromeAgent({ url: targetUrl, action: 'start_autonomous_apply' });
+            logRadarTelemetry('SUCCESS', `Chrome window launched with JobPilot agent. Autonomous apply queued.`);
           }
 
-          const activeNode = document.querySelector(`.radar-node[data-portal-id="${activeRadarPortalId}"]`);
-          if (activeNode) {
-            const badge = activeNode.querySelector('.radar-node-badge');
-            if (badge) {
-              badge.innerText = 'CHROME ACTIVE';
-              badge.className = 'radar-node-badge completed';
-            }
-          }
+          setPortalApplyingState(activeRadarPortalId, true, { company: portal.name, role: 'AI Role' });
           if (btn) btn.disabled = false;
           return;
         }
 
-        showToast('Initiating Auto-Apply in personal Chrome browser...');
-        logRadarTelemetry('ENGINE:CHROME', `Targeting logged-in Chrome tab on ${portal.name}...`);
+        showToast('Initiating Autonomous Auto-Apply in personal Chrome browser...');
+        logRadarTelemetry('ENGINE:CHROME', `Dispatching autonomous tab agent to active Chrome tab on ${portal.name}...`);
 
-        const activeNode = document.querySelector(`.radar-node[data-portal-id="${activeRadarPortalId}"]`);
-        if (activeNode) {
-          const badge = activeNode.querySelector('.radar-node-badge');
-          if (badge) {
-            badge.innerText = 'INJECTING IN CHROME';
-            badge.className = 'radar-node-badge injecting';
-          }
-        }
+        setPortalApplyingState(activeRadarPortalId, true, { company: portal.name, role: 'AI Role' });
 
         try {
           if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
-            await window.jobPilotApi.sendExtensionCommand({ action: 'autofill' });
-            logRadarTelemetry('AGENT', 'Candidate schema dispatched: Vansh Sharma (MCA AI & Data Science 2026).');
-            logRadarTelemetry('AGENT', 'Injected tailored pitch: 3+ PyTorch and LangChain RAG projects.');
-            logRadarTelemetry('SUCCESS', `Chrome autofill command delivered to active ${portal.name} tab.`);
+            await window.jobPilotApi.sendExtensionCommand({ action: 'start_autonomous_apply' });
+            logRadarTelemetry('AGENT', 'Autonomous agent taking over Chrome tab: Vansh Sharma (MCA AI 2026).');
+            logRadarTelemetry('AGENT', 'Scanning DOM for Easy Apply triggers and form fields.');
+            logRadarTelemetry('SUCCESS', `Autonomous apply dispatched to active ${portal.name} tab.`);
 
             setTimeout(() => {
-              if (activeNode) {
-                const badge = activeNode.querySelector('.radar-node-badge');
-                if (badge) {
-                  badge.innerText = 'APPLIED (JUST NOW)';
-                  badge.className = 'radar-node-badge completed';
-                }
-              }
-              showToast('Command executed in personal Chrome tab!');
+              showToast('Autonomous agent running in Chrome tab!');
               if (btn) btn.disabled = false;
             }, 1200);
           } else {
