@@ -1567,15 +1567,15 @@ ipcMain.handle('trigger-tab-agent', async () => {
 ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_autonomous_apply' } = {}) => {
   try {
     const extPath = path.join(__dirname, '..', 'extension');
-    const chromeCandidates = [
+    const browserCandidates = [
+      'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+      path.join(process.env.LOCALAPPDATA || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
       'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
       'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-      path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-      'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
-      path.join(process.env.LOCALAPPDATA || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe')
+      path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe')
     ];
 
-    let browserExe = chromeCandidates.find(p => fs.existsSync(p));
+    let browserExe = browserCandidates.find(p => fs.existsSync(p));
     if (!browserExe) {
       if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
         shell.openExternal(url);
@@ -1585,7 +1585,7 @@ ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_
 
     const targetUrl = url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
     if (action) {
-      pendingExtensionCommands.push({ action });
+      pendingExtensionCommands.push({ action, url: targetUrl });
     }
 
     const args = [

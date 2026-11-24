@@ -2033,7 +2033,7 @@
 
         try {
           if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
-            await window.jobPilotApi.sendExtensionCommand({ action: 'start_autonomous_apply' });
+            await window.jobPilotApi.sendExtensionCommand({ action: 'start_autonomous_apply', url: targetUrl });
             logRadarTelemetry('AGENT', 'Autonomous agent taking over Chrome tab: Vansh Sharma (MCA AI 2026).');
             logRadarTelemetry('AGENT', 'Scanning DOM for Easy Apply triggers and form fields.');
             logRadarTelemetry('SUCCESS', `Autonomous apply dispatched to active ${portal.name} tab.`);
@@ -4054,7 +4054,7 @@
 
       if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
         logRadarTelemetry('DISPATCH', 'Dispatching autonomous apply agent into active browser tab...');
-        await window.jobPilotApi.sendExtensionCommand({ action: 'start_autonomous_apply' });
+        await window.jobPilotApi.sendExtensionCommand({ action: 'start_autonomous_apply', url: targetUrl });
         const portal = (lastActiveJob?.portal || 'general').toLowerCase();
         setPortalApplyingState(portal, true, { company: lastActiveJob?.company, role: lastActiveJob?.title });
         logRadarTelemetry('SUCCESS', 'Autonomous apply agent dispatched to active tab.');

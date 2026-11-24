@@ -65,43 +65,103 @@ async function pollPendingCommands() {
   } catch (e) {}
 }
 
+const isInternalBrowserUrl = (url) => {
+  if (!url) return true;
+  const u = url.toLowerCase();
+  return u.startsWith('chrome://') || u.startsWith('brave://') || u.startsWith('edge://') || u.startsWith('about:') || u.startsWith('chrome-extension://');
+};
+
 async function executeCommandInActiveTab(cmd) {
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!activeTab || !activeTab.id) return;
+  if (!cmd) return;
+
+  if (cmd.action === 'reload_extension') {
+    chrome.runtime.reload();
+    return;
+  }
+
+  // 1. Query active tab across any window without restricting to currently focused window
+  let tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (!tabs || tabs.length === 0) {
+    tabs = await chrome.tabs.query({ active: true });
+  }
+  if (!tabs || tabs.length === 0) {
+    tabs = await chrome.tabs.query({});
+  }
+
+  let activeTab = tabs && tabs[0];
+  const targetUrl = cmd.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
+
+  // 2. If active tab is internal browser page or missing, open a job portal tab
+  if (!activeTab || isInternalBrowserUrl(activeTab.url)) {
+    if (activeTab && activeTab.id) {
+      activeTab = await chrome.tabs.update(activeTab.id, { url: targetUrl, active: true });
+    } else {
+      activeTab = await chrome.tabs.create({ url: targetUrl, active: true });
+    }
+
+    // Bring browser window to front so the user sees the page open
+    try {
+      if (activeTab.windowId) {
+        chrome.windows.update(activeTab.windowId, { focused: true });
+      }
+    } catch (e) {}
+
+    // Wait for the page to finish loading before dispatching autonomous agent
+    const tabListener = (tabId, changeInfo) => {
+      if (tabId === activeTab.id && changeInfo.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(tabListener);
+        setTimeout(() => dispatchCommandToTab(activeTab, cmd), 1200);
+      }
+    };
+    chrome.tabs.onUpdated.addListener(tabListener);
+    return;
+  }
+
+  // 3. Bring the browser window into focus
+  try {
+    if (activeTab.windowId) {
+      chrome.windows.update(activeTab.windowId, { focused: true });
+    }
+  } catch (e) {}
 
   if (cmd.action === 'navigate' && cmd.url) {
     chrome.tabs.update(activeTab.id, { url: cmd.url });
     return;
   }
 
-  // Ensure content script is present
-  try {
-    chrome.tabs.sendMessage(activeTab.id, {
+  // 4. Dispatch command to active tab
+  await dispatchCommandToTab(activeTab, cmd);
+}
+
+async function dispatchCommandToTab(tab, cmd) {
+  if (!tab || !tab.id) return;
+
+  const sendMsg = () => {
+    chrome.tabs.sendMessage(tab.id, {
       action: cmd.action,
       candidate: candidateProfile,
       meta: cmd.meta || {}
     }, async (response) => {
       if (chrome.runtime.lastError) {
-        // Tab might be freshly opened, try injecting script
+        // Tab might not have content script loaded. Inject dynamically
         try {
           await chrome.scripting.executeScript({
-            target: { tabId: activeTab.id },
+            target: { tabId: tab.id },
             files: ['content.js']
           });
           await chrome.scripting.insertCSS({
-            target: { tabId: activeTab.id },
+            target: { tabId: tab.id },
             files: ['content.css']
           });
-          // Retry sending command after brief delay
           setTimeout(() => {
-            chrome.tabs.sendMessage(activeTab.id, {
+            chrome.tabs.sendMessage(tab.id, {
               action: cmd.action,
               candidate: candidateProfile,
               meta: cmd.meta || {}
-            }, async (retryRes) => {
+            }, (retryRes) => {
               reportCommandResult(cmd.action, retryRes);
             });
-          }, 400);
+          }, 500);
         } catch (injectErr) {
           reportCommandResult(cmd.action, { status: 'error', error: injectErr.message });
         }
@@ -109,9 +169,9 @@ async function executeCommandInActiveTab(cmd) {
         reportCommandResult(cmd.action, response);
       }
     });
-  } catch (err) {
-    reportCommandResult(cmd.action, { status: 'error', error: err.message });
-  }
+  };
+
+  sendMsg();
 }
 
 async function reportCommandResult(action, response) {
