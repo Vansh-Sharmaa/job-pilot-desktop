@@ -6,6 +6,8 @@ const http = require('http');
 
 let mainWindow = null;
 let activeProcess = null;
+let agentAbortRequested = false;
+
 const JOBS_DIR = 'D:\\opencode stuff\\job-agents';
 const TRACKER_PATH = path.join(JOBS_DIR, 'job_applications_tracker.csv');
 let activeRouterUrl = 'http://127.0.0.1:20128/v1';
@@ -23,7 +25,7 @@ const CANDIDATE_PROFILE = {
   noticePeriod: 'Immediate',
   location: 'Gurgaon / Delhi NCR / Bengaluru / Remote',
   skills: ['Python', 'PyTorch', 'LangChain', 'RAG Pipelines', 'FastAPI', 'Docker', 'SQL', 'Algorithms'],
-  pitch: 'MCA in AI & Data Science (Class of 2026). Specialized in Generative AI, LangChain RAG pipelines, and Python backend systems. Immediate joiner.'
+  pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, PyTorch models, and scalable Python/FastAPI microservices. Immediate joiner.'
 };
 
 // Helper: Check if router is responsive
@@ -83,8 +85,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1640,
     height: 980,
-    minWidth: 1200,
-    minHeight: 760,
+    minWidth: 1050,
+    minHeight: 680,
     backgroundColor: '#080a0f',
     title: 'JobPilot Operator : OpenCode Workstation',
     frame: true,
@@ -190,6 +192,27 @@ ipcMain.handle('run-task', async (event, { scriptName, args = [] }) => {
   });
 });
 
+// IPC: Stop Running Python Task
+ipcMain.handle('stop-task', async () => {
+  if (activeProcess) {
+    try {
+      activeProcess.kill();
+      activeProcess = null;
+      mainWindow?.webContents.send('task-status', { running: false, cancelled: true });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+  return { ok: true };
+});
+
+// IPC: Abort Active Agent Loop
+ipcMain.handle('abort-agent', async () => {
+  agentAbortRequested = true;
+  return { ok: true };
+});
+
 // IPC: Router & Model Configuration
 ipcMain.handle('get-model-config', async () => {
   return {
@@ -255,7 +278,6 @@ ipcMain.handle('open-external', async (event, url) => {
 // AUTONOMOUS AGENT ENGINE (TOOL-CALLING LOOP)
 // =====================================================================
 
-// Define the tool catalog available to the autonomous agent
 const AGENT_TOOLS = [
   {
     type: 'function',
@@ -466,6 +488,7 @@ async function executeAgentTool(name, args) {
 // IPC: Execute Autonomous Agent Loop
 ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory = [] }) => {
   await ensureRouter();
+  agentAbortRequested = false;
 
   const systemMessage = {
     role: 'system',
@@ -483,6 +506,10 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
   const toolExecutions = [];
 
   while (loopCount < maxLoops) {
+    if (agentAbortRequested) {
+      return { ok: true, reply: 'Agent execution aborted by user.', toolExecutions };
+    }
+
     loopCount++;
 
     const payload = JSON.stringify({
@@ -548,6 +575,10 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
       messages.push(message);
 
       for (const tCall of message.tool_calls) {
+        if (agentAbortRequested) {
+          return { ok: true, reply: 'Agent execution aborted by user.', toolExecutions };
+        }
+
         const toolName = tCall.function.name;
         let toolArgs = {};
         try {
@@ -587,7 +618,6 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
         });
       }
     } else {
-      // Model returned text response without tool call
       return {
         ok: true,
         reply: message.content || 'Task completed.',

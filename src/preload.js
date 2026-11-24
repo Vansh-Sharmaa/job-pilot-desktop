@@ -4,12 +4,14 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   // Agent & Model APIs
   runAgentLoop: (userPrompt, conversationHistory) => 
     ipcRenderer.invoke('run-agent-loop', { userPrompt, conversationHistory }),
+  abortAgent: () => ipcRenderer.invoke('abort-agent'),
   getModelConfig: () => ipcRenderer.invoke('get-model-config'),
   setModelConfig: (cfg) => ipcRenderer.invoke('set-model-config', cfg),
   getAvailableModels: () => ipcRenderer.invoke('get-available-models'),
   
   // Python fleet task runners
   runTask: (scriptName, args) => ipcRenderer.invoke('run-task', { scriptName, args }),
+  stopTask: () => ipcRenderer.invoke('stop-task'),
   getTrackerData: () => ipcRenderer.invoke('get-tracker-data'),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   
