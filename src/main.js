@@ -51,16 +51,194 @@ function saveConfig() {
 // Candidate profile constants
 const CANDIDATE_PROFILE = {
   name: 'Vansh Sharma',
+  firstName: 'Vansh',
+  lastName: 'Sharma',
   email: 'engagevansh@gmail.com',
   phone: '+919999999999',
-  education: 'Master of Computer Applications (MCA) in AI and Data Science',
-  gradYear: '2026',
-  experience: '0 - 2 YOE (Fresher / Intern / Associate)',
-  noticePeriod: 'Immediate',
+  phoneDigits: '9999999999',
+  city: 'Gurgaon',
+  state: 'Haryana',
+  country: 'India',
+  pinCode: '122001',
   location: 'Gurgaon / Delhi NCR / Bengaluru / Remote',
+  education: 'Master of Computer Applications (MCA) in AI and Data Science',
+  degree: 'Master of Computer Applications',
+  specialization: 'Artificial Intelligence & Data Science',
+  college: 'Amity University',
+  gradYear: '2026',
+  startYear: '2024',
+  cgpa: '8.5',
+  experienceYears: '1',
+  experienceLabel: '0 - 2 YOE (Fresher / Intern / Associate)',
+  noticePeriod: 'Immediate',
+  noticeDays: '0',
+  currentCtc: '0',
+  expectedCtc: '600000',
+  expectedCtcLabel: 'Negotiable / 6 - 10 LPA',
+  linkedin: 'https://linkedin.com/in/vansh-sharma',
+  github: 'https://github.com/Vansh-Sharmaa',
+  portfolio: 'https://github.com/Vansh-Sharmaa',
+  workAuthIndia: 'Yes',
+  needSponsorship: 'No',
+  willingToRelocate: 'Yes',
   skills: ['Python', 'PyTorch', 'LangChain', 'RAG Pipelines', 'FastAPI', 'Docker', 'SQL', 'Algorithms'],
+  skillsExperience: {
+    'python': 2,
+    'machine learning': 2,
+    'ai': 2,
+    'deep learning': 2,
+    'pytorch': 1,
+    'tensorflow': 1,
+    'langchain': 1,
+    'rag': 1,
+    'vector database': 1,
+    'fastapi': 1,
+    'sql': 2,
+    'postgresql': 2,
+    'mongodb': 1,
+    'docker': 1,
+    'git': 2
+  },
   pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, PyTorch models, and scalable Python/FastAPI microservices. Immediate joiner.'
 };
+
+// Knowledge QA Cache Path
+const QA_CACHE_PATH = path.join(RESUME_DIR, 'knowledge_qa.json');
+let qaCache = {};
+try {
+  if (fs.existsSync(QA_CACHE_PATH)) {
+    qaCache = JSON.parse(fs.readFileSync(QA_CACHE_PATH, 'utf-8'));
+  }
+} catch (e) {}
+
+// Duplicate Check Helper
+function checkDuplicate(company, role, url) {
+  const records = parseTrackerCsv();
+  const cNorm = (company || '').toLowerCase().trim();
+  const rNorm = (role || '').toLowerCase().trim();
+  const uNorm = (url || '').toLowerCase().trim();
+
+  for (const r of records) {
+    if (uNorm && r.url && r.url.toLowerCase().trim() === uNorm) {
+      return { isDuplicate: true, date: r.date, status: r.status, matchedOn: 'URL' };
+    }
+    const recCompany = (r.company || '').toLowerCase().trim();
+    const recRole = (r.role || '').toLowerCase().trim();
+    if (cNorm && recCompany && (cNorm.includes(recCompany) || recCompany.includes(cNorm))) {
+      if (rNorm && recRole && (rNorm.includes(recRole) || recRole.includes(rNorm))) {
+        return { isDuplicate: true, date: r.date, status: r.status, matchedOn: 'Company & Role' };
+      }
+    }
+  }
+  return { isDuplicate: false };
+}
+
+// AI Screening Question Answerer
+async function answerQuestionWithAI(question, company = '', role = '') {
+  if (!question || typeof question !== 'string') return { ok: false, answer: '' };
+  const qClean = question.trim().toLowerCase();
+
+  if (qaCache[qClean]) {
+    return { ok: true, answer: qaCache[qClean], cached: true };
+  }
+
+  // Pre-configured common screening answers
+  if (qClean.includes('notice period') || qClean.includes('joining time') || qClean.includes('how soon')) {
+    return { ok: true, answer: 'Immediate joiner (0 days notice period).' };
+  }
+  if (qClean.includes('sponsorship') || qClean.includes('visa')) {
+    return { ok: true, answer: 'No visa sponsorship required. Legally authorized to work in India.' };
+  }
+  if (qClean.includes('authorized to work')) {
+    return { ok: true, answer: 'Yes, legally authorized to work in India.' };
+  }
+  if (qClean.includes('relocate') || qClean.includes('willing to move') || qClean.includes('open to relocate')) {
+    return { ok: true, answer: 'Yes, fully open and willing to relocate to any major tech hub in India or work hybrid/remote.' };
+  }
+  if (qClean.includes('current ctc') || qClean.includes('current salary') || qClean.includes('present ctc')) {
+    return { ok: true, answer: '0 (Fresher completing MCA in 2026).' };
+  }
+  if (qClean.includes('expected ctc') || qClean.includes('expected salary')) {
+    return { ok: true, answer: 'Negotiable as per company compensation standards for entry-level AI roles (6 to 10 LPA).' };
+  }
+  if (qClean.includes('experience with python')) {
+    return { ok: true, answer: '2 years of hands-on experience with Python for machine learning and backend services.' };
+  }
+  if (qClean.includes('experience with pytorch') || qClean.includes('experience with deep learning')) {
+    return { ok: true, answer: '1 year of hands-on experience building and training PyTorch deep learning models.' };
+  }
+  if (qClean.includes('rag') || qClean.includes('langchain')) {
+    return { ok: true, answer: '1 year of hands-on experience building production RAG pipelines with LangChain and vector databases.' };
+  }
+
+  // Query local Fable5 AI gateway on port 20128
+  try {
+    const isAlive = await isRouterAlive();
+    if (!isAlive) await ensureRouter(4000);
+
+    const payload = JSON.stringify({
+      model: config.model || 'Fable5',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are answering an employment screening application question for Vansh Sharma. Vansh is completing MCA in AI & Data Science (Class of 2026), with hands-on expertise in Python, PyTorch, LangChain, RAG architectures, and FastAPI microservices. Immediate joiner. Answer the question directly, concisely in 1 to 2 factual sentences. Never use em-dashes, en-dashes, or robotic fluff.'
+        },
+        {
+          role: 'user',
+          content: `Target Company: ${company || 'Target Company'}\nTarget Role: ${role || 'AI Engineer'}\nScreening Question: ${question}\n\nProvide direct professional answer:`
+        }
+      ],
+      temperature: 0.2
+    });
+
+    const chatUrl = `${config.routerUrl.replace(/\/$/, '')}/chat/completions`;
+    const res = await fetch(chatUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.routerToken}`
+      },
+      body: payload,
+      signal: AbortSignal.timeout(12000)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const ans = data?.choices?.[0]?.message?.content?.trim() || '';
+      if (ans) {
+        qaCache[qClean] = ans;
+        try { fs.writeFileSync(QA_CACHE_PATH, JSON.stringify(qaCache, null, 2), 'utf-8'); } catch (e) {}
+        return { ok: true, answer: ans, cached: false };
+      }
+    }
+  } catch (e) {
+    console.error('AI QA failed:', e.message);
+  }
+
+  const fallback = 'MCA in AI & Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, PyTorch models, and scalable FastAPI microservices. Immediate joiner.';
+  return { ok: true, answer: fallback, fallback: true };
+}
+
+// Fraud & Consultancy Fee Detection Helper
+function checkScam(text) {
+  if (!text || typeof text !== 'string') return { isScam: false, flags: [] };
+  const lower = text.toLowerCase();
+  const scamKeywords = [
+    'registration fee',
+    'training fee',
+    'security deposit',
+    'placement charges',
+    'pay before interview',
+    'refundable deposit',
+    'consultancy fee',
+    'bond of 3 years'
+  ];
+  const matched = scamKeywords.filter(k => lower.includes(k));
+  return {
+    isScam: matched.length > 0,
+    flags: matched
+  };
+}
 
 // =====================================================================
 // BROWSER EXTENSION LOCAL BRIDGE SERVER (PORT 5056)
@@ -89,6 +267,91 @@ function startExtensionBridgeServer() {
         candidate: CANDIDATE_PROFILE,
         pendingCommandCount: pendingExtensionCommands.length
       }));
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/candidate-profile') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, candidate: CANDIDATE_PROFILE }));
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/check-duplicate') {
+      const company = parsedUrl.searchParams.get('company') || '';
+      const role = parsedUrl.searchParams.get('role') || '';
+      const url = parsedUrl.searchParams.get('url') || '';
+      const dup = checkDuplicate(company, role, url);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, ...dup }));
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/check-scam' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          const result = checkScam(payload.text || '');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, ...result }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      });
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/answer-question' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', async () => {
+        try {
+          const payload = JSON.parse(body);
+          const ansResult = await answerQuestionWithAI(payload.question, payload.company, payload.role);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(ansResult));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      });
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/tailor-resume' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          const scriptPath = path.join(RESUME_DIR, 'tailor_resume.py');
+          const args = [
+            scriptPath,
+            '--company', payload.company || 'Target Company',
+            '--role', payload.role || 'AI Engineer',
+            '--jd', payload.jd || ''
+          ];
+          const proc = spawn('python', args, { cwd: RESUME_DIR });
+          let stdout = '';
+          proc.stdout.on('data', d => stdout += d.toString());
+          proc.on('close', (code) => {
+            if (code === 0) {
+              const match = stdout.match(/Tailored resume ready at:\s*(.+?\.pdf)/i);
+              const pdfPath = match ? match[1].trim() : path.join(RESUME_DIR, 'tailored');
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: true, pdfPath }));
+            } else {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, error: 'Tailoring failed' }));
+            }
+          });
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      });
       return;
     }
 
@@ -366,6 +629,52 @@ ipcMain.handle('get-resume-content', async () => {
     }
   } catch (e) {}
   return { ok: false, text: '' };
+});
+
+// IPC: Duplicate Application Detection
+ipcMain.handle('check-duplicate-job', async (event, { company, role, url }) => {
+  return checkDuplicate(company, role, url);
+});
+
+// IPC: AI Screening Question Answerer
+ipcMain.handle('answer-screening-question', async (event, { question, company, role }) => {
+  return await answerQuestionWithAI(question, company, role);
+});
+
+// IPC: Candidate Profile Retrieval
+ipcMain.handle('get-candidate-profile', async () => {
+  return { ok: true, candidate: CANDIDATE_PROFILE };
+});
+
+// IPC: Check Scam / Fraud Alert
+ipcMain.handle('check-job-scam', async (event, { text }) => {
+  return checkScam(text);
+});
+
+// IPC: Get Latest Tailored or Master Resume
+ipcMain.handle('get-latest-tailored-resume', async (event, { company = '' }) => {
+  try {
+    const tailoredDir = path.join(RESUME_DIR, 'tailored');
+    if (fs.existsSync(tailoredDir)) {
+      const files = fs.readdirSync(tailoredDir).filter(f => f.endsWith('.pdf'));
+      if (company) {
+        const cLower = company.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const matched = files.find(f => f.toLowerCase().includes(cLower));
+        if (matched) return { ok: true, path: path.join(tailoredDir, matched), isTailored: true };
+      }
+      if (files.length > 0) {
+        // Return most recent tailored file
+        files.sort((a, b) => {
+          return fs.statSync(path.join(tailoredDir, b)).mtimeMs - fs.statSync(path.join(tailoredDir, a)).mtimeMs;
+        });
+        return { ok: true, path: path.join(tailoredDir, files[0]), isTailored: true };
+      }
+    }
+    if (fs.existsSync(RESUME_PDF_PATH)) {
+      return { ok: true, path: RESUME_PDF_PATH, isTailored: false };
+    }
+  } catch (e) {}
+  return { ok: false, error: 'No resume found' };
 });
 
 // IPC: Dynamic ATS Resume Tailoring

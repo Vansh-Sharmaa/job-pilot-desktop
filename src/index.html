@@ -265,10 +265,14 @@
             <input type="text" class="browser-input" id="browser-url-bar" value="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" onkeydown="if(event.key === 'Enter') navigateBrowser()">
 
             <button class="browser-btn primary" onclick="smartApplyInBrowser()" title="Autofill forms on page">⚡ Smart Apply</button>
+            <button class="browser-btn" onclick="tailorForWebviewJob()" title="Tailor 1-page ATS resume for this posting">⚡ Tailor PDF</button>
             <button class="browser-btn" onclick="injectPitchInBrowser()" title="Inject tailored candidate pitch">📄 Pitch</button>
             <button class="browser-btn" onclick="recordCurrentWebviewJob()" title="Add this job posting to tracker">+ Record</button>
             <button class="browser-btn" onclick="openCurrentExternal()" title="Open in external browser">↗ External</button>
           </div>
+
+          <!-- Browser Safety and Duplicate Alert Banner -->
+          <div id="browser-safety-banner" style="display: none; padding: 5px 12px; font-size: 11px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-hairline);"></div>
 
           <!-- 20 Direct Portals Dock Strip (Monochrome Slate) -->
           <div class="portal-dock-strip">
@@ -802,44 +806,313 @@
     }
 
     function smartApplyInBrowser() {
-      showToast('Executing smart form autofill...');
+      showToast('Executing smart form autofill with edge case resolution...');
       const script = `
         (function() {
           let filled = 0;
-          const map = {
-            'name': 'Vansh Sharma',
-            'full_name': 'Vansh Sharma',
-            'first_name': 'Vansh',
-            'last_name': 'Sharma',
-            'email': 'engagevansh@gmail.com',
-            'phone': '+919999999999',
-            'mobile': '+919999999999',
-            'linkedin': 'https://linkedin.com/in/vansh-sharma',
-            'github': 'https://github.com/Vansh-Sharmaa',
-            'degree': 'MCA in AI & Data Science (Class of 2026)',
-            'experience': '0-2 YOE (Fresher / Intern / Associate)',
-            'notice': 'Immediate'
+          const cand = {
+            name: 'Vansh Sharma',
+            firstName: 'Vansh',
+            lastName: 'Sharma',
+            email: 'engagevansh@gmail.com',
+            phone: '+919999999999',
+            phoneDigits: '9999999999',
+            city: 'Gurgaon',
+            state: 'Haryana',
+            country: 'India',
+            pinCode: '122001',
+            location: 'Gurgaon / Delhi NCR / Remote',
+            education: 'Master of Computer Applications (MCA) in AI and Data Science',
+            degree: 'Master of Computer Applications',
+            college: 'Amity University',
+            gradYear: '2026',
+            cgpa: '8.5',
+            experienceYears: '1',
+            noticePeriod: 'Immediate',
+            noticeDays: '0',
+            currentCtc: '0',
+            expectedCtc: '600000',
+            expectedCtcLabel: 'Negotiable (6 - 10 LPA)',
+            linkedin: 'https://linkedin.com/in/vansh-sharma',
+            github: 'https://github.com/Vansh-Sharmaa',
+            portfolio: 'https://github.com/Vansh-Sharmaa',
+            pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices. Immediate joiner.'
           };
-          document.querySelectorAll('input, textarea').forEach(el => {
-            const attr = (el.name + ' ' + el.id + ' ' + el.placeholder).toLowerCase();
-            for (const [k, v] of Object.entries(map)) {
-              if (attr.includes(k) && !el.value) {
-                el.value = v;
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
+
+          const triggerEvents = (elem) => {
+            elem.dispatchEvent(new Event('input', { bubbles: true }));
+            elem.dispatchEvent(new Event('change', { bubbles: true }));
+            elem.dispatchEvent(new Event('blur', { bubbles: true }));
+            elem.style.outline = '1px solid #3b82f6';
+          };
+
+          const inputs = document.querySelectorAll('input, textarea, select');
+          inputs.forEach(el => {
+            const tag = el.tagName.toLowerCase();
+            const type = (el.type || '').toLowerCase();
+            const identifier = (el.name + ' ' + el.id + ' ' + el.placeholder + ' ' + (el.getAttribute('aria-label') || '')).toLowerCase();
+
+            if (type === 'hidden' || type === 'submit' || type === 'button') return;
+
+            // 1. Radio Buttons and Checkboxes
+            if (type === 'radio' || type === 'checkbox') {
+              const labelEl = el.closest('label') || document.querySelector('label[for="' + el.id + '"]');
+              const labelText = ((labelEl ? labelEl.innerText : '') + ' ' + identifier).toLowerCase();
+
+              if ((labelText.includes('authorized') || labelText.includes('legally authorized') || labelText.includes('eligible to work')) && !labelText.includes('sponsorship')) {
+                if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
+                  el.checked = true;
+                  triggerEvents(el);
+                  filled++;
+                }
+              } else if (labelText.includes('sponsorship') || labelText.includes('require visa')) {
+                if (labelText.includes('no') || el.value.toLowerCase() === 'no') {
+                  el.checked = true;
+                  triggerEvents(el);
+                  filled++;
+                }
+              } else if (labelText.includes('relocate') || labelText.includes('willing to travel') || labelText.includes('comfortable working')) {
+                if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
+                  el.checked = true;
+                  triggerEvents(el);
+                  filled++;
+                }
+              } else if (labelText.includes('immediate') || labelText.includes('join immediately')) {
+                if (labelText.includes('yes') || el.value.toLowerCase() === 'yes' || type === 'checkbox') {
+                  el.checked = true;
+                  triggerEvents(el);
+                  filled++;
+                }
+              } else if (type === 'checkbox' && (labelText.includes('agree') || labelText.includes('certify') || labelText.includes('consent') || labelText.includes('acknowledge'))) {
+                el.checked = true;
+                triggerEvents(el);
                 filled++;
-                break;
               }
+              return;
+            }
+
+            // 2. Select Dropdown Elements
+            if (tag === 'select') {
+              const options = Array.from(el.options);
+              if (identifier.includes('notice')) {
+                const opt = options.find(o => o.text.toLowerCase().includes('immediate') || o.text.toLowerCase().includes('0 days') || o.text.toLowerCase().includes('15 days') || o.value === '0');
+                if (opt) { el.value = opt.value; triggerEvents(el); filled++; }
+              } else if (identifier.includes('experience') || identifier.includes('yoe')) {
+                const opt = options.find(o => o.text.toLowerCase().includes('0-1') || o.text.toLowerCase().includes('1-2') || o.text.toLowerCase().includes('entry') || o.text.toLowerCase().includes('fresher') || o.value === '1');
+                if (opt) { el.value = opt.value; triggerEvents(el); filled++; }
+              } else if (identifier.includes('education') || identifier.includes('degree') || identifier.includes('qualification')) {
+                const opt = options.find(o => o.text.toLowerCase().includes('master') || o.text.toLowerCase().includes('post graduate') || o.text.toLowerCase().includes('mca') || o.text.toLowerCase().includes('m.tech') || o.text.toLowerCase().includes('bachelor'));
+                if (opt) { el.value = opt.value; triggerEvents(el); filled++; }
+              } else if (identifier.includes('country')) {
+                const opt = options.find(o => o.text.toLowerCase() === 'india' || o.value.toLowerCase() === 'in');
+                if (opt) { el.value = opt.value; triggerEvents(el); filled++; }
+              }
+              return;
+            }
+
+            // 3. Text and Number Inputs
+            if (el.value && el.value.trim().length > 0) return;
+
+            if ((identifier.includes('full name') || identifier.includes('candidate name') || identifier.includes('your name')) && !identifier.includes('first') && !identifier.includes('last')) {
+              el.value = cand.name;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('first name') || identifier.includes('firstname') || identifier.includes('fname')) {
+              el.value = cand.firstName;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('last name') || identifier.includes('lastname') || identifier.includes('lname')) {
+              el.value = cand.lastName;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('email') || type === 'email') {
+              el.value = cand.email;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('phone') || identifier.includes('mobile') || identifier.includes('contact') || type === 'tel') {
+              el.value = type === 'number' ? cand.phoneDigits : cand.phone;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('linkedin')) {
+              el.value = cand.linkedin;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('github') || identifier.includes('git profile')) {
+              el.value = cand.github;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('portfolio') || identifier.includes('website') || identifier.includes('personal url')) {
+              el.value = cand.portfolio;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('city') || identifier.includes('location') || identifier.includes('address')) {
+              el.value = cand.city;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('pin') || identifier.includes('postal') || identifier.includes('zip')) {
+              el.value = cand.pinCode;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('college') || identifier.includes('university') || identifier.includes('institute') || identifier.includes('school')) {
+              el.value = cand.college;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('degree') || identifier.includes('qualification') || identifier.includes('major')) {
+              el.value = cand.education;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('passing year') || identifier.includes('grad year') || identifier.includes('graduation year')) {
+              el.value = cand.gradYear;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('cgpa') || identifier.includes('gpa') || identifier.includes('percentage')) {
+              el.value = cand.cgpa;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('notice') || identifier.includes('how soon') || identifier.includes('joining date')) {
+              el.value = type === 'number' ? cand.noticeDays : cand.noticePeriod;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('current ctc') || identifier.includes('current salary') || identifier.includes('present ctc')) {
+              el.value = type === 'number' ? '0' : '0 (Fresher)';
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('expected ctc') || identifier.includes('expected salary')) {
+              el.value = type === 'number' ? cand.expectedCtc : cand.expectedCtcLabel;
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('total experience') || identifier.includes('total yoe') || (identifier.includes('experience') && !identifier.includes('python') && !identifier.includes('pytorch'))) {
+              el.value = type === 'number' ? '1' : '1 year (Fresher / Associate)';
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('python')) {
+              el.value = type === 'number' ? '2' : '2 years';
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('pytorch') || identifier.includes('deep learning')) {
+              el.value = type === 'number' ? '1' : '1 year';
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('langchain') || identifier.includes('rag') || identifier.includes('llm')) {
+              el.value = type === 'number' ? '1' : '1 year';
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('sql') || identifier.includes('database')) {
+              el.value = type === 'number' ? '2' : '2 years';
+              triggerEvents(el);
+              filled++;
+            } else if (identifier.includes('fastapi') || identifier.includes('rest api')) {
+              el.value = type === 'number' ? '1' : '1 year';
+              triggerEvents(el);
+              filled++;
+            } else if (tag === 'textarea' && !el.value) {
+              el.value = cand.pitch;
+              triggerEvents(el);
+              filled++;
             }
           });
+
           return filled;
         })();
       `;
       webview.executeJavaScript(script).then(cnt => {
-        showToast(`Smart Apply: autofilled ${cnt} form fields.`);
+        showToast(`Smart Apply: autofilled ${cnt} form fields with verified candidate data.`);
       }).catch(err => {
         showToast('Smart Apply: ' + err.message);
       });
+    }
+
+    async function tailorForWebviewJob() {
+      showToast('Extracting job description from active webview...');
+      try {
+        const info = await webview.executeJavaScript(`
+          (function() {
+            const h1 = document.querySelector('h1');
+            const title = h1 ? h1.innerText.trim() : document.title;
+            const compEl = document.querySelector('[data-company-name="true"], .company-name, .topcard__org-name-link, .employer-name');
+            const company = compEl ? compEl.innerText.trim() : (document.title.split(/[-|]/)[1] || 'Target Tech Company').trim();
+            const jdEl = document.querySelector('#jobDescriptionText, .jobs-description, .description, [class*="job-details"], article, main');
+            const jd = jdEl ? jdEl.innerText.slice(0, 3500) : (document.body ? document.body.innerText.slice(0, 2500) : '');
+            return { title, company, jd };
+          })();
+        `);
+
+        const company = (info && info.company) ? info.company : 'Target Company';
+        const role = (info && info.title) ? info.title : 'AI Engineer';
+        const jd = (info && info.jd) ? info.jd : '';
+
+        showToast(`Compiling 1-page ATS tailored resume for ${company}...`);
+        if (window.jobPilotApi && window.jobPilotApi.tailorResume) {
+          const res = await window.jobPilotApi.tailorResume({ company, role, jd });
+          if (res.ok) {
+            showToast(`Tailored ATS resume generated for ${company}! Opening PDF...`);
+            if (res.pdfPath && window.jobPilotApi.openPath) {
+              window.jobPilotApi.openPath(res.pdfPath);
+            }
+          } else {
+            showToast('Tailoring failed: ' + res.error);
+          }
+        }
+      } catch (err) {
+        showToast('Extraction failed: ' + err.message);
+      }
+    }
+
+    async function checkCurrentWebviewSafety() {
+      const banner = document.getElementById('browser-safety-banner');
+      if (!banner || !webview) return;
+      const currentUrl = webview.getURL() || '';
+      if (!currentUrl || currentUrl.startsWith('data:') || currentUrl.startsWith('about:')) {
+        banner.style.display = 'none';
+        return;
+      }
+
+      try {
+        const pageData = await webview.executeJavaScript(`
+          (function() {
+            const h1 = document.querySelector('h1');
+            const title = h1 ? h1.innerText.trim() : document.title;
+            const compEl = document.querySelector('[data-company-name="true"], .company-name, .topcard__org-name-link, .employer-name');
+            const company = compEl ? compEl.innerText.trim() : '';
+            const bodySnippet = document.body ? document.body.innerText.slice(0, 4000) : '';
+            return { title, company, text: bodySnippet };
+          })();
+        `);
+
+        const company = pageData?.company || '';
+        const role = pageData?.title || '';
+        const text = pageData?.text || '';
+
+        // 1. Check Scam / Fraud keywords first
+        if (window.jobPilotApi && window.jobPilotApi.checkJobScam) {
+          const scamRes = await window.jobPilotApi.checkJobScam(text);
+          if (scamRes && scamRes.isScam) {
+            banner.style.display = 'flex';
+            banner.style.background = 'rgba(239, 68, 68, 0.15)';
+            banner.style.color = '#fca5a5';
+            banner.style.borderBottom = '1px solid rgba(239, 68, 68, 0.3)';
+            banner.innerHTML = `<span>🚨 <strong>Scam / Fee Warning:</strong> Detected high-risk phrase (${scamRes.match}). Authentic employers do not charge fees.</span><button class="browser-btn" style="padding: 2px 8px; font-size: 10px;" onclick="document.getElementById('browser-safety-banner').style.display='none'">Dismiss</button>`;
+            return;
+          }
+        }
+
+        // 2. Check Duplicate Job in Ledger
+        if (window.jobPilotApi && window.jobPilotApi.checkDuplicateJob) {
+          const dupRes = await window.jobPilotApi.checkDuplicateJob({ company, role, url: currentUrl });
+          if (dupRes && dupRes.isDuplicate) {
+            banner.style.display = 'flex';
+            banner.style.background = 'rgba(245, 158, 11, 0.15)';
+            banner.style.color = '#fde68a';
+            banner.style.borderBottom = '1px solid rgba(245, 158, 11, 0.3)';
+            banner.innerHTML = `<span>⚠️ <strong>Duplicate Application:</strong> You already applied to <strong>${dupRes.record.company}</strong> (${dupRes.record.role}) on ${dupRes.record.date_applied || 'prior date'}.</span><button class="browser-btn" style="padding: 2px 8px; font-size: 10px;" onclick="switchWorkspaceTab('ledger')">View in Ledger</button>`;
+            return;
+          }
+        }
+
+        banner.style.display = 'none';
+      } catch (e) {
+        banner.style.display = 'none';
+      }
     }
 
     function injectPitchInBrowser() {
@@ -1514,6 +1787,21 @@
     loadLedgerData();
     loadStats();
     loadSettingsToUI();
+
+    if (webview) {
+      webview.addEventListener('did-navigate', (e) => {
+        if (urlBar) urlBar.value = e.url;
+        checkCurrentWebviewSafety();
+      });
+      webview.addEventListener('did-navigate-in-page', (e) => {
+        if (urlBar) urlBar.value = e.url;
+        checkCurrentWebviewSafety();
+      });
+      webview.addEventListener('dom-ready', () => {
+        checkCurrentWebviewSafety();
+      });
+    }
+
     setInterval(loadStats, 10000);
     setInterval(refreshFleetStatus, 5000);
   </script>

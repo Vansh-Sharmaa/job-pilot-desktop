@@ -26,14 +26,21 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   // Ledger and Exports
   getTrackerData: () => ipcRenderer.invoke('get-tracker-data'),
   addTrackerEntry: (entry) => ipcRenderer.invoke('add-tracker-entry', entry),
+  checkDuplicateJob: (meta) => ipcRenderer.invoke('check-duplicate-job', meta),
+  checkJobScam: (payload) => ipcRenderer.invoke('check-job-scam', payload),
   exportLedger: (format) => ipcRenderer.invoke('export-ledger', { format }),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   openPath: (filePath) => ipcRenderer.invoke('open-path', filePath),
+
+  // Candidate Profile & AI Q&A
+  getCandidateProfile: () => ipcRenderer.invoke('get-candidate-profile'),
+  answerScreeningQuestion: (payload) => ipcRenderer.invoke('answer-screening-question', payload),
 
   // Resume and Dynamic ATS Tailoring
   openResumePdf: () => ipcRenderer.invoke('open-resume-pdf'),
   getResumeContent: () => ipcRenderer.invoke('get-resume-content'),
   tailorResume: (payload) => ipcRenderer.invoke('tailor-resume', payload),
+  getLatestTailoredResume: (company) => ipcRenderer.invoke('get-latest-tailored-resume', { company }),
   
   // Real-time Event Listeners
   onTaskLog: (callback) => {
