@@ -20,30 +20,16 @@
       <button class="oc-icon-btn" onclick="toggleSidebar()" title="Toggle Sidebar (Ctrl+B)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
       </button>
-      <button class="oc-icon-btn" onclick="toggleSidebar()" title="Projects & Workspaces">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-      </button>
       <button class="oc-icon-btn" onclick="triggerQuickCommand('Open Command Palette')" title="Search & Actions (Ctrl+P)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       </button>
     </div>
 
-    <!-- Center Session Tabs (Exact OpenCode Replica) -->
-    <div class="oc-tabs-container">
-      <div class="oc-tab" onclick="switchSessionTab(0, 'Job hunting help')">
-        <span class="oc-tab-badge">O</span>
-        <span class="oc-tab-title">Job hunting help</span>
-      </div>
-      <div class="oc-tab" onclick="switchSessionTab(1, 'Agents for applying jobs')">
-        <span class="oc-tab-badge">O</span>
-        <span class="oc-tab-title">Agents for applying jobs</span>
-      </div>
-      <div class="oc-tab active" onclick="switchSessionTab(2, 'New app feature ideas')">
-        <span class="oc-tab-badge accent">J</span>
-        <span class="oc-tab-title">New app feature ideas</span>
-        <span class="oc-tab-close" onclick="closeSessionTab(event, 2)">✕</span>
-      </div>
-      <button class="oc-tab-new-btn" onclick="startNewSession()" title="New Chat Session">+</button>
+    <!-- Center App Brand -->
+    <div class="oc-titlebar-center">
+      <span class="oc-brand-logo">⚡</span>
+      <span class="oc-brand-name">JobPilot AI</span>
+      <span class="oc-brand-sub">Workstation</span>
     </div>
 
     <!-- Right Window Frame Controls (Frameless System Controls) -->
@@ -100,12 +86,8 @@
       </div>
     </div>
 
-    <!-- Right Controls: Token Context & Profile Pill & View Toggles -->
+    <!-- Right Controls: Profile Pill & View Toggles -->
     <div class="oc-subbar-right">
-      <div class="oc-token-chip" title="Context Token Window & Model">
-        <span class="oc-token-ring">○</span>
-        <span id="oc-token-val">85k</span>
-      </div>
       <div class="ag-profile-pill" onclick="switchWorkspaceTab('resume')" title="View & Edit Candidate Profile / Resume">
         <span class="ag-profile-dot"></span>
         <span class="ag-profile-name">Vansh Sharma (MCA '26)</span>
@@ -355,33 +337,33 @@
               </div>
             </div>
 
-            <!-- Unified Omnibar URL Input with Integrated Live ATS Pill -->
+            <!-- Unified Omnibar URL Input with Real-time ATS Match -->
             <div class="ubb-omnibar">
               <span class="ubb-lock-icon">🔒</span>
               <input type="text" class="browser-input" id="browser-url-bar"
                 value="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B"
                 onkeydown="if(event.key === 'Enter') navigateBrowser()"
                 placeholder="Enter job posting URL or keywords...">
-              <div class="ubb-ats-pill" id="ats-score-badge" onclick="toggleManualReviewDrawer()" title="Real-time ATS Match Score. Click for Manual Review Drawer.">
+              <div class="ubb-ats-pill" id="ats-score-badge" onclick="scanCurrentPageATS()" title="Live ATS match score based on job keywords" style="display: none;">
                 <i data-lucide="sparkles" class="lucide-icon-sm"></i>
-                <span id="ats-score-text">94% ATS</span>
+                <span id="ats-score-text">ATS --</span>
               </div>
             </div>
 
-            <!-- Actions: Dual Target Selector + 1-Click Auto-Apply & Review & Tools -->
+            <!-- Actions: Dual Target Selector + 1-Click Auto-Apply & ATS Scanner -->
             <div class="ubb-actions">
               <div class="ubb-engine-toggle" onclick="toggleExecutionEngine()" title="Click to toggle apply target: In-App Browser or Personal Chrome Extension">
                 <span id="ubb-engine-icon">🌐</span>
                 <span id="ubb-engine-label">In-App</span>
                 <span style="font-size: 8px; color: var(--text-muted); margin-left: 2px;">▾</span>
               </div>
+              <button class="ubb-btn-review" onclick="scanCurrentPageATS()" title="Scan Job Keywords and Calculate Real ATS Match">
+                <i data-lucide="sparkles" class="lucide-icon-sm"></i>
+                <span>Scan ATS</span>
+              </button>
               <button class="ubb-btn-apply" onclick="autoApplyWithCurrentATS()" title="Automatic 1-Click Form Apply with verified candidate profile">
                 <i data-lucide="zap" class="lucide-icon-sm"></i>
                 <span id="ubb-apply-btn-label">Auto-Apply</span>
-              </button>
-              <button class="ubb-btn-review" onclick="toggleManualReviewDrawer()" title="Review & Customize Form Fields, ATS Tailoring, and Utilities">
-                <i data-lucide="sliders" class="lucide-icon-sm"></i>
-                <span>Review & Tools</span>
               </button>
             </div>
           </div>
@@ -404,168 +386,6 @@
               src="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B"
               useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
               partition="persist:jobpilot" allowpopups></webview>
-
-            <!-- Slide-Out Manual Form Field Editor Drawer -->
-            <div id="manual-review-drawer" class="manual-review-drawer" style="display: none;">
-              <div class="drawer-header">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <i data-lucide="sliders" class="lucide-icon-sm" style="color: #38bdf8;"></i>
-                  <span style="font-weight: 600; font-size: 13px; color: #fff;">Application Tools & Manual Review</span>
-                </div>
-                <button class="browser-icon-btn" onclick="toggleManualReviewDrawer()">✕</button>
-              </div>
-
-              <!-- Top Quick Action Cards -->
-              <div class="drawer-tools-strip">
-                <button class="drawer-tool-btn" onclick="tailorForWebviewJob()" title="Tailor 1-Page ATS PDF for active job">
-                  <i data-lucide="file-text" class="lucide-icon-sm"></i>
-                  <span>Tailor ATS PDF</span>
-                </button>
-                <button class="drawer-tool-btn" onclick="injectPitchInBrowser()" title="Inject pitch into active form textarea">
-                  <i data-lucide="pen-tool" class="lucide-icon-sm"></i>
-                  <span>Inject Pitch</span>
-                </button>
-                <button class="drawer-tool-btn" onclick="recordCurrentWebviewJob()" title="Save job to Ledger">
-                  <i data-lucide="bookmark-plus" class="lucide-icon-sm"></i>
-                  <span>Save to Ledger</span>
-                </button>
-                <button class="drawer-tool-btn" onclick="openCurrentExternal()" title="Open in Chrome">
-                  <i data-lucide="external-link" class="lucide-icon-sm"></i>
-                  <span>Open in Chrome</span>
-                </button>
-              </div>
-
-              <!-- ATS Scan Summary in Drawer -->
-              <div class="drawer-ats-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <div>
-                    <div style="font-size: 12px; font-weight: 600; color: #fff;" id="drawer-ats-role">AI Engineer Posting</div>
-                    <div style="font-size: 11px; color: var(--text-dim);" id="drawer-ats-sub">Matching Vansh Sharma (MCA AI & Data Science 2026)</div>
-                  </div>
-                  <div class="ats-badge-ring high" id="drawer-ats-badge" style="font-size: 11px; padding: 3px 8px;">
-                    <span id="drawer-ats-score">94% Match</span>
-                  </div>
-                </div>
-                <div class="ats-keywords-flow" id="drawer-ats-chips">
-                  <span class="ats-chip matched">✓ Python</span>
-                  <span class="ats-chip matched">✓ PyTorch</span>
-                  <span class="ats-chip matched">✓ LangChain</span>
-                  <span class="ats-chip matched">✓ FastAPI</span>
-                  <span class="ats-chip matched">✓ SQL</span>
-                </div>
-              </div>
-
-              <div class="drawer-body">
-                <div class="drawer-section-title">Personal & Contact Details</div>
-                <div class="drawer-grid-2">
-                  <div class="setting-field">
-                    <span class="setting-label">Full Name</span>
-                    <input type="text" class="setting-input" id="man-name" value="Vansh Sharma">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">Email Address</span>
-                    <input type="email" class="setting-input" id="man-email" value="engagevansh@gmail.com">
-                  </div>
-                </div>
-                <div class="drawer-grid-2">
-                  <div class="setting-field">
-                    <span class="setting-label">Phone / WhatsApp</span>
-                    <input type="text" class="setting-input" id="man-phone" value="+919310461877">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">Location / City</span>
-                    <input type="text" class="setting-input" id="man-city" value="Gurgaon / Delhi NCR / Remote">
-                  </div>
-                </div>
-
-                <div class="drawer-section-title">Education & Graduation</div>
-                <div class="drawer-grid-2">
-                  <div class="setting-field">
-                    <span class="setting-label">Highest Degree</span>
-                    <input type="text" class="setting-input" id="man-degree"
-                      value="Master of Computer Applications (MCA)">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">University / College</span>
-                    <input type="text" class="setting-input" id="man-college" value="Amity University">
-                  </div>
-                </div>
-                <div class="drawer-grid-2">
-                  <div class="setting-field">
-                    <span class="setting-label">Graduation Year</span>
-                    <input type="text" class="setting-input" id="man-gradyear" value="2026">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">CGPA / Score</span>
-                    <input type="text" class="setting-input" id="man-cgpa" value="8.5">
-                  </div>
-                </div>
-
-                <div class="drawer-section-title">Compensation & Notice Period</div>
-                <div class="drawer-grid-2">
-                  <div class="setting-field">
-                    <span class="setting-label">Current CTC (INR)</span>
-                    <input type="text" class="setting-input" id="man-curctc" value="0">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">Expected CTC (INR)</span>
-                    <input type="text" class="setting-input" id="man-expctc" value="600000">
-                  </div>
-                </div>
-                <div class="drawer-grid-2">
-                  <div class="setting-field">
-                    <span class="setting-label">Notice Period</span>
-                    <input type="text" class="setting-input" id="man-notice" value="Immediate (0 days)">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">Total Experience</span>
-                    <input type="text" class="setting-input" id="man-yoe" value="1 year (Fresher / Associate)">
-                  </div>
-                </div>
-
-                <div class="drawer-section-title">Technical Skills Experience (Years)</div>
-                <div class="drawer-grid-3">
-                  <div class="setting-field">
-                    <span class="setting-label">Python</span>
-                    <input type="text" class="setting-input" id="man-skill-python" value="2">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">PyTorch</span>
-                    <input type="text" class="setting-input" id="man-skill-pytorch" value="1">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">LangChain</span>
-                    <input type="text" class="setting-input" id="man-skill-langchain" value="1">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">FastAPI</span>
-                    <input type="text" class="setting-input" id="man-skill-fastapi" value="1">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">SQL</span>
-                    <input type="text" class="setting-input" id="man-skill-sql" value="2">
-                  </div>
-                  <div class="setting-field">
-                    <span class="setting-label">Docker</span>
-                    <input type="text" class="setting-input" id="man-skill-docker" value="1">
-                  </div>
-                </div>
-
-                <div class="drawer-section-title">Custom Application Pitch</div>
-                <div class="setting-field">
-                  <textarea class="setting-input" id="man-pitch"
-                    rows="3">MCA in AI & Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and scaling Python FastAPI microservices. Immediate joiner.</textarea>
-                </div>
-              </div>
-
-              <div class="drawer-footer">
-                <button class="browser-btn" onclick="toggleManualReviewDrawer()">Close</button>
-                <button class="browser-btn primary" onclick="injectManualFieldsIntoForm()">
-                  <i data-lucide="check" class="lucide-icon-sm"></i>
-                  <span>Inject Custom Values Into Form</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -675,7 +495,6 @@
               <div style="display: flex; gap: 6px; align-items: center;">
                 <input type="text" class="ledger-search-box" id="ledger-search"
                   placeholder="Search company, role or portal..." oninput="filterLedger()">
-                <button class="browser-btn primary" onclick="openManualEntryModal()">+ Add Entry</button>
                 <button class="browser-btn" onclick="exportLedgerData('csv')" title="Export full tracker to CSV">⬇
                   CSV</button>
                 <button class="browser-btn" onclick="exportLedgerData('json')" title="Export full tracker to JSON">⬇
@@ -1000,49 +819,6 @@
 
     </main>
 
-  </div>
-
-  <!-- Manual Entry Modal -->
-  <div id="manual-entry-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 600; font-size: 13px; color: #fff;">Record Application Manually</span>
-        <button style="background: none; border: none; color: #64748b; font-size: 14px; cursor: pointer;"
-          onclick="closeManualEntryModal()">✕</button>
-      </div>
-
-      <div class="setting-field">
-        <span class="setting-label">Company Name</span>
-        <input type="text" class="setting-input" id="manual-company" placeholder="e.g. Swiggy">
-      </div>
-
-      <div class="setting-field">
-        <span class="setting-label">Job Title / Role</span>
-        <input type="text" class="setting-input" id="manual-role" value="AI Engineer" placeholder="e.g. AI Engineer">
-      </div>
-
-      <div class="setting-field">
-        <span class="setting-label">Location</span>
-        <input type="text" class="setting-input" id="manual-location" value="Bengaluru / Remote"
-          placeholder="e.g. Gurgaon / Remote">
-      </div>
-
-      <div class="setting-field">
-        <span class="setting-label">Portal</span>
-        <input type="text" class="setting-input" id="manual-portal" value="LinkedIn"
-          placeholder="e.g. LinkedIn, Indeed, Internshala">
-      </div>
-
-      <div class="setting-field">
-        <span class="setting-label">Job URL</span>
-        <input type="text" class="setting-input" id="manual-url" placeholder="https://...">
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px;">
-        <button class="browser-btn" onclick="closeManualEntryModal()">Cancel</button>
-        <button class="browser-btn primary" onclick="submitManualTrackerEntry()">Save to Ledger</button>
-      </div>
-    </div>
   </div>
 
   <!-- Antigravity Bottom Status Bar -->
@@ -1744,7 +1520,7 @@
       }
     }
 
-    async function autoAnalyzeWebviewJob() {
+    async function scanCurrentPageATS(showToastOnScan = false) {
       if (!webview) return;
       const currentUrl = webview.getURL() || '';
       if (!currentUrl || currentUrl.startsWith('data:') || currentUrl.startsWith('about:')) return;
@@ -1752,85 +1528,72 @@
       try {
         const pageData = await webview.executeJavaScript(`
           (function() {
-            const h1 = document.querySelector('h1');
+            const h1 = document.querySelector('h1, [data-testid="job-title"], .jobsearch-JobInfoHeader-title, .jobs-unified-top-card__job-title');
             const title = h1 ? h1.innerText.trim() : document.title;
-            const compEl = document.querySelector('[data-company-name="true"], .company-name, .topcard__org-name-link, .employer-name');
+            const compEl = document.querySelector('[data-company-name="true"], .company-name, .topcard__org-name-link, .employer-name, .jobsearch-CompanyInfoContainer');
             const company = compEl ? compEl.innerText.trim() : '';
-            const bodySnippet = document.body ? document.body.innerText.slice(0, 6000) : '';
+            const bodySnippet = document.body ? document.body.innerText.slice(0, 10000) : '';
             return { title, company, text: bodySnippet };
           })();
         `);
 
-        if (!pageData) return;
-        const text = (pageData.text || '').toLowerCase();
-        let title = pageData.title || '';
+        if (!pageData || !pageData.text) return;
+        const text = pageData.text.toLowerCase();
+        let title = (pageData.title || '').replace(/\s*-\s*Indeed.*$/i, '').replace(/\s*\|\s*LinkedIn.*$/i, '').trim();
         const company = pageData.company || '';
 
-        title = title.replace(/\s*-\s*Indeed.*$/i, '').replace(/\s*\|\s*LinkedIn.*$/i, '').trim();
-
-        // Update omnibar live ATS score badge
+        const badge = document.getElementById('ats-score-badge');
         const scoreEl = document.getElementById('ats-score-text');
-        
-        // Update drawer elements if open
-        const drawerRole = document.getElementById('drawer-ats-role');
-        const drawerSub = document.getElementById('drawer-ats-sub');
-        const drawerScore = document.getElementById('drawer-ats-score');
-        const drawerChips = document.getElementById('drawer-ats-chips');
 
-        if (drawerRole) {
-          drawerRole.innerText = title ? (title.length > 36 ? title.substring(0, 33) + '...' : title) : 'AI Engineer / Python Developer';
-        }
+        // Check if page contains recognizable job description terminology
+        const hasJobKeywords = text.includes('requirement') || text.includes('qualification') || text.includes('experience') || text.includes('responsibilit') || text.includes('skills') || text.includes('job description');
 
-        if (drawerSub) {
-          drawerSub.innerText = company ? `At ${company} | Vansh Sharma (MCA AI & Data Science 2026)` : 'Matching Vansh Sharma (MCA AI & Data Science 2026)';
+        if (!hasJobKeywords && text.length < 300) {
+          if (badge) badge.style.display = 'none';
+          if (showToastOnScan) showToast('Navigate to a specific job posting to scan ATS match');
+          return;
         }
 
         const candidateSkills = [
-          { name: 'Python', re: /\bpython\b/i },
-          { name: 'PyTorch', re: /\bpytorch\b/i },
-          { name: 'LangChain', re: /\blangchain\b/i },
-          { name: 'FastAPI', re: /\bfastapi\b/i },
-          { name: 'SQL', re: /\bsql\b/i },
-          { name: 'Docker', re: /\bdocker\b/i },
-          { name: 'NLP / RAG', re: /\b(nlp|rag|llm|transformers)\b/i },
-          { name: 'Machine Learning', re: /\b(machine learning|deep learning|ml)\b/i },
-          { name: 'Git', re: /\bgit\b/i }
+          { name: 'Python', re: /\bpython\b/i, weight: 15 },
+          { name: 'PyTorch', re: /\b(pytorch|torch)\b/i, weight: 15 },
+          { name: 'LangChain', re: /\b(langchain|langgraph|llamaindex)\b/i, weight: 15 },
+          { name: 'FastAPI', re: /\b(fastapi|flask|django|rest\s*api)\b/i, weight: 10 },
+          { name: 'SQL', re: /\b(sql|postgres|postgresql|mysql)\b/i, weight: 10 },
+          { name: 'Docker', re: /\b(docker|container|kubernetes)\b/i, weight: 10 },
+          { name: 'RAG / NLP', re: /\b(rag|retrieval|vector|embedding|nlp|llm|transformer)\b/i, weight: 15 },
+          { name: 'Machine Learning', re: /\b(machine\s*learning|deep\s*learning|ai|neural)\b/i, weight: 10 }
         ];
 
-        let matched = 0;
-        let chipsHtml = '';
+        let matchedCount = 0;
+        let matchedSkills = [];
+        let totalScore = 0;
 
         candidateSkills.forEach(s => {
-          if (s.re.test(text) || text.length < 100) {
-            matched++;
-            chipsHtml += `<span class="ats-chip matched">✓ ${s.name}</span>`;
+          if (s.re.test(text)) {
+            matchedCount++;
+            matchedSkills.push(s.name);
+            totalScore += s.weight;
           }
         });
 
-        const extraSkills = [
-          { name: 'AWS', re: /\baws\b/i },
-          { name: 'Kubernetes', re: /\bkubernetes\b/i },
-          { name: 'TypeScript', re: /\btypescript\b/i },
-          { name: 'React', re: /\breact\b/i }
-        ];
+        // Compute authentic match score
+        const finalScore = Math.max(38, Math.min(96, Math.round(38 + (totalScore / 100) * 58)));
 
-        extraSkills.forEach(k => {
-          if (k.re.test(text)) {
-            chipsHtml += `<span class="ats-chip missing">+ ${k.name}</span>`;
-          }
-        });
-
-        if (drawerChips && chipsHtml) {
-          drawerChips.innerHTML = chipsHtml;
+        if (scoreEl) scoreEl.innerText = `${finalScore}% Match`;
+        if (badge) {
+          badge.style.display = 'flex';
         }
 
-        const score = Math.min(98, Math.max(78, Math.round(75 + (matched / candidateSkills.length) * 23)));
-        if (scoreEl) scoreEl.innerText = `${score}% ATS`;
-        if (drawerScore) drawerScore.innerText = `${score}% Match`;
+        if (showToastOnScan) {
+          showToast(`ATS Match: ${finalScore}% for ${company || 'Posting'} (${matchedSkills.slice(0, 4).join(', ') || 'AI / Engineering'})`);
+        }
       } catch (e) {
-        // webview execution silent ignore
+        if (showToastOnScan) showToast('Could not scan page text yet. Ensure job page is loaded.');
       }
     }
+
+    const autoAnalyzeWebviewJob = () => scanCurrentPageATS(false);
 
     async function autoApplyWithCurrentATS() {
       const btn = document.querySelector('.ubb-btn-apply');
@@ -1911,14 +1674,7 @@
     }
 
     function toggleManualReviewDrawer() {
-      const drawer = document.getElementById('manual-review-drawer');
-      if (!drawer) return;
-      if (drawer.style.display === 'none' || !drawer.style.display) {
-        drawer.style.display = 'flex';
-        if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
-      } else {
-        drawer.style.display = 'none';
-      }
+      scanCurrentPageATS(true);
     }
 
     async function injectManualFieldsIntoForm() {
@@ -2774,12 +2530,8 @@
       showToast('Opened job URL in browser');
     }
 
-    function openManualEntryModal() {
-      document.getElementById('manual-entry-modal').style.display = 'flex';
-    }
-    function closeManualEntryModal() {
-      document.getElementById('manual-entry-modal').style.display = 'none';
-    }
+    function openManualEntryModal() {}
+    function closeManualEntryModal() {}
 
     async function submitManualTrackerEntry() {
       const company = document.getElementById('manual-company').value.trim();
