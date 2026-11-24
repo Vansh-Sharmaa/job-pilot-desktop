@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
 
   // Candidate Profile & AI Q&A
   getCandidateProfile: () => ipcRenderer.invoke('get-candidate-profile'),
+  updateCandidateProfile: (profile) => ipcRenderer.invoke('update-candidate-profile', profile),
   answerScreeningQuestion: (payload) => ipcRenderer.invoke('answer-screening-question', payload),
 
   // Resume and Dynamic ATS Tailoring

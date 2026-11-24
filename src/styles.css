@@ -213,6 +213,54 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
+.ag-brand-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  letter-spacing: -0.01em;
+  margin-right: 6px;
+}
+
+.ag-view-toggles {
+  display: flex;
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  padding: 1px;
+  gap: 2px;
+}
+
+.ag-profile-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-hairline);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.ag-profile-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.ag-profile-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  flex-shrink: 0;
+}
+
 .ag-nav-right {
   display: flex;
   align-items: center;
@@ -872,22 +920,25 @@ body {
   overflow: hidden;
 }
 
-/* Modern De-congested Omnibar */
-.browser-bar {
+/* Unified Single Browser Bar */
+.unified-browser-bar {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: var(--bg-canvas);
+  height: 44px;
+  background: var(--bg-void);
   border-bottom: 1px solid var(--border-hairline);
   position: relative;
   z-index: 30;
+  flex-shrink: 0;
 }
 
-.browser-nav-group {
+.ubb-nav-left {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .browser-icon-btn {
@@ -913,25 +964,6 @@ body {
   color: #fff;
 }
 
-.browser-omnibar {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-hairline);
-  border-radius: 8px;
-  padding: 2px 8px 2px 4px;
-  gap: 6px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  min-width: 0;
-  position: relative;
-}
-
-.browser-omnibar:focus-within {
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
 .portal-selector-trigger {
   display: flex;
   align-items: center;
@@ -939,7 +971,7 @@ body {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-hairline);
   border-radius: 6px;
-  padding: 2px 8px;
+  padding: 3px 8px;
   font-size: 11px;
   font-weight: 600;
   color: #fff;
@@ -975,6 +1007,30 @@ body {
   margin-left: 1px;
 }
 
+.ubb-omnibar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: 8px;
+  padding: 3px 8px 3px 10px;
+  gap: 8px;
+  min-width: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ubb-omnibar:focus-within {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2);
+}
+
+.ubb-lock-icon {
+  font-size: 11px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
 .browser-input {
   flex: 1;
   background: transparent;
@@ -987,40 +1043,116 @@ body {
   min-width: 0;
 }
 
-.omnibar-radar-pill {
-  display: flex;
-  align-items: center;
-  padding: 2px 4px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.browser-actions-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.smart-apply-btn {
-  background: #fff;
-  color: #000;
-  font-weight: 600;
-  font-size: 11px;
-  padding: 5px 12px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
+.ubb-ats-pill {
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: background 0.15s ease, transform 0.1s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
 }
 
-.smart-apply-btn:hover {
-  background: #e2e8f0;
+.ubb-ats-pill:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.6);
+  transform: scale(1.02);
+}
+
+.ubb-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ubb-btn-apply {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  font-size: 11.5px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+  transition: background 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.ubb-btn-apply:hover {
+  background: #1d4ed8;
   transform: translateY(-0.5px);
+}
+
+.ubb-btn-review {
+  background: var(--bg-surface);
+  color: #e2e8f0;
+  border: 1px solid var(--border-hairline);
+  font-weight: 500;
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ubb-btn-review:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+  color: #fff;
+}
+
+/* Quick Tools Drawer Strip */
+.drawer-tools-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.drawer-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  color: #e2e8f0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drawer-tool-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+  color: #fff;
+}
+
+.drawer-ats-card {
+  padding: 10px 14px;
+  background: rgba(16, 185, 129, 0.04);
+  border-bottom: 1px solid var(--border-hairline);
 }
 
 /* Floating Portal Dropdown Popover */

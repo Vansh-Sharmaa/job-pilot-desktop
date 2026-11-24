@@ -641,9 +641,17 @@ ipcMain.handle('answer-screening-question', async (event, { question, company, r
   return await answerQuestionWithAI(question, company, role);
 });
 
-// IPC: Candidate Profile Retrieval
+// IPC: Candidate Profile Retrieval & Update
 ipcMain.handle('get-candidate-profile', async () => {
   return { ok: true, candidate: CANDIDATE_PROFILE };
+});
+
+ipcMain.handle('update-candidate-profile', async (event, profile) => {
+  if (profile && typeof profile === 'object') {
+    Object.assign(CANDIDATE_PROFILE, profile);
+    return { ok: true, candidate: CANDIDATE_PROFILE };
+  }
+  return { ok: false, error: 'Invalid profile data' };
 });
 
 // IPC: Check Scam / Fraud Alert
