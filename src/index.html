@@ -2010,7 +2010,9 @@
 
       if (executionEngine === 'chrome') {
         const extStatus = await (window.jobPilotApi?.getExtensionStatus ? window.jobPilotApi.getExtensionStatus() : Promise.resolve({ connected: false }));
-        const targetUrl = portal.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
+        const webviewEl = document.getElementById('workspace-webview');
+        const currentWebviewUrl = (webviewEl && typeof webviewEl.getURL === 'function') ? webviewEl.getURL() : '';
+        const targetUrl = (currentWebviewUrl && currentWebviewUrl.startsWith('http')) ? currentWebviewUrl : (portal.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India');
 
         if (!extStatus || !extStatus.connected) {
           showToast('Launching Chrome with JobPilot Autonomous Agent...');

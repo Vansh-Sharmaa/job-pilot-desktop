@@ -608,6 +608,9 @@ function startExtensionBridgeServer() {
     if (parsedUrl.pathname === '/api/pending-command') {
       lastExtensionPing = Date.now();
       const cmd = pendingExtensionCommands.shift() || null;
+      if (cmd) {
+        debugLog(`Bridge dispatched pending command to extension: ${JSON.stringify(cmd)}`);
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true, command: cmd }));
       return;
@@ -619,6 +622,7 @@ function startExtensionBridgeServer() {
       req.on('end', () => {
         try {
           const payload = JSON.parse(body);
+          debugLog(`Bridge received command-result: ${body}`);
           mainWindow?.webContents.send('task-log', `[CHROME EXTENSION] Action '${payload.action}' executed successfully.`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -1555,6 +1559,7 @@ ipcMain.handle('open-extension-folder', async () => {
 });
 
 ipcMain.handle('send-extension-command', async (event, cmd) => {
+  debugLog(`IPC send-extension-command queued: ${JSON.stringify(cmd)}`);
   pendingExtensionCommands.push(cmd);
   return { ok: true, queued: true };
 });
