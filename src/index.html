@@ -179,13 +179,23 @@
               <div class="portal-dock-btn active" onclick="loadPortal('https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B', this)">Indeed India</div>
               <div class="portal-dock-btn" onclick="loadPortal('https://www.linkedin.com/jobs/search/?keywords=AI%20Engineer&f_E=1%2C2&location=India', this)">LinkedIn</div>
               <div class="portal-dock-btn" onclick="loadPortal('https://www.naukri.com/ai-engineer-jobs?experience=0&experience=1', this)">Naukri</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://internshala.com/jobs/ai-jobs/', this)">Internshala</div>
               <div class="portal-dock-btn" onclick="loadPortal('https://cuvette.tech/jobs', this)">Cuvette</div>
               <div class="portal-dock-btn" onclick="loadPortal('https://unstop.com/jobs?experience=0', this)">Unstop</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.foundit.in/srp/results?query=AI+Engineer', this)">foundit</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://www.hirist.tech/search?q=AI%20Engineer', this)">Hirist</div>
               <div class="portal-dock-btn" onclick="loadPortal('https://cutshort.io/jobs/ai-engineer-jobs', this)">Cutshort</div>
               <div class="portal-dock-btn" onclick="loadPortal('https://www.instahyre.com/jobs', this)">Instahyre</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.workatastartup.com/jobs', this)">YC Startup</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://www.foundit.in/srp/results?query=AI+Engineer', this)">foundit</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://www.shine.com/job-search/ai-engineer-jobs', this)">Shine</div>
               <div class="portal-dock-btn" onclick="loadPortal('https://wellfound.com/jobs', this)">Wellfound</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://www.workatastartup.com/jobs', this)">YC Startup</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://hasjob.co/?q=AI', this)">Hasjob</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://remoteok.com/remote-ai-jobs', this)">RemoteOK</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://weworkremotely.com/categories/remote-programming-jobs', this)">WeWorkRemotely</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://www.glassdoor.co.in/Job/india-ai-engineer-jobs-SRCH_IL.0,5_IN115_KO6,17.htm', this)">Glassdoor</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://www.levels.fyi/jobs?keyword=AI%20Engineer', this)">Levels.fyi</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://www.turing.com/jobs', this)">Turing</div>
+              <div class="portal-dock-btn" onclick="loadPortal('https://www.dice.com/jobs?q=AI%20Engineer', this)">Dice</div>
             </div>
 
             <div class="webview-container">
@@ -817,8 +827,23 @@
         if (host.includes('indeed')) portal = 'Indeed';
         else if (host.includes('linkedin')) portal = 'LinkedIn';
         else if (host.includes('naukri')) portal = 'Naukri';
+        else if (host.includes('internshala')) portal = 'Internshala';
         else if (host.includes('cuvette')) portal = 'Cuvette';
         else if (host.includes('unstop')) portal = 'Unstop';
+        else if (host.includes('hirist')) portal = 'Hirist';
+        else if (host.includes('cutshort')) portal = 'Cutshort';
+        else if (host.includes('instahyre')) portal = 'Instahyre';
+        else if (host.includes('foundit')) portal = 'foundit';
+        else if (host.includes('shine')) portal = 'Shine';
+        else if (host.includes('wellfound')) portal = 'Wellfound';
+        else if (host.includes('workatastartup') || host.includes('ycombinator')) portal = 'YC Startup';
+        else if (host.includes('hasjob')) portal = 'Hasjob';
+        else if (host.includes('glassdoor')) portal = 'Glassdoor';
+        else if (host.includes('remoteok')) portal = 'RemoteOK';
+        else if (host.includes('weworkremotely')) portal = 'WeWorkRemotely';
+        else if (host.includes('levels.fyi')) portal = 'Levels.fyi';
+        else if (host.includes('turing')) portal = 'Turing';
+        else if (host.includes('dice')) portal = 'Dice';
 
         if (window.jobPilotApi && window.jobPilotApi.addTrackerEntry) {
           window.jobPilotApi.addTrackerEntry({ company, role: title, location: 'India / Remote', portal, url: u, status: 'Saved' }).then(() => {
@@ -1437,11 +1462,19 @@
       if (p.includes('naukri')) return 'p-tag p-naukri';
       if (p.includes('indeed')) return 'p-tag p-indeed';
       if (p.includes('linkedin')) return 'p-tag p-linkedin';
+      if (p.includes('internshala')) return 'p-tag p-internshala';
+      if (p.includes('hirist')) return 'p-tag p-hirist';
       if (p.includes('foundit')) return 'p-tag p-foundit';
       if (p.includes('cuvette')) return 'p-tag p-cuvette';
       if (p.includes('unstop')) return 'p-tag p-unstop';
       if (p.includes('cutshort')) return 'p-tag p-cutshort';
       if (p.includes('instahyre')) return 'p-tag p-instahyre';
+      if (p.includes('wellfound')) return 'p-tag p-wellfound';
+      if (p.includes('workatastartup') || p.includes('yc')) return 'p-tag p-yc';
+      if (p.includes('hasjob')) return 'p-tag p-hasjob';
+      if (p.includes('shine')) return 'p-tag p-shine';
+      if (p.includes('glassdoor')) return 'p-tag p-glassdoor';
+      if (p.includes('remoteok') || p.includes('weworkremotely') || p.includes('levels') || p.includes('turing') || p.includes('dice')) return 'p-tag p-remote';
       return 'p-tag p-default';
     }
 
@@ -1493,22 +1526,28 @@
       showToast('Opened job URL in browser');
     }
 
-    // 14-Platform Quotas
+    // 20-Platform Quotas
     const defaultQuotas = {
       'LinkedIn': { applied_today: 25, limit: 25, url: 'https://www.linkedin.com/jobs' },
       'Naukri': { applied_today: 50, limit: 50, url: 'https://www.naukri.com' },
       'Indeed': { applied_today: 50, limit: 50, url: 'https://in.indeed.com' },
-      'foundit': { applied_today: 30, limit: 30, url: 'https://www.foundit.in' },
+      'Internshala': { applied_today: 20, limit: 20, url: 'https://internshala.com' },
+      'Cuvette': { applied_today: 25, limit: 25, url: 'https://cuvette.tech' },
+      'Unstop': { applied_today: 20, limit: 20, url: 'https://unstop.com' },
+      'Hirist': { applied_today: 15, limit: 15, url: 'https://www.hirist.tech' },
       'Cutshort': { applied_today: 15, limit: 15, url: 'https://cutshort.io' },
       'Instahyre': { applied_today: 20, limit: 20, url: 'https://www.instahyre.com' },
-      'Unstop': { applied_today: 20, limit: 20, url: 'https://unstop.com' },
-      'Cuvette': { applied_today: 25, limit: 25, url: 'https://cuvette.tech' },
+      'foundit': { applied_today: 30, limit: 30, url: 'https://www.foundit.in' },
+      'Shine': { applied_today: 25, limit: 25, url: 'https://www.shine.com' },
       'Wellfound': { applied_today: 15, limit: 15, url: 'https://wellfound.com/jobs' },
       'YC Startup': { applied_today: 15, limit: 15, url: 'https://www.workatastartup.com' },
-      'Hirist': { applied_today: 15, limit: 15, url: 'https://www.hirist.tech' },
-      'Shine': { applied_today: 15, limit: 15, url: 'https://www.shine.com' },
-      'Internshala': { applied_today: 15, limit: 15, url: 'https://internshala.com' },
-      'Glassdoor': { applied_today: 15, limit: 15, url: 'https://www.glassdoor.co.in' }
+      'Hasjob': { applied_today: 10, limit: 10, url: 'https://hasjob.co' },
+      'Glassdoor': { applied_today: 15, limit: 15, url: 'https://www.glassdoor.co.in' },
+      'RemoteOK': { applied_today: 10, limit: 10, url: 'https://remoteok.com' },
+      'WeWorkRemotely': { applied_today: 10, limit: 10, url: 'https://weworkremotely.com' },
+      'Levels.fyi': { applied_today: 10, limit: 10, url: 'https://www.levels.fyi/jobs' },
+      'Turing': { applied_today: 10, limit: 10, url: 'https://www.turing.com' },
+      'Dice': { applied_today: 15, limit: 15, url: 'https://www.dice.com' }
     };
 
     async function loadStats() {

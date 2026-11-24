@@ -16,14 +16,23 @@
     if (host.includes('indeed')) portal = 'Indeed';
     else if (host.includes('linkedin')) portal = 'LinkedIn';
     else if (host.includes('naukri')) portal = 'Naukri';
-    else if (host.includes('foundit')) portal = 'foundit';
+    else if (host.includes('internshala')) portal = 'Internshala';
+    else if (host.includes('cuvette')) portal = 'Cuvette';
+    else if (host.includes('unstop')) portal = 'Unstop';
+    else if (host.includes('hirist')) portal = 'Hirist';
     else if (host.includes('cutshort')) portal = 'Cutshort';
     else if (host.includes('instahyre')) portal = 'Instahyre';
-    else if (host.includes('unstop')) portal = 'Unstop';
-    else if (host.includes('cuvette')) portal = 'Cuvette';
-    else if (host.includes('workatastartup')) portal = 'YC Startup';
+    else if (host.includes('foundit')) portal = 'foundit';
+    else if (host.includes('shine')) portal = 'Shine';
     else if (host.includes('wellfound')) portal = 'Wellfound';
-    else if (host.includes('hirist')) portal = 'Hirist';
+    else if (host.includes('workatastartup') || host.includes('ycombinator')) portal = 'YC Startup';
+    else if (host.includes('hasjob')) portal = 'Hasjob';
+    else if (host.includes('glassdoor')) portal = 'Glassdoor';
+    else if (host.includes('remoteok')) portal = 'RemoteOK';
+    else if (host.includes('weworkremotely')) portal = 'WeWorkRemotely';
+    else if (host.includes('levels.fyi')) portal = 'Levels.fyi';
+    else if (host.includes('turing')) portal = 'Turing';
+    else if (host.includes('dice')) portal = 'Dice';
     else if (host.includes('google.com/forms')) portal = 'Google Forms';
 
     // Heuristics for job title and company
