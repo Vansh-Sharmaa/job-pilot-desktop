@@ -497,8 +497,8 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 700,
     backgroundColor: '#06070a',
-    title: 'JobPilot Operator : OpenCode Workstation',
-    frame: true,
+    title: 'JobPilot AI',
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       webviewTag: true,
@@ -507,6 +507,8 @@ function createWindow() {
       spellcheck: false
     }
   });
+
+  mainWindow.setMenu(null);
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
@@ -927,6 +929,26 @@ ipcMain.handle('get-available-models', async () => {
     }
   } catch (e) {}
   return { ok: false, models: ['Fable5', 'oc-gpt', 'claude-fable-5', 'ag/claude-opus-4-6-thinking'] };
+});
+
+// IPC: Window Frame Controls
+ipcMain.handle('window-minimize', () => {
+  mainWindow?.minimize();
+  return { ok: true };
+});
+
+ipcMain.handle('window-maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow?.maximize();
+  }
+  return { ok: true };
+});
+
+ipcMain.handle('window-close', () => {
+  mainWindow?.close();
+  return { ok: true };
 });
 
 // IPC: External URL

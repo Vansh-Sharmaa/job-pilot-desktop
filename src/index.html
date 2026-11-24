@@ -12,52 +12,111 @@
 <body>
 
   <!-- =====================================================================
-       ANTIGRAVITY TOP NAVIGATION HEADER
+       OPENCODE 3-LINE WORKSTATION HEADER ARCHITECTURE
+       LINE 1: System Titlebar & Multi-Session Tabs
        ===================================================================== -->
-  <header class="ag-header">
-    <div class="ag-nav-left">
-      <div class="ag-brand-logo" onclick="startNewSession()" title="JobPilot AI">▲</div>
-      <div class="ag-sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar (Ctrl+B)">◫</div>
-      <span class="ag-brand-title">JobPilot</span>
-      <div class="ag-view-toggles">
-        <button class="ag-view-btn active" id="mode-split" onclick="setLayoutMode('split')" title="Split View: Agent + Workspace">◫ Split</button>
-        <button class="ag-view-btn" id="mode-agent" onclick="setLayoutMode('agent')" title="Full Chat Focus">💬 Chat</button>
+  <header class="oc-titlebar">
+    <div class="oc-titlebar-left">
+      <button class="oc-icon-btn" onclick="toggleSidebar()" title="Toggle Sidebar (Ctrl+B)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <button class="oc-icon-btn" onclick="toggleSidebar()" title="Projects & Workspaces">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      </button>
+      <button class="oc-icon-btn" onclick="triggerQuickCommand('Open Command Palette')" title="Search & Actions (Ctrl+P)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </button>
+    </div>
+
+    <!-- Center Session Tabs (Exact OpenCode Replica) -->
+    <div class="oc-tabs-container">
+      <div class="oc-tab" onclick="switchSessionTab(0, 'Job hunting help')">
+        <span class="oc-tab-badge">O</span>
+        <span class="oc-tab-title">Job hunting help</span>
+      </div>
+      <div class="oc-tab" onclick="switchSessionTab(1, 'Agents for applying jobs')">
+        <span class="oc-tab-badge">O</span>
+        <span class="oc-tab-title">Agents for applying jobs</span>
+      </div>
+      <div class="oc-tab active" onclick="switchSessionTab(2, 'New app feature ideas')">
+        <span class="oc-tab-badge accent">J</span>
+        <span class="oc-tab-title">New app feature ideas</span>
+        <span class="oc-tab-close" onclick="closeSessionTab(event, 2)">✕</span>
+      </div>
+      <button class="oc-tab-new-btn" onclick="startNewSession()" title="New Chat Session">+</button>
+    </div>
+
+    <!-- Right Window Frame Controls (Frameless System Controls) -->
+    <div class="oc-win-controls">
+      <button class="oc-win-btn" onclick="if(window.jobPilotApi && window.jobPilotApi.minimizeWindow) window.jobPilotApi.minimizeWindow()" title="Minimize">
+        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+      </button>
+      <button class="oc-win-btn" onclick="if(window.jobPilotApi && window.jobPilotApi.maximizeWindow) window.jobPilotApi.maximizeWindow()" title="Maximize">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1" width="8" height="8"/></svg>
+      </button>
+      <button class="oc-win-btn close" onclick="if(window.jobPilotApi && window.jobPilotApi.closeWindow) window.jobPilotApi.closeWindow()" title="Close">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       LINE 2: Context Breadcrumb, Workspace Switcher & Context Indicators
+       ===================================================================== -->
+  <div class="oc-subbar">
+    <div class="oc-subbar-left">
+      <div class="oc-breadcrumb">
+        <span class="oc-tab-badge accent sm">J</span>
+        <span class="oc-bc-folder">job-pilot-desktop</span>
+        <span class="oc-bc-slash">/</span>
+        <span class="oc-bc-file" id="oc-current-topic">New app feature ideas</span>
+        <span class="oc-bc-dots" onclick="showToast('Topic settings')" title="More Options">···</span>
       </div>
     </div>
 
-    <!-- Center Workspace Navigation Tabs (Clean Unified Bar) -->
-    <div class="ag-segmented-control">
-      <button class="ag-seg-btn active" id="mode-browser" onclick="switchWorkspaceTab('browser')" title="Interactive Job Webview (Ctrl+1)">
-        <i data-lucide="globe" class="lucide-icon-sm"></i>
-        <span>Browser</span>
-      </button>
-      <button class="ag-seg-btn" id="mode-radar" onclick="switchWorkspaceTab('radar')" title="Portal Topology Network (Ctrl+5)">
-        <i data-lucide="network" class="lucide-icon-sm"></i>
-        <span>Radar</span>
-      </button>
-      <button class="ag-seg-btn" id="mode-ledger" onclick="switchWorkspaceTab('ledger')" title="Applications Tracker Ledger (Ctrl+2)">
-        <i data-lucide="clipboard-list" class="lucide-icon-sm"></i>
-        <span>Ledger (<span id="hdr-ledger-count">311</span>)</span>
-      </button>
-      <button class="ag-seg-btn" id="mode-fleet" onclick="switchWorkspaceTab('fleet')" title="Autonomous Multi-Platform Fleet">
-        <i data-lucide="zap" class="lucide-icon-sm"></i>
-        <span>Autopilot</span>
-      </button>
-      <button class="ag-seg-btn" id="mode-resume" onclick="switchWorkspaceTab('resume')" title="Candidate Qualifications & Resume Studio">
-        <i data-lucide="user-check" class="lucide-icon-sm"></i>
-        <span>Profile & Resume</span>
-      </button>
+    <!-- Center Workspace Segmented Control -->
+    <div class="oc-subbar-center">
+      <div class="ag-segmented-control">
+        <button class="ag-seg-btn active" id="mode-browser" onclick="switchWorkspaceTab('browser')" title="Interactive Job Webview (Ctrl+1)">
+          <i data-lucide="globe" class="lucide-icon-sm"></i>
+          <span>Browser</span>
+        </button>
+        <button class="ag-seg-btn" id="mode-radar" onclick="switchWorkspaceTab('radar')" title="Portal Topology Network (Ctrl+5)">
+          <i data-lucide="network" class="lucide-icon-sm"></i>
+          <span>Radar</span>
+        </button>
+        <button class="ag-seg-btn" id="mode-ledger" onclick="switchWorkspaceTab('ledger')" title="Applications Tracker Ledger (Ctrl+2)">
+          <i data-lucide="clipboard-list" class="lucide-icon-sm"></i>
+          <span>Ledger (<span id="hdr-ledger-count">311</span>)</span>
+        </button>
+        <button class="ag-seg-btn" id="mode-fleet" onclick="switchWorkspaceTab('fleet')" title="Autonomous Multi-Platform Fleet">
+          <i data-lucide="zap" class="lucide-icon-sm"></i>
+          <span>Autopilot</span>
+        </button>
+        <button class="ag-seg-btn" id="mode-resume" onclick="switchWorkspaceTab('resume')" title="Candidate Qualifications & Resume Studio">
+          <i data-lucide="user-check" class="lucide-icon-sm"></i>
+          <span>Profile & Resume</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Right Controls: Profile Badge & Window Controls -->
-    <div class="ag-nav-right">
+    <!-- Right Controls: Token Context & Profile Pill & View Toggles -->
+    <div class="oc-subbar-right">
+      <div class="oc-token-chip" title="Context Token Window & Model">
+        <span class="oc-token-ring">○</span>
+        <span id="oc-token-val">85k</span>
+      </div>
       <div class="ag-profile-pill" onclick="switchWorkspaceTab('resume')" title="View & Edit Candidate Profile / Resume">
         <span class="ag-profile-dot"></span>
         <span class="ag-profile-name">Vansh Sharma (MCA '26)</span>
       </div>
+      <div class="ag-view-toggles">
+        <button class="ag-view-btn active" id="mode-split" onclick="setLayoutMode('split')" title="Split View: Agent + Workspace">◫ Split</button>
+        <button class="ag-view-btn" id="mode-agent" onclick="setLayoutMode('agent')" title="Full Chat Focus">💬 Chat</button>
+      </div>
       <button class="ag-icon-btn" onclick="toggleMaximizeWorkspace()" id="btn-toggle-max" title="Maximize Workspace Pane">⛶</button>
     </div>
-  </header>
+  </div>
 
   <!-- Live Chrome Tab Detected Banner -->
   <div id="chrome-active-banner"
@@ -1150,7 +1209,27 @@
 
     function setAgentSession(title) {
       startNewSession();
+      const topicEl = document.getElementById('oc-current-topic');
+      if (topicEl) topicEl.innerText = title;
       showToast('Loaded: ' + title);
+    }
+
+    function switchSessionTab(idx, title) {
+      document.querySelectorAll('.oc-tab').forEach((tab, i) => {
+        if (i === idx) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+      const topicEl = document.getElementById('oc-current-topic');
+      if (topicEl) topicEl.innerText = title;
+      setAgentSession(title);
+    }
+
+    function closeSessionTab(e, idx) {
+      if (e) e.stopPropagation();
+      showToast('Session tab archived');
     }
 
     // 20 Verified Platforms Dictionary

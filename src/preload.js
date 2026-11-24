@@ -32,6 +32,11 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   openPath: (filePath) => ipcRenderer.invoke('open-path', filePath),
 
+  // Window Frame Controls
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
+  maximizeWindow: () => ipcRenderer.invoke('window-maximize'),
+  closeWindow: () => ipcRenderer.invoke('window-close'),
+
   // Candidate Profile & AI Q&A
   getCandidateProfile: () => ipcRenderer.invoke('get-candidate-profile'),
   updateCandidateProfile: (profile) => ipcRenderer.invoke('update-candidate-profile', profile),
