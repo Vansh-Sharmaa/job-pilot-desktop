@@ -35,13 +35,16 @@
       <span id="ext-status-text" style="color: #9ca3af; font-size: 11px;">Extension Ready</span>
     </div>
 
-    <!-- Right Controls -->
+    <!-- Right Controls: Segmented View Controller & Autopilot -->
     <div class="ag-nav-right">
-      <button class="ag-view-btn" id="mode-split" onclick="setLayoutMode('split')" title="Split View: Agent + Workspace (Ctrl+0)">◫ Split</button>
-      <button class="ag-view-btn active" id="mode-agent" onclick="setLayoutMode('agent')" title="Full-width Agent Terminal">▣ Terminal</button>
-      <button class="ag-view-btn" id="mode-browser" onclick="setLayoutMode('browser')" title="Full-width Browser (Ctrl+1)">🌐 Browser</button>
-      <button class="ag-view-btn" id="mode-ledger" onclick="setLayoutMode('ledger')" title="Applications Ledger (Ctrl+2)">📋 Ledger (<span id="hdr-ledger-count">311</span>)</button>
-      <button class="ag-pill-action-btn" onclick="switchWorkspaceTab('fleet')">⚡ Launch Autopilot</button>
+      <div class="ag-segmented-control">
+        <button class="ag-seg-btn active" id="mode-split" onclick="setLayoutMode('split')" title="Split View: Agent + Workspace (Ctrl+0)">◫ Split</button>
+        <button class="ag-seg-btn" id="mode-agent" onclick="setLayoutMode('agent')" title="Full Chat Focus">💬 Chat</button>
+        <button class="ag-seg-btn" id="mode-browser" onclick="switchWorkspaceTab('browser')" title="Browser Focus (Ctrl+1)">🌐 Browser</button>
+        <button class="ag-seg-btn" id="mode-radar" onclick="switchWorkspaceTab('radar')" title="Radar Topology (Ctrl+5)">🛰 Radar</button>
+        <button class="ag-seg-btn" id="mode-ledger" onclick="switchWorkspaceTab('ledger')" title="Ledger (Ctrl+2)">📋 Ledger</button>
+      </div>
+      <button class="ag-pill-action-btn" onclick="switchWorkspaceTab('fleet')">⚡ Autopilot</button>
     </div>
   </header>
 
@@ -242,68 +245,65 @@
            ===================================================================== -->
       <section class="pane-workspace" id="pane-workspace">
 
-        <!-- Workspace Tabs Bar -->
+        <!-- Workspace Tabs Bar (De-congested, Sleek 5 Core Tabs) -->
         <div class="workspace-tabs-bar">
           <div class="ws-tabs-group">
             <button class="ws-tab-btn active" id="wstab-browser" onclick="switchWorkspaceTab('browser')">🌐 Browser</button>
             <button class="ws-tab-btn" id="wstab-radar" onclick="switchWorkspaceTab('radar')">🛰 Radar Topology</button>
             <button class="ws-tab-btn" id="wstab-ledger" onclick="switchWorkspaceTab('ledger')">📋 Ledger (<span id="ws-ledger-count">311</span>)</button>
-            <button class="ws-tab-btn" id="wstab-fleet" onclick="switchWorkspaceTab('fleet')">🚀 Fleet Matrix</button>
-            <button class="ws-tab-btn" id="wstab-resume" onclick="switchWorkspaceTab('resume')">📄 Resume & ATS</button>
-            <button class="ws-tab-btn" id="wstab-quotas" onclick="switchWorkspaceTab('quotas')">⚡ Quotas</button>
-            <button class="ws-tab-btn" id="wstab-telemetry" onclick="switchWorkspaceTab('telemetry')">📊 Telemetry</button>
+            <button class="ws-tab-btn" id="wstab-fleet" onclick="switchWorkspaceTab('fleet')">🚀 Operations</button>
+            <button class="ws-tab-btn" id="wstab-resume" onclick="switchWorkspaceTab('resume')">📄 Resume Studio</button>
             <button class="ws-tab-btn" id="wstab-settings" onclick="switchWorkspaceTab('settings')">⚙ Config</button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button class="browser-icon-btn" onclick="toggleMaximizeWorkspace()" id="btn-toggle-max" title="Toggle Fullscreen Focus">⛶</button>
           </div>
         </div>
 
-        <!-- TAB 1: BROWSER VIEW -->
+        <!-- TAB 1: BROWSER VIEW (CLEAN OMNIBAR WITH INTEGRATED 20-PORTAL DROPDOWN) -->
         <div class="ws-view active-ws" id="ws-browser">
           <div class="browser-bar">
-            <button class="browser-btn" onclick="webviewBack()" title="Back">&lt;</button>
-            <button class="browser-btn" onclick="webviewFwd()" title="Forward">&gt;</button>
-            <button class="browser-btn" onclick="webviewReload()" title="Reload">&#8635;</button>
-
-            <input type="text" class="browser-input" id="browser-url-bar" value="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" onkeydown="if(event.key === 'Enter') navigateBrowser()">
-
-            <!-- Live Topology Pill Indicator -->
-            <div class="radar-live-pill" onclick="switchWorkspaceTab('radar')" title="Live Portal Topology: Click to inspect node graph">
-              <span class="radar-pulse-dot"></span>
-              <span id="radar-live-pill-text">Indeed India: Active</span>
+            <div class="browser-nav-group">
+              <button class="browser-icon-btn" onclick="webviewBack()" title="Back">←</button>
+              <button class="browser-icon-btn" onclick="webviewFwd()" title="Forward">→</button>
+              <button class="browser-icon-btn" onclick="webviewReload()" title="Reload">⟳</button>
             </div>
 
-            <button class="browser-btn primary" onclick="smartApplyInBrowser()" title="Autofill forms on page">⚡ Smart Apply</button>
-            <button class="browser-btn" onclick="tailorForWebviewJob()" title="Tailor 1-page ATS resume for this posting">⚡ Tailor PDF</button>
-            <button class="browser-btn" onclick="injectPitchInBrowser()" title="Inject tailored candidate pitch">📄 Pitch</button>
-            <button class="browser-btn" onclick="recordCurrentWebviewJob()" title="Add this job posting to tracker">+ Record</button>
-            <button class="browser-btn" onclick="openCurrentExternal()" title="Open in external browser">↗ External</button>
+            <!-- Unified Omnibar with Portal Dropdown inside -->
+            <div class="browser-omnibar">
+              <div class="portal-selector-trigger" onclick="togglePortalDropdown(event)" id="portal-selector-trigger" title="Switch Portal (20 Verified Platforms)">
+                <span id="active-portal-icon-badge" class="mini-icon-badge">IN</span>
+                <span id="active-portal-label">Indeed India</span>
+                <span class="portal-caret">▾</span>
+              </div>
+
+              <input type="text" class="browser-input" id="browser-url-bar" value="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" onkeydown="if(event.key === 'Enter') navigateBrowser()" placeholder="Enter job posting URL or keywords...">
+
+              <div class="omnibar-radar-pill" onclick="switchWorkspaceTab('radar')" title="Radar Active : Click for Topology Graph">
+                <span class="radar-pulse-dot"></span>
+              </div>
+            </div>
+
+            <!-- Floating 20-Portals Dropdown Popover -->
+            <div id="portal-dropdown-menu" class="portal-popover" style="display: none;">
+              <input type="text" class="portal-search-input" id="portal-filter-search" placeholder="Filter 20 hiring platforms..." oninput="filterPortalDropdown(this.value)">
+              <div class="portal-grid-list" id="portal-grid-list">
+                <!-- Populated via initPortalDropdown() -->
+              </div>
+            </div>
+
+            <!-- Actions Group -->
+            <div class="browser-actions-group">
+              <button class="smart-apply-btn" onclick="smartApplyInBrowser()" title="Smart form autofill with verified profile">⚡ Smart Apply</button>
+              <button class="browser-icon-btn" onclick="tailorForWebviewJob()" title="Tailor 1-Page ATS Resume for active job">📄 ATS</button>
+              <button class="browser-icon-btn" onclick="injectPitchInBrowser()" title="Inject candidate pitch">✍ Pitch</button>
+              <button class="browser-icon-btn" onclick="recordCurrentWebviewJob()" title="Record job to ledger">+ Save</button>
+              <button class="browser-icon-btn" onclick="openCurrentExternal()" title="Open in external browser">↗</button>
+            </div>
           </div>
 
           <!-- Browser Safety and Duplicate Alert Banner -->
           <div id="browser-safety-banner" style="display: none; padding: 5px 12px; font-size: 11px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-hairline);"></div>
-
-          <!-- 20 Direct Portals Dock Strip (Monochrome Slate) -->
-          <div class="portal-dock-strip">
-            <div class="portal-dock-btn active" onclick="loadPortal('https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B', this)">Indeed India</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.linkedin.com/jobs/search/?keywords=AI%20Engineer&f_E=1%2C2&location=India', this)">LinkedIn</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.naukri.com/ai-engineer-jobs?experience=0&experience=1', this)">Naukri</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://internshala.com/jobs/ai-jobs/', this)">Internshala</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://cuvette.tech/jobs', this)">Cuvette</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://unstop.com/jobs?experience=0', this)">Unstop</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.hirist.tech/search?q=AI%20Engineer', this)">Hirist</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://cutshort.io/jobs/ai-engineer-jobs', this)">Cutshort</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.instahyre.com/jobs', this)">Instahyre</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.foundit.in/srp/results?query=AI+Engineer', this)">foundit</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.shine.com/job-search/ai-engineer-jobs', this)">Shine</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://wellfound.com/jobs', this)">Wellfound</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.workatastartup.com/jobs', this)">YC Startup</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://hasjob.co/?q=AI', this)">Hasjob</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://remoteok.com/remote-ai-jobs', this)">RemoteOK</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://weworkremotely.com/categories/remote-programming-jobs', this)">WeWorkRemotely</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.glassdoor.co.in/Job/india-ai-engineer-jobs-SRCH_IL.0,5_IN115_KO6,17.htm', this)">Glassdoor</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.levels.fyi/jobs?keyword=AI%20Engineer', this)">Levels.fyi</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.turing.com/jobs', this)">Turing</div>
-            <div class="portal-dock-btn" onclick="loadPortal('https://www.dice.com/jobs?q=AI%20Engineer', this)">Dice</div>
-          </div>
 
           <div class="webview-container">
             <webview id="workspace-webview" src="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36" partition="persist:jobpilot" allowpopups></webview>
@@ -755,15 +755,40 @@
         paneAgent.style.display = 'none';
         resizer.style.display = 'none';
         paneWorkspace.style.display = 'flex';
+        paneWorkspace.style.width = '100%';
         switchWorkspaceTab(mode);
+      }
+    }
+
+    function toggleMaximizeWorkspace() {
+      const btn = document.getElementById('btn-toggle-max');
+      if (paneAgent.style.display === 'none') {
+        setLayoutMode('split');
+        if (btn) btn.innerText = '⛶';
+        showToast('Restored side-by-side view');
+      } else {
+        paneAgent.style.display = 'none';
+        resizer.style.display = 'none';
+        paneWorkspace.style.display = 'flex';
+        paneWorkspace.style.width = '100%';
+        if (btn) btn.innerText = '◫';
+        showToast('Expanded to full workspace focus');
       }
     }
 
     // Workspace Tabs
     function switchWorkspaceTab(tabName) {
+      if (paneWorkspace && paneWorkspace.style.display === 'none') {
+        paneWorkspace.style.display = 'flex';
+      }
+
       document.querySelectorAll('.ws-tab-btn').forEach(b => b.classList.remove('active'));
       const activeTabBtn = document.getElementById('wstab-' + tabName);
       if (activeTabBtn) activeTabBtn.classList.add('active');
+
+      document.querySelectorAll('.ag-seg-btn').forEach(b => b.classList.remove('active'));
+      const segBtn = document.getElementById('mode-' + tabName) || document.getElementById('seg-' + tabName);
+      if (segBtn) segBtn.classList.add('active');
 
       document.querySelectorAll('.ws-view').forEach(v => v.classList.remove('active-ws'));
       const targetView = document.getElementById('ws-' + tabName);
@@ -792,6 +817,102 @@
       showToast('Loaded: ' + title);
     }
 
+    // 20 Verified Platforms Dictionary
+    const ALL_20_PORTALS = [
+      { id: 'indeed', name: 'Indeed India', category: 'Tech Hub', badge: 'IN', bg: '#2557a7', url: 'https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B' },
+      { id: 'linkedin', name: 'LinkedIn', category: 'Tech Hub', badge: 'in', bg: '#0a66c2', url: 'https://www.linkedin.com/jobs/search/?keywords=AI%20Engineer&f_E=1%2C2&location=India' },
+      { id: 'naukri', name: 'Naukri', category: 'Tech Hub', badge: 'N', bg: '#1d4ed8', url: 'https://www.naukri.com/ai-engineer-jobs?experience=0&experience=1' },
+      { id: 'internshala', name: 'Internshala', category: 'Fresher / Intern', badge: 'IS', bg: '#008bdc', url: 'https://internshala.com/jobs/ai-jobs/' },
+      { id: 'cuvette', name: 'Cuvette', category: 'Startup Fast-Track', badge: 'CV', bg: '#10b981', url: 'https://cuvette.tech/jobs' },
+      { id: 'unstop', name: 'Unstop', category: 'Fresher / Contests', badge: 'UN', bg: '#f59e0b', url: 'https://unstop.com/jobs?experience=0' },
+      { id: 'hirist', name: 'Hirist Tech', category: 'Premium Tech', badge: 'HR', bg: '#6366f1', url: 'https://www.hirist.tech/search?q=AI%20Engineer' },
+      { id: 'cutshort', name: 'Cutshort', category: 'AI Matching', badge: 'CS', bg: '#8b5cf6', url: 'https://cutshort.io/jobs/ai-engineer-jobs' },
+      { id: 'instahyre', name: 'Instahyre', category: 'Direct HR Invites', badge: 'IH', bg: '#14b8a6', url: 'https://www.instahyre.com/jobs' },
+      { id: 'wellfound', name: 'Wellfound', category: 'Global Startup', badge: 'WF', bg: '#e11d48', url: 'https://wellfound.com/jobs' },
+      { id: 'foundit', name: 'foundit', category: 'Direct Hiring', badge: 'FD', bg: '#7c3aed', url: 'https://www.foundit.in/srp/results?query=AI+Engineer' },
+      { id: 'shine', name: 'Shine', category: 'Direct Hiring', badge: 'SH', bg: '#ea580c', url: 'https://www.shine.com/job-search/ai-engineer-jobs' },
+      { id: 'ycstartup', name: 'YC Startup', category: 'Top YC Startups', badge: 'YC', bg: '#ff6600', url: 'https://www.workatastartup.com/jobs' },
+      { id: 'hasjob', name: 'Hasjob', category: 'Developer Board', badge: 'HJ', bg: '#475569', url: 'https://hasjob.co/?q=AI' },
+      { id: 'remoteok', name: 'RemoteOK', category: 'Global Remote', badge: 'RO', bg: '#06b6d4', url: 'https://remoteok.com/remote-ai-jobs' },
+      { id: 'weworkremotely', name: 'WeWorkRemotely', category: 'Global Remote', badge: 'WR', bg: '#16a34a', url: 'https://weworkremotely.com/categories/remote-programming-jobs' },
+      { id: 'glassdoor', name: 'Glassdoor', category: 'Salary & Reviews', badge: 'GD', bg: '#059669', url: 'https://www.glassdoor.co.in/Job/india-ai-engineer-jobs-SRCH_IL.0,5_IN115_KO6,17.htm' },
+      { id: 'levels', name: 'Levels.fyi', category: 'High Compensation', badge: 'LV', bg: '#0284c7', url: 'https://www.levels.fyi/jobs?keyword=AI%20Engineer' },
+      { id: 'turing', name: 'Turing', category: 'US Remote Tech', badge: 'TU', bg: '#2563eb', url: 'https://www.turing.com/jobs' },
+      { id: 'dice', name: 'Dice Tech', category: 'US Tech Hiring', badge: 'DC', bg: '#dc2626', url: 'https://www.dice.com/jobs?q=AI%20Engineer' }
+    ];
+
+    function initPortalDropdown() {
+      const list = document.getElementById('portal-grid-list');
+      if (!list) return;
+      list.innerHTML = '';
+      ALL_20_PORTALS.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'portal-grid-item' + (p.id === activeRadarPortalId ? ' active' : '');
+        item.dataset.portalId = p.id;
+        item.onclick = (e) => {
+          e.stopPropagation();
+          selectPortalFromDropdown(p);
+        };
+        item.innerHTML = `
+          <span class="mini-icon-badge" style="background: ${p.bg};">${p.badge}</span>
+          <span class="portal-item-name">${p.name}</span>
+          <span class="portal-item-badge">${p.category}</span>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function togglePortalDropdown(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('portal-dropdown-menu');
+      if (!menu) return;
+      const isOpen = menu.style.display === 'flex';
+      if (isOpen) {
+        menu.style.display = 'none';
+      } else {
+        initPortalDropdown();
+        menu.style.display = 'flex';
+        document.getElementById('portal-filter-search')?.focus();
+      }
+    }
+
+    function filterPortalDropdown(q) {
+      const query = (q || '').toLowerCase().trim();
+      document.querySelectorAll('.portal-grid-item').forEach(el => {
+        const text = el.innerText.toLowerCase();
+        el.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+    }
+
+    function selectPortalFromDropdown(p) {
+      const menu = document.getElementById('portal-dropdown-menu');
+      if (menu) menu.style.display = 'none';
+      loadPortal(p.url);
+      updatePortalTriggerBadge(p);
+      showToast(`Connected to ${p.name}`);
+    }
+
+    function updatePortalTriggerBadge(p) {
+      const label = document.getElementById('active-portal-label');
+      const badge = document.getElementById('active-portal-icon-badge');
+      if (label) label.innerText = p.name;
+      if (badge) {
+        badge.innerText = p.badge || p.iconText || 'JP';
+        badge.style.background = p.bg || p.iconBg || '#2557a7';
+      }
+    }
+
+    // Close portal dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('portal-dropdown-menu');
+      const trigger = document.getElementById('portal-selector-trigger');
+      if (menu && menu.style.display === 'flex') {
+        if (!menu.contains(e.target) && !trigger.contains(e.target)) {
+          menu.style.display = 'none';
+        }
+      }
+    });
+
     // Browser Controls
     function webviewBack() { if (webview && webview.canGoBack()) webview.goBack(); }
     function webviewFwd() { if (webview && webview.canGoForward()) webview.goForward(); }
@@ -804,7 +925,11 @@
       }
       webview.src = u;
       const det = detectPortalFromUrl(u);
-      if (det) setActiveRadarPortal(det);
+      if (det) {
+        setActiveRadarPortal(det);
+        const match = ALL_20_PORTALS.find(p => p.id === det);
+        if (match) updatePortalTriggerBadge(match);
+      }
     }
 
     function loadPortal(url, btnEl) {
@@ -815,7 +940,11 @@
         btnEl.classList.add('active');
       }
       const det = detectPortalFromUrl(url);
-      if (det) setActiveRadarPortal(det);
+      if (det) {
+        setActiveRadarPortal(det);
+        const match = ALL_20_PORTALS.find(p => p.id === det);
+        if (match) updatePortalTriggerBadge(match);
+      }
     }
 
     function openCurrentExternal() {
@@ -1582,6 +1711,9 @@
         urlBar.value = portal.url;
         webview.src = portal.url;
       }
+
+      const matchedAll = ALL_20_PORTALS.find(p => p.id === id);
+      if (matchedAll) updatePortalTriggerBadge(matchedAll);
     }
 
     function updateRadarCounts() {
@@ -2115,6 +2247,7 @@
     loadLedgerData();
     loadStats();
     loadSettingsToUI();
+    initPortalDropdown();
 
     if (webview) {
       webview.addEventListener('did-navigate', (e) => {
