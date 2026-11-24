@@ -239,6 +239,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'ASK_AI_QUESTION') {
+    getBridgeToken().then(token => {
+      fetch(`${BRIDGE_URL}/api/answer-question`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-JobPilot-Token': token
+        },
+        body: JSON.stringify(request.payload)
+      })
+      .then(r => r.json())
+      .then(data => sendResponse(data))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    });
+    return true;
+  }
+
   if (request.type === 'SEND_ACTIVE_JOB') {
     getBridgeToken().then(token => {
       fetch(`${BRIDGE_URL}/api/active-job`, {

@@ -291,61 +291,90 @@ function checkDuplicate(company, role, url) {
 }
 
 // AI Screening Question Answerer
-async function answerQuestionWithAI(question, company = '', role = '') {
+function sanitizeHumanAnswer(text) {
+  if (!text) return '';
+  return text
+    .replace(/[\u2014\u2013]/g, ' ')
+    .replace(/[;*`"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function answerQuestionWithAI(question, company = '', role = '', fieldType = 'text', options = []) {
   if (!question || typeof question !== 'string') return { ok: false, answer: '' };
   const qClean = question.trim().toLowerCase();
+  const hasOptions = Array.isArray(options) && options.length > 0;
+  const cacheKey = hasOptions ? `${qClean}::${options.join('|')}` : qClean;
 
-  if (qaCache[qClean]) {
-    return { ok: true, answer: qaCache[qClean], cached: true };
-  }
-
-  // Pre-configured common screening answers
-  if (qClean.includes('notice period') || qClean.includes('joining time') || qClean.includes('how soon')) {
-    return { ok: true, answer: 'Immediate joiner (0 days notice period).' };
-  }
-  if (qClean.includes('sponsorship') || qClean.includes('visa')) {
-    return { ok: true, answer: 'No visa sponsorship required. Legally authorized to work in India.' };
-  }
-  if (qClean.includes('authorized to work')) {
-    return { ok: true, answer: 'Yes, legally authorized to work in India.' };
-  }
-  if (qClean.includes('relocate') || qClean.includes('willing to move') || qClean.includes('open to relocate')) {
-    return { ok: true, answer: 'Yes, fully open and willing to relocate to any major tech hub in India or work hybrid/remote.' };
-  }
-  if (qClean.includes('current ctc') || qClean.includes('current salary') || qClean.includes('present ctc')) {
-    return { ok: true, answer: '0 (Fresher completing MCA in 2026).' };
-  }
-  if (qClean.includes('expected ctc') || qClean.includes('expected salary')) {
-    return { ok: true, answer: 'Negotiable as per company compensation standards for entry-level AI roles (6 to 10 LPA).' };
-  }
-  if (qClean.includes('experience with python')) {
-    return { ok: true, answer: '2 years of hands-on experience with Python for machine learning and backend services.' };
-  }
-  if (qClean.includes('experience with pytorch') || qClean.includes('experience with deep learning')) {
-    return { ok: true, answer: '1 year of hands-on experience building and training PyTorch deep learning models.' };
-  }
-  if (qClean.includes('rag') || qClean.includes('langchain')) {
-    return { ok: true, answer: '1 year of hands-on experience building production RAG pipelines with LangChain and vector databases.' };
+  if (qaCache[cacheKey]) {
+    return { ok: true, answer: qaCache[cacheKey], cached: true };
   }
 
-  // Query local Fable5 AI gateway on port 20128
+  // Pre-configured common screening answers in natural human phrasing
+  if (!hasOptions) {
+    if (qClean.includes('notice period') || qClean.includes('joining time') || qClean.includes('how soon')) {
+      return { ok: true, answer: 'I can join immediately with zero notice period' };
+    }
+    if (qClean.includes('sponsorship') || qClean.includes('visa')) {
+      return { ok: true, answer: 'No I do not need visa sponsorship I am authorized to work in India' };
+    }
+    if (qClean.includes('authorized to work') || qClean.includes('eligible to work')) {
+      return { ok: true, answer: 'Yes I am legally authorized to work in India' };
+    }
+    if (qClean.includes('relocate') || qClean.includes('willing to move') || qClean.includes('open to relocate')) {
+      return { ok: true, answer: 'Yes I am open to relocating or working hybrid or remote' };
+    }
+    if (qClean.includes('current ctc') || qClean.includes('current salary') || qClean.includes('present ctc')) {
+      return { ok: true, answer: fieldType === 'number' ? '0' : '0 as I am a 2026 fresher' };
+    }
+    if (qClean.includes('expected ctc') || qClean.includes('expected salary')) {
+      return { ok: true, answer: fieldType === 'number' ? '600000' : 'Negotiable around 6 to 10 LPA depending on the role' };
+    }
+    if (qClean.includes('experience with python')) {
+      return { ok: true, answer: fieldType === 'number' ? '2' : 'Around 2 years of hands on experience building Python backends and ML scripts' };
+    }
+    if (qClean.includes('experience with pytorch') || qClean.includes('experience with deep learning')) {
+      return { ok: true, answer: fieldType === 'number' ? '1' : 'About 1 year working with PyTorch for model training and fine tuning' };
+    }
+    if (qClean.includes('rag') || qClean.includes('langchain')) {
+      return { ok: true, answer: fieldType === 'number' ? '1' : 'About 1 year building RAG pipelines with LangChain and vector databases' };
+    }
+  }
+
+  // Query local Fable5 AI gateway on port 20128 with full candidate resume context
   try {
     const isAlive = await isRouterAlive();
     if (!isAlive) await ensureRouter(4000);
 
+    const resumeContext = [
+      'Candidate Name: Vansh Sharma',
+      'Location: Gurgaon Haryana India (open to relocate)',
+      'Education: Master of Computer Applications (MCA) in AI and Data Science at Amity University (2024 to 2026, CGPA 8.5)',
+      'Experience level: Fresher / 0 to 2 years hands on project and internship experience',
+      'Core Skills: Python, PyTorch, LangChain, RAG pipelines, Vector Databases, FastAPI, Docker, SQL, PostgreSQL, Git',
+      'Key Projects: Built an autonomous multi platform job application agent, a live RAG question answering system, and fine tuned PyTorch classifiers',
+      'Availability: Immediate joiner (0 days notice), authorized to work in India, no sponsorship needed'
+    ].join('\n');
+
+    let systemPrompt = 'You are Vansh Sharma filling out a job application form yourself. Write in a completely natural, casual yet professional human way, like a real developer typing directly into a form box. Keep answers concise (1 to 2 simple sentences). Do NOT use robotic AI phrases like "I am thrilled", "leverage my expertise", "delve into", or "testament". Do NOT use em-dashes, en-dashes, semicolons, bullet points, or heavy punctuation. Use plain everyday sentences with minimal punctuation.';
+    let userContent = `My Resume:\n${resumeContext}\n\nTarget Company: ${company || 'this company'}\nTarget Role: ${role || 'AI Engineer'}\nField Type: ${fieldType}\nQuestion: ${question}`;
+
+    if (fieldType === 'number') {
+      systemPrompt += ' Since this is a number field, reply ONLY with a single integer number (for example 1 or 2 or 0) and nothing else.';
+    } else if (hasOptions) {
+      systemPrompt += ` Since this is a multiple choice or dropdown question, pick the single best option from the provided list and reply ONLY with that exact option text.`;
+      userContent += `\nAvailable Options: ${JSON.stringify(options)}`;
+    } else {
+      userContent += '\n\nWrite my direct human answer:';
+    }
+
     const payload = JSON.stringify({
       model: config.model || 'Fable5',
       messages: [
-        {
-          role: 'system',
-          content: 'You are answering an employment screening application question for Vansh Sharma. Vansh is completing MCA in AI & Data Science (Class of 2026), with hands-on expertise in Python, PyTorch, LangChain, RAG architectures, and FastAPI microservices. Immediate joiner. Answer the question directly, concisely in 1 to 2 factual sentences. Never use em-dashes, en-dashes, or robotic fluff.'
-        },
-        {
-          role: 'user',
-          content: `Target Company: ${company || 'Target Company'}\nTarget Role: ${role || 'AI Engineer'}\nScreening Question: ${question}\n\nProvide direct professional answer:`
-        }
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent }
       ],
-      temperature: 0.2
+      temperature: 0.3
     });
 
     const chatUrl = `${config.routerUrl.replace(/\/$/, '')}/chat/completions`;
@@ -361,9 +390,10 @@ async function answerQuestionWithAI(question, company = '', role = '') {
 
     if (res.ok) {
       const data = await res.json();
-      const ans = data?.choices?.[0]?.message?.content?.trim() || '';
+      const rawAns = data?.choices?.[0]?.message?.content?.trim() || '';
+      const ans = hasOptions ? rawAns : sanitizeHumanAnswer(rawAns);
       if (ans) {
-        qaCache[qClean] = ans;
+        qaCache[cacheKey] = ans;
         try { fs.writeFileSync(QA_CACHE_PATH, JSON.stringify(qaCache, null, 2), 'utf-8'); } catch (e) {}
         return { ok: true, answer: ans, cached: false };
       }
@@ -372,7 +402,15 @@ async function answerQuestionWithAI(question, company = '', role = '') {
     console.error('AI QA failed:', e.message);
   }
 
-  const fallback = 'MCA in AI & Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, PyTorch models, and scalable FastAPI microservices. Immediate joiner.';
+  if (fieldType === 'number') {
+    return { ok: true, answer: '1', fallback: true };
+  }
+  if (hasOptions) {
+    const yesOpt = options.find(o => o.toLowerCase().includes('yes') || o.toLowerCase().includes('immediate') || o.toLowerCase().includes('india'));
+    return { ok: true, answer: yesOpt || options[0], fallback: true };
+  }
+
+  const fallback = 'I am completing my MCA in AI and Data Science and have hands on experience building RAG pipelines with LangChain PyTorch models and FastAPI backends and I can join immediately';
   return { ok: true, answer: fallback, fallback: true };
 }
 
@@ -515,7 +553,14 @@ function startExtensionBridgeServer() {
       req.on('end', async () => {
         try {
           const payload = JSON.parse(body);
-          const ansResult = await answerQuestionWithAI(payload.question, payload.company, payload.role);
+          const ansResult = await answerQuestionWithAI(
+            payload.question,
+            payload.company,
+            payload.role,
+            payload.fieldType || 'text',
+            payload.options || []
+          );
+          debugLog(`Bridge AI Q&A answered "${(payload.question || '').slice(0, 40)}": ${(ansResult.answer || '').slice(0, 50)}`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(ansResult));
         } catch (e) {

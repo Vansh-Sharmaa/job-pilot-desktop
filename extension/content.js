@@ -283,10 +283,10 @@
 
     while (stepCount < maxSteps && isAgentRunning) {
       stepCount++;
-      updateAgentHud(`Step ${stepCount}: Scanning & filling form fields...`);
-      sendTelemetry('FILL_STEP', `Autonomous agent filling fields on Step ${stepCount}...`);
+      updateAgentHud(`Step ${stepCount}: Scanning & answering form fields...`);
+      sendTelemetry('FILL_STEP', `Autonomous agent filling fields & answering AI questions on Step ${stepCount}...`);
 
-      const filledOnThisStep = executeSmartFormFilling(cand);
+      const filledOnThisStep = await executeSmartFormFillingWithAI(cand, meta);
       totalFilled += filledOnThisStep;
       await sleep(600);
 
@@ -348,77 +348,146 @@
     isAgentRunning = false;
   }
 
-  // Precision Form Control Engine
-  function executeSmartFormFilling(cand) {
-    const inputs = document.querySelectorAll('input, textarea, select');
+  // Extract human-readable question or label for any form field
+  function extractFieldQuestion(el) {
+    if (!el) return '';
+    // 1. Explicit <label for="id">
+    if (el.id) {
+      const explicitLabel = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      if (explicitLabel && explicitLabel.innerText.trim()) return explicitLabel.innerText.trim();
+    }
+    // 2. Wrapping <label>
+    const parentLabel = el.closest('label');
+    if (parentLabel && parentLabel.innerText.trim()) return parentLabel.innerText.trim();
+
+    // 3. Google Forms question container
+    const gFormItem = el.closest('[role="listitem"]');
+    if (gFormItem) {
+      const heading = gFormItem.querySelector('[role="heading"], .M7eMe');
+      if (heading && heading.innerText.trim()) return heading.innerText.trim();
+    }
+
+    // 4. Standard ATS / React form group containers
+    const group = el.closest('.form-group, .field, .question, .form-field, fieldset, [class*="question"], [class*="field"]');
+    if (group) {
+      const lbl = group.querySelector('label, legend, p, span, h3, h4, .label');
+      if (lbl && lbl !== el && lbl.innerText.trim().length > 2 && lbl.innerText.trim().length < 300) {
+        return lbl.innerText.trim();
+      }
+    }
+
+    // 5. Fallback to aria-label or placeholder
+    const aria = el.getAttribute('aria-label') || '';
+    if (aria.trim().length > 2) return aria.trim();
+    if (el.placeholder && el.placeholder.trim().length > 2) return el.placeholder.trim();
+    return (el.name || el.id || '').replace(/[_-]+/g, ' ').trim();
+  }
+
+  function askDesktopAI(question, fieldType = 'text', options = [], meta = {}) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({
+          type: 'ASK_AI_QUESTION',
+          payload: {
+            question,
+            company: meta.company || 'Target Company',
+            role: meta.title || 'AI Engineer',
+            fieldType,
+            options
+          }
+        }, (res) => {
+          if (res && res.ok && res.answer) {
+            resolve(res.answer);
+          } else {
+            resolve('');
+          }
+        });
+      } catch (e) {
+        resolve('');
+      }
+    });
+  }
+
+  // Precision AI-Powered Form Control Engine
+  async function executeSmartFormFillingWithAI(cand, meta = {}) {
+    const inputs = Array.from(document.querySelectorAll('input, textarea, select'));
     let filledCount = 0;
 
-    inputs.forEach(el => {
-      if (el.offsetParent === null) return; // Skip hidden elements
+    for (const el of inputs) {
+      if (el.offsetParent === null) continue; // Skip hidden elements
       const tag = el.tagName.toLowerCase();
       const type = (el.type || '').toLowerCase();
       const identifier = (el.name + ' ' + el.id + ' ' + el.placeholder + ' ' + (el.getAttribute('aria-label') || '')).toLowerCase();
 
-      if (type === 'hidden' || type === 'submit' || type === 'button') return;
+      if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'file') continue;
 
       // 1. Radio Buttons & Checkboxes
       if (type === 'radio' || type === 'checkbox') {
-        const labelEl = el.closest('label') || document.querySelector(`label[for="${el.id}"]`);
+        const labelEl = el.closest('label') || (el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null);
         const labelText = ((labelEl ? labelEl.innerText : '') + ' ' + identifier).toLowerCase();
 
         if ((labelText.includes('authorized') || labelText.includes('legally authorized') || labelText.includes('eligible to work')) && !labelText.includes('sponsorship')) {
           if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
-            el.checked = true;
-            triggerEvents(el);
-            filledCount++;
+            el.checked = true; triggerEvents(el); filledCount++;
           }
         } else if (labelText.includes('sponsorship') || labelText.includes('require visa')) {
           if (labelText.includes('no') || el.value.toLowerCase() === 'no') {
-            el.checked = true;
-            triggerEvents(el);
-            filledCount++;
+            el.checked = true; triggerEvents(el); filledCount++;
           }
         } else if (labelText.includes('relocate') || labelText.includes('comfortable working') || labelText.includes('willing to travel')) {
           if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
-            el.checked = true;
-            triggerEvents(el);
-            filledCount++;
+            el.checked = true; triggerEvents(el); filledCount++;
           }
         } else if (labelText.includes('immediate') || labelText.includes('join immediately')) {
           if (labelText.includes('yes') || el.value.toLowerCase() === 'yes' || type === 'checkbox') {
-            el.checked = true;
-            triggerEvents(el);
-            filledCount++;
+            el.checked = true; triggerEvents(el); filledCount++;
           }
         } else if (type === 'checkbox' && (labelText.includes('agree') || labelText.includes('certify') || labelText.includes('consent') || labelText.includes('acknowledge') || labelText.includes('terms'))) {
-          el.checked = true;
-          triggerEvents(el);
-          filledCount++;
+          el.checked = true; triggerEvents(el); filledCount++;
         }
-        return;
+        continue;
       }
 
       // 2. Select Dropdowns
       if (tag === 'select') {
         const options = Array.from(el.options);
+        let matched = false;
         if (identifier.includes('notice')) {
           const opt = options.find(o => o.text.toLowerCase().includes('immediate') || o.text.toLowerCase().includes('0 days') || o.value === '0');
-          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; }
+          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; matched = true; }
         } else if (identifier.includes('experience') || identifier.includes('yoe')) {
           const opt = options.find(o => o.text.toLowerCase().includes('0-1') || o.text.toLowerCase().includes('1-2') || o.text.toLowerCase().includes('entry') || o.text.toLowerCase().includes('fresher') || o.value === '1');
-          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; }
+          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; matched = true; }
         } else if (identifier.includes('education') || identifier.includes('degree') || identifier.includes('qualification')) {
           const opt = options.find(o => o.text.toLowerCase().includes('master') || o.text.toLowerCase().includes('post graduate') || o.text.toLowerCase().includes('mca') || o.text.toLowerCase().includes('bachelor'));
-          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; }
+          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; matched = true; }
         } else if (identifier.includes('country')) {
           const opt = options.find(o => o.text.toLowerCase() === 'india' || o.value.toLowerCase() === 'in');
-          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; }
+          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; matched = true; }
         }
-        return;
+
+        // Ask AI to pick the best dropdown option if unmatched
+        if (!matched && options.length > 1) {
+          const qText = extractFieldQuestion(el);
+          const optionTexts = options.map(o => o.text.trim()).filter(t => t && !t.toLowerCase().includes('select'));
+          if (qText.length > 4 && optionTexts.length > 0) {
+            el.classList.add('jobpilot-target-highlight');
+            updateAgentHud(`AI selecting option: "${qText.slice(0, 26)}..."`);
+            const aiChoice = await askDesktopAI(qText, 'select', optionTexts, meta);
+            const bestOpt = options.find(o => o.text.trim().toLowerCase() === aiChoice.toLowerCase() || o.text.trim().toLowerCase().includes(aiChoice.toLowerCase()));
+            if (bestOpt) {
+              el.value = bestOpt.value;
+              triggerEvents(el);
+              filledCount++;
+            }
+            el.classList.remove('jobpilot-target-highlight');
+          }
+        }
+        continue;
       }
 
-      // 3. Text, Email, Tel, and Number Inputs
-      if (el.value && el.value.trim().length > 0) return; // Preserve existing user entries
+      // 3. Text, Email, Tel, Number, and Textarea Inputs
+      if (el.value && el.value.trim().length > 0) continue; // Preserve existing user entries
 
       let valToSet = '';
       if ((identifier.includes('full name') || identifier.includes('candidate name') || identifier.includes('your name')) && !identifier.includes('first') && !identifier.includes('last')) {
@@ -454,36 +523,58 @@
       } else if (identifier.includes('current ctc') || identifier.includes('current salary') || identifier.includes('present ctc')) {
         valToSet = type === 'number' ? '0' : '0 (Fresher)';
       } else if (identifier.includes('expected ctc') || identifier.includes('expected salary')) {
-        valToSet = type === 'number' ? (cand.expectedCtc || '600000') : 'Negotiable (6 - 10 LPA)';
+        valToSet = type === 'number' ? (cand.expectedCtc || '600000') : 'Negotiable 6 to 10 LPA';
       } else if (identifier.includes('total experience') || identifier.includes('total yoe') || (identifier.includes('experience') && !identifier.includes('python') && !identifier.includes('pytorch'))) {
-        valToSet = type === 'number' ? '1' : '1 year (Fresher / Associate)';
-      } else if (identifier.includes('python')) {
-        valToSet = type === 'number' ? '2' : '2 years';
-      } else if (identifier.includes('pytorch') || identifier.includes('deep learning')) {
         valToSet = type === 'number' ? '1' : '1 year';
-      } else if (identifier.includes('langchain') || identifier.includes('rag') || identifier.includes('llm')) {
-        valToSet = type === 'number' ? '1' : '1 year';
-      } else if (identifier.includes('sql') || identifier.includes('database')) {
-        valToSet = type === 'number' ? '2' : '2 years';
-      } else if (identifier.includes('fastapi') || identifier.includes('rest api')) {
-        valToSet = type === 'number' ? '1' : '1 year';
-      } else if (tag === 'textarea' && !el.value) {
-        valToSet = cand.pitch || 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices. Immediate joiner.';
+      } else {
+        // Custom company screening question: ask local AI using Vansh's resume!
+        const questionText = extractFieldQuestion(el);
+        if (questionText && questionText.length >= 4 && !questionText.toLowerCase().includes('search')) {
+          el.classList.add('jobpilot-target-highlight');
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          updateAgentHud(`AI answering: "${questionText.slice(0, 28)}..."`);
+          sendTelemetry('AI_QA', `Generating human answer for: ${questionText.slice(0, 60)}`);
+          const aiAns = await askDesktopAI(questionText, type === 'number' ? 'number' : 'text', [], meta);
+          if (aiAns) {
+            valToSet = aiAns;
+          }
+          el.classList.remove('jobpilot-target-highlight');
+        }
       }
 
       if (valToSet) {
         el.value = valToSet;
         triggerEvents(el);
         filledCount++;
+        await sleep(80);
       }
-    });
+    }
 
     return filledCount;
   }
 
-  function executeAutoFill(customCand) {
-    const cand = customCand || activeCandidate;
-    return executeSmartFormFilling(cand);
+  async function executeAutoFill(customCand) {
+    const cand = customCand || activeCandidate || {
+      name: 'Vansh Sharma',
+      firstName: 'Vansh',
+      lastName: 'Sharma',
+      email: 'engagevansh@gmail.com',
+      phone: '+919310461877',
+      phoneDigits: '9310461877',
+      city: 'Gurgaon',
+      college: 'Amity University',
+      education: 'MCA in AI & Data Science',
+      gradYear: '2026',
+      cgpa: '8.5',
+      noticePeriod: 'Immediate',
+      noticeDays: '0',
+      expectedCtc: '600000',
+      linkedin: 'https://linkedin.com/in/vansh-sharma',
+      github: 'https://github.com/Vansh-Sharmaa',
+      portfolio: 'https://github.com/Vansh-Sharmaa'
+    };
+    const meta = extractJobMetadata();
+    return await executeSmartFormFillingWithAI(cand, meta);
   }
 
   function executeInjectPitch() {
@@ -614,9 +705,10 @@
       runAutonomousApplyAgent();
     });
 
-    document.getElementById('jp-btn-autofill').addEventListener('click', () => {
-      const filled = executeAutoFill();
-      showPillNotice(`✓ Auto-filled ${filled} inputs!`);
+    document.getElementById('jp-btn-autofill').addEventListener('click', async () => {
+      showPillNotice('AI analyzing form questions...');
+      const filled = await executeAutoFill();
+      showPillNotice(`✓ AI auto-filled ${filled} inputs!`);
     });
 
     document.getElementById('jp-btn-pitch').addEventListener('click', () => {
@@ -674,8 +766,10 @@
       });
       return true;
     } else if (request.action === 'autofill') {
-      const filled = executeAutoFill(request.candidate);
-      sendResponse({ status: 'success', filled });
+      executeAutoFill(request.candidate).then((filled) => {
+        sendResponse({ status: 'success', filled });
+      });
+      return true;
     } else if (request.action === 'inject_pitch') {
       const injected = executeInjectPitch();
       sendResponse({ status: 'success', injected });
