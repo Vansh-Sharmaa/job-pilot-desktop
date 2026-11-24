@@ -25,8 +25,15 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   
   // Ledger and Exports
   getTrackerData: () => ipcRenderer.invoke('get-tracker-data'),
+  addTrackerEntry: (entry) => ipcRenderer.invoke('add-tracker-entry', entry),
   exportLedger: (format) => ipcRenderer.invoke('export-ledger', { format }),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
+  openPath: (filePath) => ipcRenderer.invoke('open-path', filePath),
+
+  // Resume and Dynamic ATS Tailoring
+  openResumePdf: () => ipcRenderer.invoke('open-resume-pdf'),
+  getResumeContent: () => ipcRenderer.invoke('get-resume-content'),
+  tailorResume: (payload) => ipcRenderer.invoke('tailor-resume', payload),
   
   // Real-time Event Listeners
   onTaskLog: (callback) => {

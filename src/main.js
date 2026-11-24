@@ -15,7 +15,10 @@ let pendingExtensionCommands = [];
 let lastExtensionPing = 0;
 
 const JOBS_DIR = 'D:\\opencode stuff\\job-agents';
+const RESUME_DIR = 'D:\\improved resume';
 const TRACKER_PATH = path.join(JOBS_DIR, 'job_applications_tracker.csv');
+const RESUME_PDF_PATH = path.join(RESUME_DIR, 'Vansh_Sharma_Resume.pdf');
+const RESUME_MD_PATH = path.join(RESUME_DIR, 'Vansh_Sharma_Resume.md');
 const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
 
 // Default model configuration
@@ -299,6 +302,19 @@ ipcMain.handle('get-tracker-data', async () => {
   }
 });
 
+// IPC: Add Manual Application to Tracker
+ipcMain.handle('add-tracker-entry', async (event, { company, role, location, portal, url, status }) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const entry = `\n${today},"${company || 'Unknown'}","${role || 'Job'}","${location || 'Remote'}","${portal || 'Direct'}","${status || 'Submitted'}","${url || ''}"`;
+    fs.appendFileSync(TRACKER_PATH, entry, 'utf-8');
+    mainWindow?.webContents.send('tracker-updated');
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
 // IPC: Export Ledger (CSV or JSON)
 ipcMain.handle('export-ledger', async (event, { format = 'csv' }) => {
   try {
@@ -322,6 +338,67 @@ ipcMain.handle('export-ledger', async (event, { format = 'csv' }) => {
   } catch (e) {
     return { ok: false, error: e.message };
   }
+});
+
+// IPC: Open Specific File or Directory
+ipcMain.handle('open-path', async (event, targetPath) => {
+  if (targetPath && fs.existsSync(targetPath)) {
+    shell.openPath(targetPath);
+    return { ok: true };
+  }
+  return { ok: false, error: 'Path does not exist' };
+});
+
+// IPC: Resume Management
+ipcMain.handle('open-resume-pdf', async () => {
+  if (fs.existsSync(RESUME_PDF_PATH)) {
+    shell.openPath(RESUME_PDF_PATH);
+    return { ok: true, path: RESUME_PDF_PATH };
+  }
+  return { ok: false, error: 'Resume PDF not found' };
+});
+
+ipcMain.handle('get-resume-content', async () => {
+  try {
+    if (fs.existsSync(RESUME_MD_PATH)) {
+      const text = fs.readFileSync(RESUME_MD_PATH, 'utf-8');
+      return { ok: true, text };
+    }
+  } catch (e) {}
+  return { ok: false, text: '' };
+});
+
+// IPC: Dynamic ATS Resume Tailoring
+ipcMain.handle('tailor-resume', async (event, { company, role, jd }) => {
+  return new Promise((resolve) => {
+    const scriptPath = path.join(RESUME_DIR, 'tailor_resume.py');
+    const args = [
+      scriptPath,
+      '--company', company || 'Target Company',
+      '--role', role || 'AI Engineer',
+      '--jd', jd || ''
+    ];
+
+    const proc = spawn('python', args, { cwd: RESUME_DIR });
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', d => stdout += d.toString());
+    proc.stderr.on('data', d => stderr += d.toString());
+
+    proc.on('close', (code) => {
+      if (code === 0) {
+        const match = stdout.match(/Tailored resume ready at:\s*(.+?\.pdf)/i);
+        const generatedPath = match ? match[1].trim() : path.join(RESUME_DIR, 'tailored');
+        mainWindow?.webContents.send('task-log', `[ATS TAILOR] Generated custom resume for ${company} (${role}).`);
+        resolve({ ok: true, generatedPath, output: stdout });
+      } else {
+        resolve({ ok: false, error: stderr || stdout });
+      }
+    });
+
+    proc.on('error', err => resolve({ ok: false, error: err.message }));
+  });
 });
 
 // =====================================================================
@@ -603,6 +680,22 @@ const AGENT_TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'tailor_ats_resume',
+      description: 'Dynamically generate a verified 1-page ATS tailored PDF resume for a specific target company, role, and job description.',
+      parameters: {
+        type: 'object',
+        properties: {
+          company: { type: 'string', description: 'Target employer name (e.g. Google, Zomato, TCS).' },
+          role: { type: 'string', description: 'Target job title (e.g. AI Engineer, Python Developer).' },
+          jd: { type: 'string', description: 'Job description text or requirements snippet.' }
+        },
+        required: ['company', 'role']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'run_fleet_agent',
       description: 'Execute an autonomous Python job hunting fleet script (e.g. daily_autopilot_daemon.py, inbound_email_calendar_runner.py, auto_quota_closer.py, assessment_prep_engine.py).',
       parameters: {
@@ -619,7 +712,7 @@ const AGENT_TOOLS = [
     type: 'function',
     function: {
       name: 'search_ledger',
-      description: 'Query the 311 verified genuine applications in the tracker ledger by keyword, company, or portal.',
+      description: 'Query the verified genuine applications in the tracker ledger by keyword, company, or portal.',
       parameters: {
         type: 'object',
         properties: {
@@ -697,6 +790,27 @@ async function executeAgentTool(name, args) {
       pendingExtensionCommands.push(args);
       mainWindow?.webContents.send('task-log', `[OPERATOR] Dispatched command '${args.action}' to user Chrome browser extension.`);
       return { status: 'dispatched', message: `Command '${args.action}' delivered to user personal Chrome browser.` };
+    }
+
+    case 'tailor_ats_resume': {
+      const scriptPath = path.join(RESUME_DIR, 'tailor_resume.py');
+      return new Promise((resolve) => {
+        const proc = spawn('python', [scriptPath, '--company', args.company, '--role', args.role, '--jd', args.jd || ''], {
+          cwd: RESUME_DIR
+        });
+        let out = '';
+        proc.stdout.on('data', d => out += d.toString());
+        proc.on('close', code => {
+          const match = out.match(/Tailored resume ready at:\s*(.+?\.pdf)/i);
+          const pdfPath = match ? match[1].trim() : RESUME_PDF_PATH;
+          mainWindow?.webContents.send('task-log', `[RESUME TAILOR] Generated custom ATS resume for ${args.company} (${args.role}).`);
+          resolve({
+            status: 'success',
+            tailoredPdfPath: pdfPath,
+            message: `Generated custom 1-page ATS tailored resume at ${pdfPath}`
+          });
+        });
+      });
     }
 
     case 'run_fleet_agent': {
@@ -791,7 +905,7 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
 
   const systemMessage = {
     role: 'system',
-    content: 'You are the JobPilot Autonomous Operator, an elite engineering agent running locally inside an OpenCode-style workstation. You have direct tool access to the browser, personal Chrome extension bridge, 14-platform Python fleet, and verified tracker ledger. The user is Vansh Sharma (MCA in AI and Data Science, Class of 2026, 0-2 YOE). Execute tasks directly using available tools when appropriate. Keep responses concise, technical, structured, and factual. Never use em-dashes or en-dashes.'
+    content: 'You are the JobPilot Autonomous Operator, an elite engineering agent running locally inside an OpenCode-style workstation. You have direct tool access to the browser, personal Chrome extension bridge, ATS resume tailoring engine, 14-platform Python fleet, and verified tracker ledger. The user is Vansh Sharma (MCA in AI and Data Science, Class of 2026, 0-2 YOE). Execute tasks directly using available tools when appropriate. Keep responses concise, technical, structured, and factual. Never use em-dashes or en-dashes.'
   };
 
   const messages = [
