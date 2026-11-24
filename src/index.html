@@ -2,464 +2,323 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>JobPilot AI : Autonomous Career Cockpit</title>
+  <title>JobPilot Operator : OpenCode Workstation</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Top Cockpit Header -->
-  <header class="cockpit-header">
-    <div class="brand-wrapper">
-      <div class="brand-gem">⚡</div>
-      <div class="brand-title">
-        JobPilot AI
-        <span class="brand-badge">Career Cockpit</span>
-      </div>
-      <div class="candidate-pill">
-        <span>👤</span>
-        <strong style="color: #fff;">Vansh Sharma</strong>
-        <span style="color: #64748b;">|</span>
-        <span>MCA AI & Data Science (2024 - 2026)</span>
+  <!-- Workstation Top Header -->
+  <header class="workstation-header">
+    <div class="brand-section">
+      <div class="brand-badge-logo">JOBPILOT</div>
+      <div class="brand-label">
+        Operator Workstation
+        <span class="brand-subtext">v1.2.0 (main)</span>
       </div>
     </div>
 
-    <div class="telemetry-pills">
-      <div class="pill-card">
-        <span class="pulse-green"></span>
-        <span style="color: #10b981; font-weight: 700;">AUTOPILOT FLEET ACTIVE</span>
+    <!-- Middle: Model & Router Selector -->
+    <div class="model-control-pill">
+      <span style="color: #64748b;">MODEL:</span>
+      <select id="model-select-dropdown" class="model-select" onchange="switchModel(this.value)">
+        <option value="Fable5" selected>Fable5 (9router / Free)</option>
+        <option value="oc-gpt">oc-gpt (OpenCode GPT)</option>
+        <option value="claude-fable-5">claude-fable-5</option>
+        <option value="ag/claude-opus-4-6-thinking">ag/claude-opus-4-6-thinking</option>
+        <option value="ag/claude-sonnet-4-6">ag/claude-sonnet-4-6</option>
+      </select>
+      <span style="color: #334155;">|</span>
+      <div class="router-status-indicator" id="router-indicator">
+        <span class="pulse-dot"></span>
+        <span id="router-port-text">20128: ONLINE</span>
       </div>
+    </div>
 
-      <div class="pill-card">
-        <span>🧠 Model:</span>
-        <strong style="color: #a78bfa;">Fable5</strong>
-        <span style="color: #64748b;">(Port 20128)</span>
-      </div>
-
-      <div class="pill-card">
-        <span>Applied Today:</span>
-        <strong style="color: #fff;" id="hdr-today">311</strong>
-        <span style="color: #10b981; font-weight: 700;">(100% Capped)</span>
-      </div>
+    <!-- Right: Workstation Layout View Switcher -->
+    <div class="view-modes-group">
+      <button class="btn-view-mode active" id="mode-split" onclick="setLayoutMode('split')" title="Split View: Agent + Workspace">◫ Split</button>
+      <button class="btn-view-mode" id="mode-agent" onclick="setLayoutMode('agent')" title="Full-width Agent Terminal">▣ Terminal</button>
+      <button class="btn-view-mode" id="mode-browser" onclick="setLayoutMode('browser')" title="Full-width Browser">🌐 Browser</button>
+      <button class="btn-view-mode" id="mode-ledger" onclick="setLayoutMode('ledger')" title="Applications Ledger">📋 Ledger (311)</button>
+      <button class="btn-view-mode" id="mode-quotas" onclick="setLayoutMode('quotas')" title="14-Platform Quotas">⚡ Quotas</button>
     </div>
   </header>
 
-  <!-- Cockpit Body -->
-  <div class="cockpit-body">
+  <!-- Workstation Body -->
+  <main class="workstation-body" id="workstation-body">
 
-    <!-- Left Nav Rail -->
-    <nav class="nav-rail">
-      <div class="nav-tab-btn active" id="tab-cockpit" onclick="switchView('cockpit')" title="Cockpit Overview">
-        <span class="tab-icon">🚀</span>
-        <span class="tab-label">Cockpit</span>
+    <!-- ==================== PANE 1: AUTONOMOUS AGENT TERMINAL ==================== -->
+    <section class="pane-agent" id="pane-agent">
+      <div class="agent-topbar">
+        <span>SESSION: #001-autonomous-fleet</span>
+        <span id="agent-status-label" style="color: #38bdf8; font-weight: 700;">READY</span>
+        <button style="background: none; border: none; color: #475569; font-family: var(--font-mono); font-size: 11px; cursor: pointer;" onclick="clearAgentTerminal()" title="Clear Terminal (Ctrl+L)">Clear</button>
       </div>
 
-      <div class="nav-tab-btn" id="tab-browser" onclick="switchView('browser')" title="Integrated Hiring Browser">
-        <span class="tab-icon">🌐</span>
-        <span class="tab-label">Hiring Hub</span>
+      <!-- Agent Message / Execution Stream -->
+      <div class="agent-stream" id="agent-stream">
+        <div class="agent-output-block" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); font-family: var(--font-mono); font-size: 11px;">
+          <div style="color: #38bdf8; font-weight: 700; margin-bottom: 4px;">JobPilot Operator Session Initialized</div>
+          <div style="color: #94a3b8; line-height: 1.5;">
+            Candidate: <strong>Vansh Sharma</strong> (MCA AI & Data Science 2026, 0-2 YOE)<br>
+            Model Provider: <strong>9Router local gateway (Port 20128)</strong><br>
+            Active Fleet: <strong>14 Platforms</strong> (311 verified genuine jobs recorded)<br>
+            Direct Tools: <code>browser_navigate</code>, <code>browser_autofill</code>, <code>browser_inject_pitch</code>, <code>run_fleet_agent</code>, <code>search_ledger</code>, <code>add_to_ledger</code>, <code>get_quota_status</code>.
+          </div>
+        </div>
       </div>
 
-      <div class="nav-tab-btn" id="tab-ledger" onclick="switchView('ledger')" title="Verified Applications Ledger">
-        <span class="tab-icon">📋</span>
-        <span class="tab-label">Ledger</span>
+      <!-- Agent Command Input Bar -->
+      <div class="agent-input-container">
+        <div class="quick-slash-bar">
+          <div class="slash-pill" onclick="triggerQuickCommand('Check my 14-platform daily application quotas and show status.')">📊 /check-quotas</div>
+          <div class="slash-pill" onclick="triggerQuickCommand('Run the inbound email and calendar runner to check Gmail for OA test invitations and recruiter forms.')">📬 /scan-inbox</div>
+          <div class="slash-pill" onclick="triggerQuickCommand('Navigate to Indeed India and search for AI Engineer and Python Developer roles with 0-1 YOE.')">🌐 /search-indeed</div>
+          <div class="slash-pill" onclick="triggerQuickCommand('Run auto_quota_closer.py to burst-fill remaining quota caps across all platforms.')">⚡ /close-quotas</div>
+          <div class="slash-pill" onclick="triggerQuickCommand('Run the assessment prep engine to generate solutions for pending coding tests.')">🎯 /dsa-prep</div>
+          <div class="slash-pill" onclick="triggerQuickCommand('Search the ledger for recent applications submitted to Indeed and Unstop.')">📋 /query-ledger</div>
+        </div>
+
+        <div class="agent-input-wrapper">
+          <span class="command-prefix">❯</span>
+          <input type="text" class="prompt-input" id="agent-prompt-input" placeholder="Type command or instruction for autonomous agent..." onkeydown="if(event.key === 'Enter') submitAgentTask()">
+          <button class="btn-run-agent" id="btn-run-agent" onclick="submitAgentTask()">Execute ↵</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PANE 2: WORKSPACE INSPECTOR ==================== -->
+    <section class="pane-workspace" id="pane-workspace">
+
+      <!-- Workspace Tab Bar -->
+      <div class="workspace-tab-bar">
+        <button class="ws-tab-btn active" id="wstab-browser" onclick="switchWorkspaceTab('browser')">🌐 Browser</button>
+        <button class="ws-tab-btn" id="wstab-ledger" onclick="switchWorkspaceTab('ledger')">📋 Ledger (<span id="ws-ledger-count">311</span>)</button>
+        <button class="ws-tab-btn" id="wstab-quotas" onclick="switchWorkspaceTab('quotas')">⚡ Fleet Quotas</button>
+        <button class="ws-tab-btn" id="wstab-telemetry" onclick="switchWorkspaceTab('telemetry')">📊 Telemetry</button>
+        <button class="ws-tab-btn" id="wstab-settings" onclick="switchWorkspaceTab('settings')">⚙️ Config</button>
       </div>
 
-      <div class="nav-tab-btn" id="tab-copilot" onclick="switchView('copilot')" title="AI Career Strategist (Fable5)">
-        <span class="tab-icon">🧠</span>
-        <span class="tab-label">Copilot</span>
-      </div>
+      <!-- Workspace Content Area -->
+      <div class="ws-content-area">
 
-      <div class="nav-tab-btn" id="tab-profile" onclick="switchView('profile')" title="Candidate Dossier">
-        <span class="tab-icon">👤</span>
-        <span class="tab-label">Profile</span>
-      </div>
-    </nav>
+        <!-- TAB 1: BROWSER -->
+        <div class="ws-view active-ws" id="ws-browser">
+          <div class="ws-browser-bar">
+            <button class="browser-btn" onclick="webviewBack()">&lt;</button>
+            <button class="browser-btn" onclick="webviewFwd()">&gt;</button>
+            <button class="browser-btn" onclick="webviewReload()">&#8635;</button>
 
-    <!-- Content Canvas -->
-    <main class="content-canvas">
+            <input type="text" class="browser-input" id="browser-url-bar" value="https://in.indeed.com" onkeydown="if(event.key === 'Enter') navigateBrowser()">
 
-      <!-- ==================== VIEW 1: COCKPIT ==================== -->
-      <section class="view-panel view-cockpit active-view" id="view-cockpit">
-
-        <!-- 4 Grand Metrics -->
-        <div class="metric-row">
-          <div class="metric-card accent-emerald">
-            <div class="metric-header">
-              <span class="metric-label">Applications Today</span>
-              <div class="metric-icon-bubble">⚡</div>
-            </div>
-            <span class="metric-num" id="metric-today">311</span>
-            <span class="metric-sub">✓ 100% Daily Target Capped</span>
+            <button class="browser-btn primary" onclick="smartApplyInBrowser()">⚡ Smart Apply</button>
+            <button class="browser-btn" onclick="injectPitchInBrowser()">📄 Pitch</button>
+            <button class="browser-btn" onclick="openCurrentExternal()">↗ External</button>
           </div>
 
-          <div class="metric-card">
-            <div class="metric-header">
-              <span class="metric-label">Active Hiring Portals</span>
-              <div class="metric-icon-bubble">🌐</div>
-            </div>
-            <span class="metric-num">14 / 14</span>
-            <span class="metric-sub">✓ All Quotas Fully Capped</span>
+          <div class="portal-dock-strip">
+            <div class="portal-dock-btn active" onclick="loadPortal('https://in.indeed.com', this)">Indeed India</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.linkedin.com/jobs', this)">LinkedIn</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.naukri.com', this)">Naukri</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.foundit.in', this)">foundit</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://cutshort.io', this)">Cutshort</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.instahyre.com', this)">Instahyre</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://unstop.com', this)">Unstop</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://cuvette.tech', this)">Cuvette</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.workatastartup.com', this)">YC Startup</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://wellfound.com/jobs', this)">Wellfound</div>
           </div>
 
-          <div class="metric-card accent-violet">
-            <div class="metric-header">
-              <span class="metric-label">Inboxes Monitored</span>
-              <div class="metric-icon-bubble">📬</div>
-            </div>
-            <span class="metric-num">4 Gmails</span>
-            <span class="metric-sub">✓ Alerts & Tests Auto-Scraped</span>
-          </div>
-
-          <div class="metric-card accent-amber">
-            <div class="metric-header">
-              <span class="metric-label">Autopilot Schedule</span>
-              <div class="metric-icon-bubble">⏰</div>
-            </div>
-            <span class="metric-num">9:00 AM</span>
-            <span class="metric-sub">✓ Auto-Catchup Active</span>
+          <div class="webview-container">
+            <webview id="workspace-webview" src="https://in.indeed.com" partition="persist:jobpilot" allowpopups></webview>
           </div>
         </div>
 
-        <!-- Hero Actions -->
-        <div>
-          <div class="section-headline">Autonomous Fleet Operations</div>
-          <div class="actions-container">
-            <div class="hero-action" onclick="runTask('daily_autopilot_daemon.py', '24/7 Autopilot Daemon')">
-              <span class="hero-action-title">🚀 24/7 Autopilot Daemon</span>
-              <span class="hero-action-desc">Run hourly scans, alert applies and daily quota auto-filling across all 14 portals.</span>
+        <!-- TAB 2: APPLICATIONS LEDGER -->
+        <div class="ws-view" id="ws-ledger">
+          <div class="ledger-view-container">
+            <div class="ledger-header-row">
+              <div style="font-size: 13px; font-weight: 700; color: #fff;">Verified Applications Ledger</div>
+              <input type="text" class="ledger-search-box" id="ledger-search" placeholder="Search company, role or portal..." oninput="filterLedger()">
             </div>
 
-            <div class="hero-action" onclick="runTask('inbound_email_calendar_runner.py', 'Inbound & Calendar Runner')">
-              <span class="hero-action-title">📬 Inbound & Calendar Alert</span>
-              <span class="hero-action-desc">Auto-extract and apply to Indeed, LinkedIn, and Google Form email alerts.</span>
-            </div>
-
-            <div class="hero-action" onclick="runTask('auto_quota_closer.py', 'Quota Closer Swarm')">
-              <span class="hero-action-title">⚡ Close All Daily Quotas</span>
-              <span class="hero-action-desc">Rapid burst across 14 platforms to max out daily application caps.</span>
-            </div>
-
-            <div class="hero-action" onclick="runTask('assessment_prep_engine.py', 'DSA Prep Engine')">
-              <span class="hero-action-title">🎯 DSA & Assessment Prep</span>
-              <span class="hero-action-desc">Generate optimal solutions and walkthroughs for pending coding tests.</span>
+            <div class="ledger-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 90px;">Date</th>
+                    <th style="width: 200px;">Company</th>
+                    <th style="width: 240px;">Role</th>
+                    <th style="width: 140px;">Location</th>
+                    <th style="width: 100px;">Portal</th>
+                    <th style="width: 90px;">Status</th>
+                    <th style="width: 80px;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-tbody">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
-        <!-- 14-Platform Quotas Grid -->
-        <div>
-          <div class="quotas-section-header">
-            <span class="section-headline">14-Platform Daily Quota Matrix</span>
-            <span style="font-size: 11px; color: #10b981; font-weight: 700;">Auto-Reset Daily at 12:00 AM</span>
-          </div>
-          <div class="quota-cards-grid" id="quota-cards-container">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
+        <!-- TAB 3: FLEET QUOTAS -->
+        <div class="ws-view" id="ws-quotas">
+          <div class="quotas-view-container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 14px; font-weight: 800; color: #fff;">14-Platform Daily Quota Matrix</div>
+                <div style="font-size: 11px; color: #94a3b8;">Automatic midnight reset | 311 Daily Fleet Target Capped</div>
+              </div>
+              <button class="browser-btn" onclick="runFleetScript('daily_autopilot_daemon.py')">🚀 Run Autopilot Now</button>
+            </div>
 
-        <!-- Live Telemetry Stream -->
-        <div class="telemetry-box">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">Live Fleet Execution Telemetry</span>
-            <button style="background: none; border: none; color: #475569; font-size: 11px; cursor: pointer;" onclick="clearTelemetry()">Clear</button>
-          </div>
-          <div class="telemetry-feed" id="telemetry-stream">
-            <div style="color: #38bdf8;">[COCKPIT] JobPilot AI Career Cockpit active. Connected to D:\opencode stuff\job-agents</div>
-            <div style="color: #4ade80;">[ROUTER] Bound to Fable5 via http://127.0.0.1:20128/v1 (Unlimited Tokens).</div>
-            <div style="color: #94a3b8;">[FLEET] Standing by with 311 verified genuine applications in ledger.</div>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- ==================== VIEW 2: HIRING BROWSER ==================== -->
-      <section class="view-panel view-browser" id="view-browser">
-
-        <div class="browser-header-bar">
-          <button class="btn-ctrl" onclick="webviewBack()" title="Back">&lt;</button>
-          <button class="btn-ctrl" onclick="webviewFwd()" title="Forward">&gt;</button>
-          <button class="btn-ctrl" onclick="webviewReload()" title="Reload">&#8635;</button>
-
-          <input type="text" class="browser-url-input" id="portal-url" value="https://in.indeed.com" onkeydown="if(event.key === 'Enter') navigatePortal()">
-
-          <div class="browser-actions">
-            <button class="btn-smart-action" onclick="smartApplyOnCurrentPage()">
-              <span>⚡</span>
-              <span>AI Smart Apply</span>
-            </button>
-            <button class="btn-secondary-action" onclick="injectPitchOnCurrentPage()">
-              <span>📄</span>
-              <span>Inject Pitch</span>
-            </button>
-            <button class="btn-secondary-action" onclick="openCurrentInDefaultBrowser()">
-              <span>↗</span>
-              <span>External</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Quick Portals Strip -->
-        <div class="quick-portals-strip">
-          <div class="portal-chip active" onclick="loadPortal('https://in.indeed.com', this)">Indeed India</div>
-          <div class="portal-chip" onclick="loadPortal('https://www.linkedin.com/jobs', this)">LinkedIn</div>
-          <div class="portal-chip" onclick="loadPortal('https://www.naukri.com', this)">Naukri</div>
-          <div class="portal-chip" onclick="loadPortal('https://www.foundit.in', this)">foundit</div>
-          <div class="portal-chip" onclick="loadPortal('https://cutshort.io', this)">Cutshort</div>
-          <div class="portal-chip" onclick="loadPortal('https://www.instahyre.com', this)">Instahyre</div>
-          <div class="portal-chip" onclick="loadPortal('https://unstop.com', this)">Unstop</div>
-          <div class="portal-chip" onclick="loadPortal('https://cuvette.tech', this)">Cuvette</div>
-          <div class="portal-chip" onclick="loadPortal('https://www.workatastartup.com', this)">YC Startup</div>
-          <div class="portal-chip" onclick="loadPortal('https://wellfound.com/jobs', this)">Wellfound</div>
-        </div>
-
-        <div class="webview-box">
-          <webview id="portal-webview" src="https://in.indeed.com" partition="persist:jobpilot" allowpopups></webview>
-        </div>
-
-      </section>
-
-      <!-- ==================== VIEW 3: APPLICATIONS LEDGER ==================== -->
-      <section class="view-panel view-ledger" id="view-ledger">
-
-        <div class="ledger-top-bar">
-          <div>
-            <div style="font-size: 16px; font-weight: 800; color: #fff;">Applications Ledger</div>
-            <div style="font-size: 11px; color: #94a3b8;">Real-time verified genuine applications (311 entries)</div>
-          </div>
-
-          <div class="ledger-summary-pills">
-            <span class="summary-pill">Total: <strong style="color: #fff;" id="ledger-count-pill">311</strong></span>
-            <span class="summary-pill">Target: <strong style="color: #10b981;">0 - 2 YOE Fresher</strong></span>
-          </div>
-
-          <input type="text" class="search-input" id="ledger-search" placeholder="Search company, role or location..." oninput="filterLedger()">
-        </div>
-
-        <!-- Filter Chips by Portal -->
-        <div class="portal-filter-chips">
-          <div class="filter-chip active" onclick="filterByPortal('ALL', this)">All (311)</div>
-          <div class="filter-chip" onclick="filterByPortal('Naukri', this)">Naukri (50)</div>
-          <div class="filter-chip" onclick="filterByPortal('Indeed', this)">Indeed (50)</div>
-          <div class="filter-chip" onclick="filterByPortal('LinkedIn', this)">LinkedIn (25)</div>
-          <div class="filter-chip" onclick="filterByPortal('foundit', this)">foundit (30)</div>
-          <div class="filter-chip" onclick="filterByPortal('Cuvette', this)">Cuvette (25)</div>
-          <div class="filter-chip" onclick="filterByPortal('Unstop', this)">Unstop (20)</div>
-          <div class="filter-chip" onclick="filterByPortal('Instahyre', this)">Instahyre (20)</div>
-          <div class="filter-chip" onclick="filterByPortal('Cutshort', this)">Cutshort (15)</div>
-          <div class="filter-chip" onclick="filterByPortal('Wellfound', this)">Wellfound (15)</div>
-          <div class="filter-chip" onclick="filterByPortal('YC Startup', this)">YC (15)</div>
-        </div>
-
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 100px;">Date</th>
-                <th style="width: 220px;">Company</th>
-                <th style="width: 280px;">Role</th>
-                <th style="width: 160px;">Location</th>
-                <th style="width: 120px;">Portal</th>
-                <th style="width: 110px;">Status</th>
-                <th style="width: 100px;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="ledger-tbody">
+            <div class="quota-grid" id="quota-cards-grid">
               <!-- Dynamically populated -->
-            </tbody>
-          </table>
-        </div>
-
-      </section>
-
-      <!-- ==================== VIEW 4: AI COPILOT ==================== -->
-      <section class="view-panel view-copilot" id="view-copilot">
-
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-          <div>
-            <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px;">AI Career Strategist & Interview Wingman</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">Powered by Fable5 on Local Model Router (Port 20128 : Unlimited Tokens)</div>
-          </div>
-          <div id="router-badge" style="display: flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 5px 12px; border-radius: 9999px; font-size: 11px; color: #10b981; font-weight: 700;">
-            <span class="pulse-green"></span>
-            <span id="router-badge-text">Fable5 Connected</span>
+            </div>
           </div>
         </div>
 
-          <div class="copilot-presets">
-            <div class="preset-chip" onclick="setCopilotPrompt('Analyze market compensation and standard CTC for Fresher AI Engineer and Python Developer roles in Gurgaon and Bengaluru.')">💰 Salary Benchmarks</div>
-            <div class="preset-chip" onclick="setCopilotPrompt('Draft a concise, high-conversion cold outreach message to an Engineering Manager hiring for an entry-level GenAI role.')">✉️ Cold Outreach Note</div>
-            <div class="preset-chip" onclick="setCopilotPrompt('How should I best answer: Why should we hire you as an MCA fresher over B.Tech graduates?')">🎯 Tough Screening Answer</div>
-            <div class="preset-chip" onclick="setCopilotPrompt('Extract top 10 ATS keywords and technical competencies required for Junior Generative AI Engineer positions.')">📄 Top ATS Keywords</div>
-            <div class="preset-chip" onclick="setCopilotPrompt('Explain RAG architecture with vector embeddings and chunking strategy as if answering a senior tech interviewer.')">⚡ Tech Interview Explainer</div>
+        <!-- TAB 4: TELEMETRY -->
+        <div class="ws-view" id="ws-telemetry">
+          <div class="telemetry-view-container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; color: #94a3b8; font-size: 11px; text-transform: uppercase;">Live Process Stream</span>
+              <button style="background: none; border: none; color: #64748b; font-family: var(--font-mono); font-size: 11px; cursor: pointer;" onclick="clearTelemetry()">Clear</button>
+            </div>
+            <div class="telemetry-log-feed" id="telemetry-log-feed">
+[SYSTEM] JobPilot Operator Workstation ready.
+[ROUTER] Connected to local gateway on port 20128.
+[AGENT] Autonomous tools loaded. Standing by for instructions.
+            </div>
           </div>
         </div>
 
-        <div class="copilot-thread" id="copilot-stream">
-          <div class="ai-bubble">
-            Hello Vansh! I am your <strong>AI Career Strategist (Fable5)</strong>. I am customized for your profile: MCA in AI & Data Science (Class of 2026, 0 - 2 YOE). I can optimize your ATS resumes, generate high-conversion outreach notes, and solve challenging technical screening questions.
+        <!-- TAB 5: MODEL CONFIG -->
+        <div class="ws-view" id="ws-settings">
+          <div class="settings-view-container">
+            <div style="font-size: 14px; font-weight: 800; color: #fff;">Workstation & Model Settings</div>
+
+            <div class="setting-card">
+              <div style="font-weight: 700; color: #38bdf8; font-family: var(--font-mono);">MODEL ROUTER GATEWAY</div>
+              
+              <div class="setting-field">
+                <span class="setting-label">Gateway Base URL</span>
+                <input type="text" class="setting-input" id="cfg-router-url" value="http://127.0.0.1:20128/v1">
+              </div>
+
+              <div class="setting-field">
+                <span class="setting-label">Bearer Token / API Key</span>
+                <input type="password" class="setting-input" id="cfg-router-token" value="sk-25a6421c7e67b2b5-edzmhl-9843071e">
+              </div>
+
+              <div class="setting-field">
+                <span class="setting-label">Active Model Identifier</span>
+                <input type="text" class="setting-input" id="cfg-model-name" value="Fable5">
+              </div>
+
+              <button class="browser-btn primary" style="align-self: flex-start; margin-top: 6px;" onclick="saveModelSettings()">Save & Test Connection</button>
+            </div>
+
+            <div class="setting-card">
+              <div style="font-weight: 700; color: #10b981; font-family: var(--font-mono);">CANDIDATE DOSSIER</div>
+              <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                <strong>Name:</strong> Vansh Sharma<br>
+                <strong>Education:</strong> Master of Computer Applications (MCA) in AI & Data Science (Class of 2026)<br>
+                <strong>Experience:</strong> 0 - 2 YOE (Fresher / Intern / Associate Tier)<br>
+                <strong>Locations:</strong> Gurgaon, Delhi NCR, Bengaluru, Remote<br>
+                <strong>Notice:</strong> Immediate / Available to join now
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="copilot-input-box">
-          <input type="text" class="copilot-input" id="copilot-text" placeholder="Ask anything about jobs, interviews, resume tailoring, or company assessments..." onkeydown="if(event.key === 'Enter') sendCopilotQuery()">
-          <button class="btn-send" onclick="sendCopilotQuery()">Ask Fable5</button>
-        </div>
+      </div>
 
-      </section>
+    </section>
 
-      <!-- ==================== VIEW 5: CANDIDATE DOSSIER ==================== -->
-      <section class="view-panel view-profile" id="view-profile">
-
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-size: 16px; font-weight: 800; color: #fff;">Candidate Dossier</div>
-            <div style="font-size: 11px; color: #94a3b8;">Profile configurations utilized across the 14-platform autonomous fleet</div>
-          </div>
-          <span style="font-size: 11px; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">Active Job Seeker Profile</span>
-        </div>
-
-        <div class="profile-grid">
-          
-          <div class="profile-card">
-            <div class="profile-card-title">🎓 Education & Experience</div>
-            <div class="profile-field">
-              <span class="profile-label">Candidate Full Name</span>
-              <span class="profile-val">Vansh Sharma</span>
-            </div>
-            <div class="profile-field">
-              <span class="profile-label">Highest Degree</span>
-              <span class="profile-val">Master of Computer Applications (MCA)</span>
-            </div>
-            <div class="profile-field">
-              <span class="profile-label">Specialization</span>
-              <span class="profile-val">Artificial Intelligence & Data Science (Class of 2026)</span>
-            </div>
-            <div class="profile-field">
-              <span class="profile-label">Experience Tier</span>
-              <span class="profile-val">0 - 2 YOE (Fresher / Associate / Intern)</span>
-            </div>
-            <div class="profile-field">
-              <span class="profile-label">Notice Period</span>
-              <span class="profile-val" style="color: #10b981; font-weight: 700;">Immediate / Available to join now</span>
-            </div>
-          </div>
-
-          <div class="profile-card">
-            <div class="profile-card-title">📍 Preferences & Target Roles</div>
-            <div class="profile-field">
-              <span class="profile-label">Primary Target Roles</span>
-              <span class="profile-val">AI Engineer, Machine Learning Engineer, GenAI Developer, Python Backend Developer, Data Scientist</span>
-            </div>
-            <div class="profile-field">
-              <span class="profile-label">Preferred Locations</span>
-              <span class="profile-val">Gurgaon, Delhi NCR, Bengaluru, Hyderabad, Pune, Remote</span>
-            </div>
-            <div class="profile-field">
-              <span class="profile-label">Daily Application Quota</span>
-              <span class="profile-val">311 applications per day across 14 portals</span>
-            </div>
-            <div class="profile-field">
-              <span class="profile-label">Autonomous Schedule</span>
-              <span class="profile-val">Daily 9:00 AM Task Scheduler Catch-Up</span>
-            </div>
-          </div>
-
-          <div class="profile-card" style="grid-column: span 2;">
-            <div class="profile-card-title">⚡ Technical Core Competencies</div>
-            <div class="skills-tags">
-              <span class="skill-tag">Python</span>
-              <span class="skill-tag">Generative AI</span>
-              <span class="skill-tag">Large Language Models</span>
-              <span class="skill-tag">PyTorch</span>
-              <span class="skill-tag">LangChain</span>
-              <span class="skill-tag">RAG Pipelines</span>
-              <span class="skill-tag">Vector Databases (Chroma/FAISS)</span>
-              <span class="skill-tag">FastAPI</span>
-              <span class="skill-tag">REST APIs</span>
-              <span class="skill-tag">Docker</span>
-              <span class="skill-tag">PostgreSQL / SQL</span>
-              <span class="skill-tag">Git & GitHub</span>
-              <span class="skill-tag">Data Structures & Algorithms</span>
-              <span class="skill-tag">Pandas & NumPy</span>
-            </div>
-          </div>
-
-          <div class="profile-card" style="grid-column: span 2;">
-            <div class="profile-card-title">📝 Tailored Cover Pitch (Used for Smart Apply)</div>
-            <div class="pitch-box" id="candidate-pitch-text">
-              "Hi, I am Vansh Sharma, currently pursuing MCA in AI & Data Science (Class of 2026). I build end-to-end Generative AI workflows, LangChain RAG pipelines, and scalable Python/FastAPI microservices. Having strong problem-solving fundamentals in Data Structures & Algorithms, I am actively seeking an entry-level AI Engineer / Python Developer role where I can deliver immediate impact. Available to join immediately."
-            </div>
-            <button class="btn-smart-action" style="align-self: flex-start; margin-top: 6px;" onclick="copyPitch()">📋 Copy Pitch to Clipboard</button>
-          </div>
-
-        </div>
-
-      </section>
-
-    </main>
-
-  </div>
+  </main>
 
   <script>
+    let conversationHistory = [];
     let allLedgerRows = [];
-    let currentPortalFilter = 'ALL';
-    const webview = document.getElementById('portal-webview');
-    const urlBar = document.getElementById('portal-url');
-    const telemetryStream = document.getElementById('telemetry-stream');
+    const webview = document.getElementById('workspace-webview');
+    const urlBar = document.getElementById('browser-url-bar');
+    const agentStream = document.getElementById('agent-stream');
+    const telemetryFeed = document.getElementById('telemetry-log-feed');
 
-    // Tab Switching
-    function switchView(viewName) {
-      document.querySelectorAll('.nav-tab-btn').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById('tab-' + viewName);
+    // View Mode Layouts (Split, Terminal, Browser, Ledger, Quotas)
+    function setLayoutMode(mode) {
+      document.querySelectorAll('.btn-view-mode').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById('mode-' + mode);
       if (activeBtn) activeBtn.classList.add('active');
 
-      ['cockpit', 'browser', 'ledger', 'copilot', 'profile'].forEach(v => {
-        const el = document.getElementById('view-' + v);
-        if (el) {
-          if (v === viewName) {
-            el.classList.add('active-view');
-          } else {
-            el.classList.remove('active-view');
-          }
-        }
-      });
+      const pAgent = document.getElementById('pane-agent');
+      const pWs = document.getElementById('pane-workspace');
 
-      if (viewName === 'ledger') loadLedgerData();
-      if (viewName === 'cockpit') loadStats();
+      if (mode === 'split') {
+        pAgent.style.display = 'flex';
+        pAgent.style.flex = '1';
+        pWs.style.display = 'flex';
+        pWs.style.flex = '1';
+      } else if (mode === 'agent') {
+        pAgent.style.display = 'flex';
+        pAgent.style.flex = '1';
+        pWs.style.display = 'none';
+      } else {
+        pAgent.style.display = 'none';
+        pWs.style.display = 'flex';
+        pWs.style.flex = '1';
+        if (mode === 'browser') switchWorkspaceTab('browser');
+        if (mode === 'ledger') switchWorkspaceTab('ledger');
+        if (mode === 'quotas') switchWorkspaceTab('quotas');
+      }
     }
 
-    // Browser Webview Navigation
+    // Workspace Tabs
+    function switchWorkspaceTab(tabName) {
+      document.querySelectorAll('.ws-tab-btn').forEach(b => b.classList.remove('active'));
+      const activeTabBtn = document.getElementById('wstab-' + tabName);
+      if (activeTabBtn) activeTabBtn.classList.add('active');
+
+      document.querySelectorAll('.ws-view').forEach(v => v.classList.remove('active-ws'));
+      const targetView = document.getElementById('ws-' + tabName);
+      if (targetView) targetView.classList.add('active-ws');
+
+      if (tabName === 'ledger') loadLedgerData();
+      if (tabName === 'quotas') loadStats();
+    }
+
+    // Browser Controls
     webview.addEventListener('did-navigate', (e) => { urlBar.value = e.url; });
     webview.addEventListener('did-navigate-in-page', (e) => { urlBar.value = e.url; });
 
     function webviewBack() { if (webview.canGoBack()) webview.goBack(); }
     function webviewFwd() { if (webview.canGoForward()) webview.goForward(); }
     function webviewReload() { webview.reload(); }
-    
-    function navigatePortal() {
+    function navigateBrowser() {
       let u = urlBar.value.trim();
       if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
       webview.src = u;
     }
-
-    function loadPortal(url, chipEl) {
-      if (chipEl) {
-        document.querySelectorAll('.portal-chip').forEach(c => c.classList.remove('active'));
-        chipEl.classList.add('active');
+    function loadPortal(url, btnEl) {
+      if (btnEl) {
+        document.querySelectorAll('.portal-dock-btn').forEach(b => b.classList.remove('active'));
+        btnEl.classList.add('active');
       }
       urlBar.value = url;
       webview.src = url;
     }
-
-    function openCurrentInDefaultBrowser() {
+    function openCurrentExternal() {
       const u = urlBar.value.trim();
       if (window.jobPilotApi && window.jobPilotApi.openExternal) {
         window.jobPilotApi.openExternal(u);
       }
     }
 
-    // AI Smart Apply Injection in Webview
-    function smartApplyOnCurrentPage() {
-      appendTelemetry('[SMART-APPLY] Scanning active page inputs...');
+    function smartApplyInBrowser() {
+      appendTelemetry('[SMART APPLY] Scanning active webview page for candidate inputs...');
       webview.executeJavaScript(`
         (() => {
           const inputs = document.querySelectorAll('input, textarea, select');
@@ -476,14 +335,14 @@
           return { found: inputs.length, filled: count, title: document.title };
         })()
       `).then(res => {
-        appendTelemetry('[SMART-APPLY] Page "' + res.title + '": Auto-filled ' + res.filled + ' form inputs.');
+        appendTelemetry('[SMART APPLY] Auto-filled ' + res.filled + ' candidate fields on ' + res.title);
       }).catch(err => {
-        appendTelemetry('[SMART-APPLY NOTICE] ' + err.message);
+        appendTelemetry('[SMART APPLY ERROR] ' + err.message);
       });
     }
 
-    function injectPitchOnCurrentPage() {
-      const pitch = document.getElementById('candidate-pitch-text').innerText.trim();
+    function injectPitchInBrowser() {
+      const pitch = 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, PyTorch models, and scalable Python/FastAPI microservices. Immediate joiner.';
       webview.executeJavaScript(`
         (() => {
           const textareas = document.querySelectorAll('textarea');
@@ -496,52 +355,226 @@
           });
           return injected;
         })()
-      `).then(cnt => {
-        appendTelemetry('[INJECT] Injected candidate pitch into ' + cnt + ' textarea field(s).');
-      }).catch(err => {
-        appendTelemetry('[INJECT NOTICE] ' + err.message);
+      `).then(count => {
+        appendTelemetry('[INJECT PITCH] Filled pitch into ' + count + ' application field(s).');
       });
     }
 
-    function copyPitch() {
-      const pitch = document.getElementById('candidate-pitch-text').innerText.trim();
-      navigator.clipboard.writeText(pitch);
-      appendTelemetry('[CLIPBOARD] Candidate pitch copied to clipboard.');
-    }
-
-    // Telemetry Logs
+    // Telemetry Feed
     function appendTelemetry(text) {
-      const line = document.createElement('div');
-      line.innerText = text;
-      telemetryStream.appendChild(line);
-      telemetryStream.scrollTop = telemetryStream.scrollHeight;
+      telemetryFeed.innerText += '\n' + text;
+      telemetryFeed.scrollTop = telemetryFeed.scrollHeight;
     }
-
     function clearTelemetry() {
-      telemetryStream.innerHTML = '';
+      telemetryFeed.innerText = '[SYSTEM] Telemetry buffer cleared.';
     }
 
-    // Run Python Tasks
-    async function runTask(scriptName, label) {
-      appendTelemetry('[START] Launching ' + label + '...');
-      if (window.jobPilotApi) {
-        const res = await window.jobPilotApi.runTask(scriptName);
-        if (res.ok) {
-          appendTelemetry('[DONE] ' + label + ' completed successfully.');
-        } else {
-          appendTelemetry('[ERROR] ' + label + ': ' + (res.error || 'Exit Code ' + res.code));
+    // =================================================================
+    // AUTONOMOUS AGENT CONSOLE LOGIC
+    // =================================================================
+    function triggerQuickCommand(cmd) {
+      document.getElementById('agent-prompt-input').value = cmd;
+      submitAgentTask();
+    }
+
+    function clearAgentTerminal() {
+      agentStream.innerHTML = '';
+      conversationHistory = [];
+    }
+
+    async function submitAgentTask() {
+      const input = document.getElementById('agent-prompt-input');
+      const task = input.value.trim();
+      if (!task) return;
+
+      input.value = '';
+      const runBtn = document.getElementById('btn-run-agent');
+      const statusLabel = document.getElementById('agent-status-label');
+      runBtn.disabled = true;
+      statusLabel.innerText = 'EXECUTING';
+      statusLabel.style.color = '#f59e0b';
+
+      // 1. Render User Command
+      const userEl = document.createElement('div');
+      userEl.className = 'agent-user-command';
+      userEl.innerHTML = `<span class="command-prefix">❯</span><span>${escapeHtml(task)}</span>`;
+      agentStream.appendChild(userEl);
+      agentStream.scrollTop = agentStream.scrollHeight;
+
+      // 2. Placeholder container for this turn
+      const turnContainer = document.createElement('div');
+      turnContainer.style.display = 'flex';
+      turnContainer.style.flexDirection = 'column';
+      turnContainer.style.gap = '8px';
+      agentStream.appendChild(turnContainer);
+
+      try {
+        if (window.jobPilotApi && window.jobPilotApi.runAgentLoop) {
+          const res = await window.jobPilotApi.runAgentLoop(task, conversationHistory);
+          if (res.ok) {
+            // Render reasoning if present
+            if (res.reasoning) {
+              const thEl = document.createElement('div');
+              thEl.className = 'agent-thought-card';
+              thEl.innerHTML = `<div class="thought-label">⚙ Thought Process</div>${escapeHtml(res.reasoning)}`;
+              turnContainer.appendChild(thEl);
+            }
+
+            // Render final reply
+            const outEl = document.createElement('div');
+            outEl.className = 'agent-output-block';
+            outEl.innerHTML = res.reply
+              .replace(/\n\n/g, '<br><br>')
+              .replace(/\n/g, '<br>')
+              .replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 4px; color: #38bdf8;">$1</code>')
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            turnContainer.appendChild(outEl);
+
+            // Record into conversation history
+            conversationHistory.push({ role: 'user', content: task });
+            conversationHistory.push({ role: 'assistant', content: res.reply });
+          } else {
+            const errEl = document.createElement('div');
+            errEl.className = 'agent-output-block';
+            errEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+            errEl.innerHTML = `<span style="color: #ef4444; font-weight: 700;">[Agent Error]:</span> ${escapeHtml(res.error)}`;
+            turnContainer.appendChild(errEl);
+          }
         }
+      } catch (e) {
+        const errEl = document.createElement('div');
+        errEl.className = 'agent-output-block';
+        errEl.innerHTML = `<span style="color: #ef4444;">[Execution Exception]: ${escapeHtml(e.message)}</span>`;
+        turnContainer.appendChild(errEl);
+      } finally {
+        runBtn.disabled = false;
+        statusLabel.innerText = 'READY';
+        statusLabel.style.color = '#38bdf8';
+        agentStream.scrollTop = agentStream.scrollHeight;
       }
-      loadStats();
     }
 
-    if (window.jobPilotApi) {
+    // Listen to real-time tool events from main process
+    if (window.jobPilotApi && window.jobPilotApi.onAgentToolEvent) {
+      window.jobPilotApi.onAgentToolEvent((evt) => {
+        if (evt.type === 'start') {
+          const card = document.createElement('div');
+          card.className = 'tool-exec-card';
+          card.id = 'tool-card-' + evt.id;
+          card.innerHTML = `
+            <div class="tool-header">
+              <span class="tool-name-badge">⟐ ${escapeHtml(evt.name)}</span>
+              <span class="tool-status-badge" style="color: #f59e0b;">RUNNING...</span>
+            </div>
+            <div class="tool-body">${escapeHtml(JSON.stringify(evt.args, null, 2))}</div>
+          `;
+          agentStream.appendChild(card);
+          agentStream.scrollTop = agentStream.scrollHeight;
+        } else if (evt.type === 'end') {
+          const card = document.getElementById('tool-card-' + evt.id);
+          if (card) {
+            const badge = card.querySelector('.tool-status-badge');
+            if (badge) {
+              badge.innerText = 'COMPLETED ✓';
+              badge.style.color = '#10b981';
+            }
+            const body = card.querySelector('.tool-body');
+            if (body) {
+              body.innerHTML = `<div><strong>Arguments:</strong></div>${body.innerHTML}<div><strong>Result:</strong></div>${escapeHtml(JSON.stringify(evt.result, null, 2))}`;
+            }
+          }
+          agentStream.scrollTop = agentStream.scrollHeight;
+        }
+      });
+    }
+
+    // Listen to browser actions commanded by the agent
+    if (window.jobPilotApi && window.jobPilotApi.onAgentBrowserAction) {
+      window.jobPilotApi.onAgentBrowserAction((data) => {
+        if (data.action === 'navigate') {
+          loadPortal(data.url);
+        } else if (data.action === 'autofill') {
+          smartApplyInBrowser();
+        } else if (data.action === 'inject_pitch') {
+          injectPitchInBrowser();
+        }
+      });
+    }
+
+    // Python fleet streaming logs
+    if (window.jobPilotApi && window.jobPilotApi.onTaskLog) {
       window.jobPilotApi.onTaskLog((text) => {
         appendTelemetry(text.trim());
       });
     }
 
-    // Load 14-Platform Quotas & Stats
+    // Ledger update listener
+    if (window.jobPilotApi && window.jobPilotApi.onTrackerUpdated) {
+      window.jobPilotApi.onTrackerUpdated(() => {
+        loadLedgerData();
+      });
+    }
+
+    // Helper: Escape HTML
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // =================================================================
+    // LEDGER & QUOTAS DATA
+    // =================================================================
+    async function loadLedgerData() {
+      if (!window.jobPilotApi || !window.jobPilotApi.getTrackerData) return;
+      const res = await window.jobPilotApi.getTrackerData();
+      if (res.ok) {
+        allLedgerRows = res.rows;
+        document.getElementById('ws-ledger-count').innerText = allLedgerRows.length;
+        renderLedgerTable(allLedgerRows);
+      }
+    }
+
+    function renderLedgerTable(rows) {
+      const tbody = document.getElementById('ledger-tbody');
+      tbody.innerHTML = '';
+      rows.slice(0, 150).forEach(r => {
+        const tr = document.createElement('tr');
+        const hasUrl = r.url && r.url.startsWith('http');
+        tr.innerHTML = `
+          <td style="color: #64748b; font-family: var(--font-mono);">${r.date}</td>
+          <td style="font-weight: 700; color: #fff;">${escapeHtml(r.company)}</td>
+          <td style="color: #cbd5e1;">${escapeHtml(r.role)}</td>
+          <td style="color: #94a3b8;">${escapeHtml(r.location)}</td>
+          <td><span style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 10px;">${r.portal}</span></td>
+          <td><span style="color: #10b981; font-weight: 700;">✓ ${r.status}</span></td>
+          <td>${hasUrl ? `<button class="browser-btn" style="padding: 2px 6px; font-size: 10px;" onclick="openJobInWs('${r.url}')">Open</button>` : '<span style="color: #475569;">Direct</span>'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterLedger() {
+      const q = (document.getElementById('ledger-search')?.value || '').toLowerCase();
+      const filtered = allLedgerRows.filter(r => 
+        (r.company && r.company.toLowerCase().includes(q)) ||
+        (r.role && r.role.toLowerCase().includes(q)) ||
+        (r.portal && r.portal.toLowerCase().includes(q)) ||
+        (r.location && r.location.toLowerCase().includes(q))
+      );
+      renderLedgerTable(filtered);
+    }
+
+    function openJobInWs(url) {
+      switchWorkspaceTab('browser');
+      loadPortal(url);
+    }
+
+    // 14-Platform Quotas
     const defaultQuotas = {
       'LinkedIn': { applied_today: 25, limit: 25, url: 'https://www.linkedin.com/jobs' },
       'Naukri': { applied_today: 50, limit: 50, url: 'https://www.naukri.com' },
@@ -561,12 +594,9 @@
 
     async function loadStats() {
       let quotas = defaultQuotas;
-      let totalToday = 311;
-
       try {
         const res = await fetch('http://127.0.0.1:5055/api/stats');
         const data = await res.json();
-        if (data.total_today) totalToday = data.total_today;
         if (data.quotas) {
           for (const [k, v] of Object.entries(data.quotas)) {
             if (quotas[k]) {
@@ -577,164 +607,67 @@
         }
       } catch (e) {}
 
-      document.getElementById('hdr-today').innerText = totalToday;
-      document.getElementById('metric-today').innerText = totalToday;
-
-      const container = document.getElementById('quota-cards-container');
+      const container = document.getElementById('quota-cards-grid');
+      if (!container) return;
       container.innerHTML = '';
       for (const [name, q] of Object.entries(quotas)) {
         const card = document.createElement('div');
-        card.className = 'portal-quota-card';
+        card.className = 'q-card';
         const pct = Math.min(100, Math.round((q.applied_today / q.limit) * 100));
         card.innerHTML = `
-          <div class="portal-card-top">
-            <span class="portal-name">${name}</span>
-            <span class="badge-capped">CAPPED</span>
+          <div class="q-card-top">
+            <span style="color: #fff;">${escapeHtml(name)}</span>
+            <span style="color: #10b981; font-family: var(--font-mono); font-size: 10px;">CAPPED</span>
           </div>
-          <div class="progress-track">
-            <div class="progress-bar" style="width: ${pct}%;"></div>
+          <div class="q-bar-bg"><div class="q-bar-fill" style="width: ${pct}%;"></div></div>
+          <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; font-family: var(--font-mono);">
+            <span>${q.applied_today} / ${q.limit}</span>
+            <span style="color: #10b981;">100%</span>
           </div>
-          <div class="quota-stats-text">
-            <span>Today: <strong style="color: #fff;">${q.applied_today}</strong> / ${q.limit}</span>
-            <span style="color: #10b981; font-weight: 700;">100%</span>
-          </div>
-          <button class="btn-open-portal" onclick="openPortalFromCard('${q.url || 'https://in.indeed.com'}')">Open in Hub</button>
+          <button class="browser-btn" style="margin-top: 4px; font-size: 10px; padding: 2px 6px; justify-content: center;" onclick="openJobInWs('${q.url}')">Open Portal</button>
         `;
         container.appendChild(card);
       }
     }
 
-    function openPortalFromCard(url) {
-      switchView('browser');
-      loadPortal(url);
-    }
-
-    // Ledger Data
-    async function loadLedgerData() {
-      if (!window.jobPilotApi) return;
-      const res = await window.jobPilotApi.getTrackerData();
-      if (res.ok) {
-        allLedgerRows = res.rows;
-        document.getElementById('ledger-count-pill').innerText = allLedgerRows.length;
-        filterLedger();
+    async function runFleetScript(scriptName) {
+      appendTelemetry('[OPERATOR] Executing fleet script: ' + scriptName);
+      if (window.jobPilotApi && window.jobPilotApi.runTask) {
+        await window.jobPilotApi.runTask(scriptName);
       }
     }
 
-    function filterByPortal(portalName, chipEl) {
-      currentPortalFilter = portalName;
-      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-      if (chipEl) chipEl.classList.add('active');
-      filterLedger();
+    // Model & Settings Management
+    async function switchModel(modelName) {
+      document.getElementById('cfg-model-name').value = modelName;
+      if (window.jobPilotApi && window.jobPilotApi.setModelConfig) {
+        await window.jobPilotApi.setModelConfig({ model: modelName });
+      }
     }
 
-    function renderLedgerRows(rows) {
-      const tbody = document.getElementById('ledger-tbody');
-      tbody.innerHTML = '';
-      rows.slice(0, 150).forEach(r => {
-        const tr = document.createElement('tr');
-        const hasUrl = r.url && r.url.startsWith('http');
-        tr.innerHTML = `
-          <td style="color: #94a3b8; font-size: 11px;">${r.date}</td>
-          <td style="font-weight: 700; color: #fff;">${r.company}</td>
-          <td style="color: #cbd5e1;">${r.role}</td>
-          <td style="color: #94a3b8;">${r.location}</td>
-          <td><span style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700;">${r.portal}</span></td>
-          <td><span style="color: #10b981; font-weight: 700;">✓ ${r.status}</span></td>
-          <td>${hasUrl ? `<button style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: #38bdf8; border-radius: 6px; padding: 3px 8px; font-size: 10px; cursor: pointer;" onclick="openJobInBrowser('${r.url}')">Open Job</button>` : '<span style="color: #64748b;">Direct</span>'}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+    async function saveModelSettings() {
+      const url = document.getElementById('cfg-router-url').value.trim();
+      const token = document.getElementById('cfg-router-token').value.trim();
+      const model = document.getElementById('cfg-model-name').value.trim();
 
-    function filterLedger() {
-      const q = (document.getElementById('ledger-search')?.value || '').toLowerCase();
-      const filtered = allLedgerRows.filter(r => {
-        const matchesPortal = (currentPortalFilter === 'ALL') || 
-          (r.portal && r.portal.toLowerCase().includes(currentPortalFilter.toLowerCase()));
-        const matchesQuery = !q || 
-          (r.company && r.company.toLowerCase().includes(q)) ||
-          (r.role && r.role.toLowerCase().includes(q)) ||
-          (r.location && r.location.toLowerCase().includes(q)) ||
-          (r.portal && r.portal.toLowerCase().includes(q));
-        return matchesPortal && matchesQuery;
-      });
-      renderLedgerRows(filtered);
-    }
-
-    function openJobInBrowser(url) {
-      switchView('browser');
-      loadPortal(url);
-    }
-
-    // AI Copilot
-    function setCopilotPrompt(p) {
-      document.getElementById('copilot-text').value = p;
-    }
-
-    async function sendCopilotQuery(customText) {
-      const input = document.getElementById('copilot-text');
-      const text = customText || input.value.trim();
-      if (!text) return;
-
-      const stream = document.getElementById('copilot-stream');
-      const uEl = document.createElement('div');
-      uEl.className = 'user-bubble';
-      uEl.innerText = text;
-      stream.appendChild(uEl);
-      if (!customText) input.value = '';
-
-      const aEl = document.createElement('div');
-      aEl.className = 'ai-bubble';
-      aEl.innerHTML = '<span style="color: #a78bfa;">Thinking with Fable5 on Local Router...</span>';
-      stream.appendChild(aEl);
-      stream.scrollTop = stream.scrollHeight;
-
-      if (window.jobPilotApi) {
-        const res = await window.jobPilotApi.callAi(text);
-        if (res.ok) {
-          // Format basic bold / linebreaks
-          aEl.innerHTML = res.reply
-            .replace(/\n\n/g, '<br><br>')
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      if (window.jobPilotApi && window.jobPilotApi.setModelConfig) {
+        const res = await window.jobPilotApi.setModelConfig({ routerUrl: url, token, model });
+        if (res.ok && res.isAlive) {
+          appendTelemetry('[SETTINGS] Router connected. Model set to ' + model);
+          document.getElementById('router-port-text').innerText = '20128: ONLINE';
+          document.getElementById('router-port-text').style.color = '#10b981';
         } else {
-          aEl.innerHTML = '<span style="color: #ef4444;">[Router Notice] ' + res.error + '</span><br><br>' +
-            '<button style="background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 6px; padding: 5px 12px; font-size: 11px; font-weight: 700; cursor: pointer;" onclick="retryQuery(' + JSON.stringify(text).replace(/"/g, '&quot;') + ')">⚡ Retry with Fable5</button>';
-        }
-      }
-      stream.scrollTop = stream.scrollHeight;
-    }
-
-    function retryQuery(text) {
-      sendCopilotQuery(text);
-    }
-
-    async function checkRouter() {
-      if (window.jobPilotApi && window.jobPilotApi.checkRouterStatus) {
-        const res = await window.jobPilotApi.checkRouterStatus();
-        const badge = document.getElementById('router-badge');
-        const badgeText = document.getElementById('router-badge-text');
-        if (badge && badgeText) {
-          if (res.alive) {
-            badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-            badge.style.background = 'rgba(16, 185, 129, 0.12)';
-            badge.style.color = '#10b981';
-            badgeText.innerText = 'Fable5 Live (20128)';
-          } else {
-            badge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-            badge.style.background = 'rgba(239, 68, 68, 0.12)';
-            badge.style.color = '#ef4444';
-            badgeText.innerText = 'Router Reconnecting...';
-          }
+          appendTelemetry('[SETTINGS WARNING] Router connection failed on ' + url);
+          document.getElementById('router-port-text').innerText = 'OFFLINE';
+          document.getElementById('router-port-text').style.color = '#ef4444';
         }
       }
     }
 
     // Init
+    loadLedgerData();
     loadStats();
-    checkRouter();
-    setInterval(loadStats, 6000);
-    setInterval(checkRouter, 5000);
+    setInterval(loadStats, 10000);
   </script>
 </body>
 </html>
