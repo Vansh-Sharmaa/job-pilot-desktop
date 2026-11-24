@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   // Extension Companion APIs
   openExtensionFolder: () => ipcRenderer.invoke('open-extension-folder'),
   sendExtensionCommand: (cmd) => ipcRenderer.invoke('send-extension-command', cmd),
+  triggerTabAgent: () => ipcRenderer.invoke('trigger-tab-agent'),
+  launchChromeAgent: (payload) => ipcRenderer.invoke('launch-chrome-agent', payload),
   getExtensionStatus: () => ipcRenderer.invoke('get-extension-status'),
   
   // Orca Fleet Subagent Engine
@@ -26,12 +28,32 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   
   // Ledger and Exports
   getTrackerData: () => ipcRenderer.invoke('get-tracker-data'),
+  getApplicationsTracker: async () => {
+    const res = await ipcRenderer.invoke('get-tracker-data');
+    return (res && Array.isArray(res.rows)) ? res.rows : (Array.isArray(res) ? res : []);
+  },
   addTrackerEntry: (entry) => ipcRenderer.invoke('add-tracker-entry', entry),
   checkDuplicateJob: (meta) => ipcRenderer.invoke('check-duplicate-job', meta),
-  checkJobScam: (payload) => ipcRenderer.invoke('check-job-scam', payload),
+  checkJobScam: (payload) => ipcRenderer.invoke('check-job-scam', typeof payload === 'object' ? payload : { text: payload }),
   exportLedger: (format) => ipcRenderer.invoke('export-ledger', { format }),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   openPath: (filePath) => ipcRenderer.invoke('open-path', filePath),
+
+  // Interview Intelligence & Email Radar
+  getInterviewIntelligence: () => ipcRenderer.invoke('get-interview-intelligence'),
+  syncGmailInbox: (accountEmail) => ipcRenderer.invoke('sync-gmail-inbox', { accountEmail }),
+  saveEmailCredentials: (creds) => ipcRenderer.invoke('save-email-credentials', creds),
+  getEmailCredentials: () => ipcRenderer.invoke('get-email-credentials'),
+  getEmailAccounts: () => ipcRenderer.invoke('get-email-accounts'),
+  saveEmailAccount: (acc) => ipcRenderer.invoke('save-email-account', acc),
+  removeEmailAccount: (accountId) => ipcRenderer.invoke('remove-email-account', { accountId }),
+  toggleEmailAccount: (accountId, enabled) => ipcRenderer.invoke('toggle-email-account', { accountId, enabled }),
+  parseManualEmail: (text, account) => ipcRenderer.invoke('parse-manual-email', { text, account }),
+
+  // Job Leads & Recommendation Engine
+  getJobLeads: () => ipcRenderer.invoke('get-job-leads'),
+  syncJobLeads: () => ipcRenderer.invoke('sync-job-leads'),
+  parseJobLeadEmail: (text, account) => ipcRenderer.invoke('parse-job-lead-email', { text, account }),
 
   // Window Frame Controls
   minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
@@ -84,5 +106,15 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
     const handler = (event, data) => callback(data);
     ipcRenderer.on('extension-active-job', handler);
     return () => ipcRenderer.removeListener('extension-active-job', handler);
+  },
+  onAgentTelemetry: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('agent-telemetry', handler);
+    return () => ipcRenderer.removeListener('agent-telemetry', handler);
+  },
+  onPortalApplying: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('portal-applying', handler);
+    return () => ipcRenderer.removeListener('portal-applying', handler);
   }
 });
