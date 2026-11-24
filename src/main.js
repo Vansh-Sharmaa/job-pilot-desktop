@@ -1,8 +1,15 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const http = require('http');
+const crypto = require('crypto');
+
+// Enforce single-instance lock to prevent port collision, double-writes and fleet races
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
 
 let mainWindow = null;
 let agentAbortRequested = false;
@@ -10,9 +17,28 @@ let agentAbortRequested = false;
 // Concurrent background fleet worker processes
 const activeProcesses = new Map(); // scriptName -> { proc, startTime, pid }
 
-// Browser Extension Bridge State
+// Browser Extension Bridge State & Auth Token
 let pendingExtensionCommands = [];
 let lastExtensionPing = 0;
+
+const BRIDGE_TOKEN_FILE = path.join(__dirname, '..', 'extension', 'bridge-token.json');
+let bridgeAuthToken = '';
+
+try {
+  if (fs.existsSync(BRIDGE_TOKEN_FILE)) {
+    const raw = fs.readFileSync(BRIDGE_TOKEN_FILE, 'utf-8');
+    bridgeAuthToken = JSON.parse(raw).token || '';
+  }
+} catch (e) {}
+
+if (!bridgeAuthToken) {
+  bridgeAuthToken = crypto.randomBytes(24).toString('hex');
+  try {
+    fs.writeFileSync(BRIDGE_TOKEN_FILE, JSON.stringify({ token: bridgeAuthToken }, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('Could not write bridge-token.json:', e.message);
+  }
+}
 
 const JOBS_DIR = 'D:\\opencode stuff\\job-agents';
 const RESUME_DIR = 'D:\\improved resume';
@@ -21,11 +47,11 @@ const RESUME_PDF_PATH = path.join(RESUME_DIR, 'Vansh_Sharma_Resume.pdf');
 const RESUME_MD_PATH = path.join(RESUME_DIR, 'Vansh_Sharma_Resume.md');
 const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
 
-// Default model configuration
+// Default model configuration without hardcoded secret token
 let config = {
   provider: '9router',
   routerUrl: 'http://127.0.0.1:20128/v1',
-  routerToken: 'sk-25a6421c7e67b2b5-edzmhl-9843071e',
+  routerToken: process.env.ROUTER_TOKEN || '',
   model: 'Fable5'
 };
 
@@ -48,14 +74,95 @@ function saveConfig() {
   }
 }
 
-// Candidate profile constants
+// Process Tree Killer for clean Windows subprocess termination
+function terminateProcessTree(proc) {
+  if (!proc || !proc.pid) return;
+  const pid = proc.pid;
+  if (process.platform === 'win32') {
+    try {
+      exec(`taskkill /pid ${pid} /T /F`, (err) => {
+        if (err) {
+          try { proc.kill('SIGKILL'); } catch (e) {}
+        }
+      });
+    } catch (e) {
+      try { proc.kill('SIGKILL'); } catch (err) {}
+    }
+  } else {
+    try {
+      process.kill(-pid, 'SIGKILL');
+    } catch (e) {
+      try { proc.kill('SIGKILL'); } catch (err) {}
+    }
+  }
+}
+
+// Path Traversal Validator for fleet scripts
+function resolveSafeScript(scriptName) {
+  if (!scriptName || typeof scriptName !== 'string') return null;
+  const base = path.basename(scriptName.trim());
+  if (base !== scriptName.trim()) return null; // Path traversal detected
+  if (!/^[a-zA-Z0-9_\-]+\.py$/.test(base)) return null;
+  const full = path.resolve(JOBS_DIR, base);
+  if (!full.startsWith(path.resolve(JOBS_DIR))) return null;
+  if (!fs.existsSync(full)) return null;
+  return full;
+}
+
+// CSV Sanitization, Backup, and Serialized Atomic Write Queue
+function escapeCsvField(val) {
+  if (val === null || val === undefined) return '""';
+  const str = String(val).replace(/"/g, '""');
+  return `"${str}"`;
+}
+
+function backupTrackerCsv() {
+  try {
+    if (fs.existsSync(TRACKER_PATH)) {
+      const backupPath = path.join(JOBS_DIR, 'job_applications_tracker.backup.csv');
+      fs.copyFileSync(TRACKER_PATH, backupPath);
+    }
+  } catch (e) {
+    console.warn('Could not create tracker backup:', e.message);
+  }
+}
+
+let csvWriteQueue = Promise.resolve();
+
+function safeAppendTrackerEntry(row) {
+  csvWriteQueue = csvWriteQueue.then(async () => {
+    backupTrackerCsv();
+    const today = new Date().toISOString().split('T')[0];
+    const line = [
+      today,
+      escapeCsvField(row.company || 'Unknown'),
+      escapeCsvField(row.role || 'Job'),
+      escapeCsvField(row.location || 'Remote'),
+      escapeCsvField(row.portal || 'Direct'),
+      escapeCsvField(row.status || 'Submitted'),
+      escapeCsvField(row.url || '')
+    ].join(',');
+
+    let existing = '';
+    if (fs.existsSync(TRACKER_PATH)) {
+      existing = fs.readFileSync(TRACKER_PATH, 'utf-8');
+    }
+    const needsNewline = existing.length > 0 && !existing.endsWith('\n');
+    fs.appendFileSync(TRACKER_PATH, (needsNewline ? '\n' : '') + line + '\n', 'utf-8');
+  }).catch(err => {
+    console.error('CSV append error:', err);
+  });
+  return csvWriteQueue;
+}
+
+// Candidate profile constants with verified contact data
 const CANDIDATE_PROFILE = {
   name: 'Vansh Sharma',
   firstName: 'Vansh',
   lastName: 'Sharma',
   email: 'engagevansh@gmail.com',
-  phone: '+919999999999',
-  phoneDigits: '9999999999',
+  phone: '+919310461877',
+  phoneDigits: '9310461877',
   city: 'Gurgaon',
   state: 'Haryana',
   country: 'India',
@@ -245,9 +352,23 @@ function checkScam(text) {
 // =====================================================================
 function startExtensionBridgeServer() {
   const bridge = http.createServer((req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    const origin = req.headers.origin || '';
+    const isExtension = origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://');
+    const isLocalhost = origin.startsWith('http://127.0.0.1') || origin.startsWith('http://localhost');
+    const isJobSite = ['indeed.com', 'linkedin.com', 'naukri.com', 'internshala.com', 'cuvette.tech', 'unstop.com', 'hirist.tech', 'cutshort.io', 'instahyre.com', 'wellfound.com', 'foundit.in'].some(d => origin.includes(d));
+
+    if (isExtension || isLocalhost || isJobSite) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-JobPilot-Token');
+    } else if (!origin) {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-JobPilot-Token');
+    } else {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Cross-origin access from unauthorized website rejected.' }));
+      return;
+    }
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -256,6 +377,20 @@ function startExtensionBridgeServer() {
     }
 
     const parsedUrl = new URL(req.url, 'http://127.0.0.1:5056');
+
+    // Token verification for sensitive endpoints
+    const authHeader = req.headers.authorization || '';
+    const tokenHeader = req.headers['x-jobpilot-token'] || '';
+    const providedToken = authHeader.replace(/^Bearer\s+/i, '') || tokenHeader;
+    const isAuthed = isExtension || isLocalhost || (providedToken && providedToken === bridgeAuthToken);
+
+    if (['/api/candidate-profile', '/api/pending-command', '/api/command-result'].includes(parsedUrl.pathname)) {
+      if (!isAuthed) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Unauthorized: valid extension token required.' }));
+        return;
+      }
+    }
 
     if (parsedUrl.pathname === '/api/status') {
       lastExtensionPing = Date.now();
@@ -358,12 +493,17 @@ function startExtensionBridgeServer() {
     if (parsedUrl.pathname === '/api/sync-application' && req.method === 'POST') {
       let body = '';
       req.on('data', c => body += c);
-      req.on('end', () => {
+      req.on('end', async () => {
         try {
           const payload = JSON.parse(body);
-          const today = new Date().toISOString().split('T')[0];
-          const entry = `\n${today},"${payload.company || 'Unknown'}","${payload.role || 'Job'}","${payload.location || 'Remote'}","${payload.portal || 'Extension'}","Submitted","${payload.url || ''}"`;
-          fs.appendFileSync(TRACKER_PATH, entry, 'utf-8');
+          await safeAppendTrackerEntry({
+            company: payload.company || 'Unknown',
+            role: payload.role || 'Job',
+            location: payload.location || 'Remote',
+            portal: payload.portal || 'Extension',
+            status: 'Submitted',
+            url: payload.url || ''
+          });
           mainWindow?.webContents.send('tracker-updated');
           mainWindow?.webContents.send('task-log', `[EXTENSION SYNC] Verified application for ${payload.company} (${payload.role}) recorded to tracker.`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -568,11 +708,9 @@ ipcMain.handle('get-tracker-data', async () => {
 });
 
 // IPC: Add Manual Application to Tracker
-ipcMain.handle('add-tracker-entry', async (event, { company, role, location, portal, url, status }) => {
+ipcMain.handle('add-tracker-entry', async (event, row) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const entry = `\n${today},"${company || 'Unknown'}","${role || 'Job'}","${location || 'Remote'}","${portal || 'Direct'}","${status || 'Submitted'}","${url || ''}"`;
-    fs.appendFileSync(TRACKER_PATH, entry, 'utf-8');
+    await safeAppendTrackerEntry(row);
     mainWindow?.webContents.send('tracker-updated');
     return { ok: true };
   } catch (e) {
@@ -605,13 +743,22 @@ ipcMain.handle('export-ledger', async (event, { format = 'csv' }) => {
   }
 });
 
-// IPC: Open Specific File or Directory
+// IPC: Open Specific File or Directory (Restricted to safe documents)
 ipcMain.handle('open-path', async (event, targetPath) => {
-  if (targetPath && fs.existsSync(targetPath)) {
-    shell.openPath(targetPath);
-    return { ok: true };
+  if (!targetPath || typeof targetPath !== 'string') {
+    return { ok: false, error: 'Invalid path' };
   }
-  return { ok: false, error: 'Path does not exist' };
+  const resolved = path.resolve(targetPath);
+  const dangerousExts = ['.exe', '.bat', '.cmd', '.ps1', '.vbs', '.js', '.msi', '.com', '.scr', '.hta', '.jar', '.pif'];
+  const ext = path.extname(resolved).toLowerCase();
+  if (dangerousExts.includes(ext)) {
+    return { ok: false, error: 'Opening executable or script binaries is blocked for security.' };
+  }
+  if (!fs.existsSync(resolved)) {
+    return { ok: false, error: 'Path does not exist' };
+  }
+  shell.openPath(resolved);
+  return { ok: true };
 });
 
 // IPC: Resume Management
@@ -729,6 +876,7 @@ ipcMain.handle('get-fleet-processes', async () => {
   for (const [name, item] of activeProcesses.entries()) {
     list.push({
       name,
+      scriptName: name,
       pid: item.proc.pid,
       startTime: item.startTime,
       running: true
@@ -742,9 +890,9 @@ ipcMain.handle('launch-fleet-worker', async (event, { scriptName, args = [] }) =
     return { ok: false, error: `Worker ${scriptName} is already running.` };
   }
 
-  const fullScript = path.join(JOBS_DIR, scriptName);
-  if (!fs.existsSync(fullScript)) {
-    return { ok: false, error: `File not found: ${fullScript}` };
+  const fullScript = resolveSafeScript(scriptName);
+  if (!fullScript) {
+    return { ok: false, error: `Unauthorized or non-existent script: ${scriptName}` };
   }
 
   const proc = spawn('python', ['-u', fullScript, ...args], {
@@ -787,7 +935,7 @@ ipcMain.handle('kill-fleet-worker', async (event, { scriptName }) => {
   const item = activeProcesses.get(scriptName);
   if (item && item.proc) {
     try {
-      item.proc.kill();
+      terminateProcessTree(item.proc);
       activeProcesses.delete(scriptName);
       mainWindow?.webContents.send('task-status', { running: false, task: scriptName, cancelled: true });
       mainWindow?.webContents.send('task-log', `[FLEET ORCHESTRATOR] Worker terminated: ${scriptName}`);
@@ -802,7 +950,11 @@ ipcMain.handle('kill-fleet-worker', async (event, { scriptName }) => {
 // Single-task runner for legacy triggers
 ipcMain.handle('run-task', async (event, { scriptName, args = [] }) => {
   return new Promise((resolve) => {
-    const fullScript = path.join(JOBS_DIR, scriptName);
+    const fullScript = resolveSafeScript(scriptName);
+    if (!fullScript) {
+      resolve({ ok: false, error: `Unauthorized script: ${scriptName}` });
+      return;
+    }
     const proc = spawn('python', ['-u', fullScript, ...args], {
       cwd: JOBS_DIR,
       env: { ...process.env, PYTHONUNBUFFERED: '1' }
@@ -830,7 +982,16 @@ ipcMain.handle('run-task', async (event, { scriptName, args = [] }) => {
 
 ipcMain.handle('stop-task', async () => {
   for (const [name, item] of activeProcesses.entries()) {
-    try { item.proc.kill(); } catch (e) {}
+    try { terminateProcessTree(item.proc); } catch (e) {}
+  }
+  activeProcesses.clear();
+  mainWindow?.webContents.send('task-status', { running: false, cancelled: true });
+  return { ok: true };
+});
+
+ipcMain.handle('kill-all-fleet-workers', async () => {
+  for (const [name, item] of activeProcesses.entries()) {
+    try { terminateProcessTree(item.proc); } catch (e) {}
   }
   activeProcesses.clear();
   mainWindow?.webContents.send('task-status', { running: false, cancelled: true });
@@ -1155,9 +1316,9 @@ async function executeAgentTool(name, args) {
     case 'run_fleet_agent': {
       const script = args.scriptName;
       const scriptArgs = args.args || [];
-      const fullPath = path.join(JOBS_DIR, script);
-      if (!fs.existsSync(fullPath)) {
-        return { status: 'error', error: `Script ${script} not found in ${JOBS_DIR}` };
+      const fullPath = resolveSafeScript(script);
+      if (!fullPath) {
+        return { status: 'error', error: `Unauthorized or non-existent script: ${script}` };
       }
 
       mainWindow?.webContents.send('task-log', `[OPERATOR] Running agent ${script}...`);
@@ -1195,9 +1356,14 @@ async function executeAgentTool(name, args) {
     }
 
     case 'add_to_ledger': {
-      const today = new Date().toISOString().split('T')[0];
-      const entry = `\n${today},"${args.company}","${args.role}","${args.location || 'Remote'}","${args.portal}","Submitted","${args.url || ''}"`;
-      fs.appendFileSync(TRACKER_PATH, entry, 'utf-8');
+      await safeAppendTrackerEntry({
+        company: args.company,
+        role: args.role,
+        location: args.location || 'Remote',
+        portal: args.portal,
+        status: 'Submitted',
+        url: args.url || ''
+      });
       mainWindow?.webContents.send('tracker-updated');
       return { status: 'success', message: `Added ${args.company} (${args.role}) on ${args.portal} to tracker.` };
     }

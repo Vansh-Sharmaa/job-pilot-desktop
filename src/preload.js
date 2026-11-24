@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   stopTask: () => ipcRenderer.invoke('stop-task'),
   launchFleetWorker: (scriptName, args) => ipcRenderer.invoke('launch-fleet-worker', { scriptName, args }),
   killFleetWorker: (scriptName) => ipcRenderer.invoke('kill-fleet-worker', { scriptName }),
+  killAllFleetWorkers: () => ipcRenderer.invoke('kill-all-fleet-workers'),
   getFleetProcesses: () => ipcRenderer.invoke('get-fleet-processes'),
   
   // Ledger and Exports

@@ -3,3 +3,7 @@ dist/
 build/
 *.log
 .env
+config.json
+extension/bridge-token.json
+*.backup.csv
+
