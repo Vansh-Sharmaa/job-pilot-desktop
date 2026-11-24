@@ -20,16 +20,45 @@
       <button class="oc-icon-btn" onclick="toggleSidebar()" title="Toggle Sidebar (Ctrl+B)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
       </button>
+      <button class="oc-icon-btn" onclick="setLayoutMode(currentLayoutMode === 'split' ? 'agent' : 'split')" title="Toggle Split View">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+      </button>
       <button class="oc-icon-btn" onclick="triggerQuickCommand('Open Command Palette')" title="Search & Actions (Ctrl+P)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       </button>
     </div>
 
-    <!-- Center App Brand -->
-    <div class="oc-titlebar-center">
-      <span class="oc-brand-logo">⚡</span>
-      <span class="oc-brand-name">JobPilot AI</span>
-      <span class="oc-brand-sub">Workstation</span>
+    <!-- Center OpenCode Workspace Tabs (Precision Utility) -->
+    <div class="oc-tab-strip">
+      <div class="oc-tab active" id="tab-browser" onclick="switchWorkspaceTab('browser')" title="Interactive Job Webview (Ctrl+1)">
+        <span class="oc-tab-badge">IN</span>
+        <span class="oc-tab-title">Browser</span>
+      </div>
+      <div class="oc-tab" id="tab-radar" onclick="switchWorkspaceTab('radar')" title="Portal Topology Network (Ctrl+5)">
+        <span class="oc-tab-badge">RD</span>
+        <span class="oc-tab-title">Radar</span>
+      </div>
+      <div class="oc-tab" id="tab-ledger" onclick="switchWorkspaceTab('ledger')" title="Applications Tracker Ledger (Ctrl+2)">
+        <span class="oc-tab-badge">LG</span>
+        <span class="oc-tab-title">Ledger (<span id="hdr-ledger-count">0</span>)</span>
+      </div>
+      <div class="oc-tab" id="tab-interviews" onclick="switchWorkspaceTab('interviews')" title="Gmail Interview Intelligence & Scheduling (Ctrl+6)">
+        <span class="oc-tab-badge">IV</span>
+        <span class="oc-tab-title">Interviews (<span id="hdr-interviews-count">0</span>)</span>
+      </div>
+      <div class="oc-tab" id="tab-leads" onclick="switchWorkspaceTab('leads')" title="Recommended Job Leads Extracted from Alert Emails">
+        <span class="oc-tab-badge">JL</span>
+        <span class="oc-tab-title">Job Leads (<span id="hdr-leads-count">10</span>)</span>
+      </div>
+      <div class="oc-tab" id="tab-fleet" onclick="switchWorkspaceTab('fleet')" title="Autonomous Multi-Platform Fleet">
+        <span class="oc-tab-badge">AP</span>
+        <span class="oc-tab-title">Autopilot</span>
+      </div>
+      <div class="oc-tab" id="tab-resume" onclick="switchWorkspaceTab('resume')" title="Candidate Qualifications & Resume Studio">
+        <span class="oc-tab-badge">CV</span>
+        <span class="oc-tab-title">Profile & Resume</span>
+      </div>
+      <button class="oc-tab-new-btn" onclick="startNewSession()" title="New Chat Session">+</button>
     </div>
 
     <!-- Right Window Frame Controls (Frameless System Controls) -->
@@ -47,64 +76,47 @@
   </header>
 
   <!-- =====================================================================
-       LINE 2: Context Breadcrumb, Workspace Switcher & Context Indicators
+       LINE 2: Context Breadcrumb, Telemetry Badges & Layout Controls
        ===================================================================== -->
   <div class="oc-subbar">
     <div class="oc-subbar-left">
       <div class="oc-breadcrumb">
-        <span class="oc-tab-badge accent sm">J</span>
+        <span class="oc-tab-badge sm">J</span>
         <span class="oc-bc-folder">job-pilot-desktop</span>
         <span class="oc-bc-slash">/</span>
-        <span class="oc-bc-file" id="oc-current-topic">New app feature ideas</span>
-        <span class="oc-bc-dots" onclick="showToast('Topic settings')" title="More Options">···</span>
+        <span class="oc-bc-file" id="oc-current-topic">Interactive Job Application Browser</span>
+        <span class="oc-bc-slash">/</span>
+        <span style="color: var(--text-muted); font-size: 12px;">Vansh Sharma (MCA '26)</span>
+        <span class="oc-bc-dots" onclick="switchWorkspaceTab('settings')" title="Application Settings">...</span>
       </div>
     </div>
 
-    <!-- Center Workspace Segmented Control -->
-    <div class="oc-subbar-center">
-      <div class="ag-segmented-control">
-        <button class="ag-seg-btn active" id="mode-browser" onclick="switchWorkspaceTab('browser')" title="Interactive Job Webview (Ctrl+1)">
-          <i data-lucide="globe" class="lucide-icon-sm"></i>
-          <span>Browser</span>
-        </button>
-        <button class="ag-seg-btn" id="mode-radar" onclick="switchWorkspaceTab('radar')" title="Portal Topology Network (Ctrl+5)">
-          <i data-lucide="network" class="lucide-icon-sm"></i>
-          <span>Radar</span>
-        </button>
-        <button class="ag-seg-btn" id="mode-ledger" onclick="switchWorkspaceTab('ledger')" title="Applications Tracker Ledger (Ctrl+2)">
-          <i data-lucide="clipboard-list" class="lucide-icon-sm"></i>
-          <span>Ledger (<span id="hdr-ledger-count">311</span>)</span>
-        </button>
-        <button class="ag-seg-btn" id="mode-fleet" onclick="switchWorkspaceTab('fleet')" title="Autonomous Multi-Platform Fleet">
-          <i data-lucide="zap" class="lucide-icon-sm"></i>
-          <span>Autopilot</span>
-        </button>
-        <button class="ag-seg-btn" id="mode-resume" onclick="switchWorkspaceTab('resume')" title="Candidate Qualifications & Resume Studio">
-          <i data-lucide="user-check" class="lucide-icon-sm"></i>
-          <span>Profile & Resume</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Right Controls: Profile Pill & View Toggles -->
+    <!-- Right Controls: Status Indicators & View Toggles -->
     <div class="oc-subbar-right">
       <div class="ag-profile-pill" onclick="switchWorkspaceTab('resume')" title="View & Edit Candidate Profile / Resume">
         <span class="ag-profile-dot"></span>
         <span class="ag-profile-name">Vansh Sharma (MCA '26)</span>
       </div>
       <div class="ag-view-toggles">
-        <button class="ag-view-btn active" id="mode-split" onclick="setLayoutMode('split')" title="Split View: Agent + Workspace">◫ Split</button>
-        <button class="ag-view-btn" id="mode-agent" onclick="setLayoutMode('agent')" title="Full Chat Focus">💬 Chat</button>
+        <button class="ag-view-btn active" id="mode-split" onclick="setLayoutMode('split')" title="Split View: Agent + Workspace">
+          <i data-lucide="columns" class="lucide-icon-sm"></i>
+          <span>Split</span>
+        </button>
+        <button class="ag-view-btn" id="mode-agent" onclick="setLayoutMode('agent')" title="Full Chat Focus">
+          <i data-lucide="message-square" class="lucide-icon-sm"></i>
+          <span>Chat</span>
+        </button>
       </div>
-      <button class="ag-icon-btn" onclick="toggleMaximizeWorkspace()" id="btn-toggle-max" title="Maximize Workspace Pane">⛶</button>
+      <button class="ag-icon-btn" onclick="toggleMaximizeWorkspace()" id="btn-toggle-max" title="Maximize Workspace Pane">
+        <i data-lucide="maximize-2" class="lucide-icon-sm"></i>
+      </button>
     </div>
   </div>
-
-  <!-- Live Chrome Tab Detected Banner -->
+<!-- Live Chrome Tab Detected Banner -->
   <div id="chrome-active-banner"
     style="display: none; background: rgba(56, 189, 248, 0.08); border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding: 5px 14px; font-size: 11px; align-items: center; justify-content: space-between; z-index: 40;">
     <div style="display: flex; align-items: center; gap: 8px;">
-      <span style="font-size: 13px;">⚡</span>
+      <i data-lucide="zap" class="lucide-icon-sm" style="color: var(--accent);"></i>
       <span style="color: #fff; font-weight: 600;">CHROME JOB DETECTED:</span>
       <span id="active-banner-company" style="color: #38bdf8; font-weight: 700;"></span>
       <span style="color: #94a3b8;">:</span>
@@ -113,7 +125,7 @@
     </div>
     <div style="display: flex; gap: 6px;">
       <button class="browser-btn primary" style="font-size: 10px; padding: 2px 7px;"
-        onclick="applyToActiveChromeJob()">⚡ Smart Apply</button>
+        onclick="applyToActiveChromeJob()">⚡ Auto-Apply on Tab</button>
       <button class="browser-btn" style="font-size: 10px; padding: 2px 7px;" onclick="pitchActiveChromeJob()">📄 Inject
         Pitch</button>
       <button class="browser-btn" style="font-size: 10px; padding: 2px 7px;" onclick="saveActiveChromeJobToLedger()">+
@@ -483,22 +495,25 @@
           </div>
         </div>
 
-        <!-- TAB 2: LEDGER VIEW -->
+        <!-- TAB 2: LEDGER VIEW (PRECISION UTILITY) -->
         <div class="ws-view" id="ws-ledger">
           <div class="ledger-view-container">
             <div class="ledger-top-row">
               <div>
-                <div style="font-size: 13px; font-weight: 600; color: #fff;">Verified Applications Ledger</div>
-                <div style="font-size: 11px; color: var(--text-muted);">Real-time synchronized records from fleet
-                  workers and Chrome extension</div>
+                <div class="ledger-heading">Applications Ledger</div>
+                <div class="ledger-subheading">Synchronized application records across hiring portals and Chrome bridge</div>
               </div>
-              <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="display: flex; gap: var(--space-2); align-items: center;">
                 <input type="text" class="ledger-search-box" id="ledger-search"
                   placeholder="Search company, role or portal..." oninput="filterLedger()">
-                <button class="browser-btn" onclick="exportLedgerData('csv')" title="Export full tracker to CSV">⬇
-                  CSV</button>
-                <button class="browser-btn" onclick="exportLedgerData('json')" title="Export full tracker to JSON">⬇
-                  JSON</button>
+                <button class="browser-btn" onclick="exportLedgerData('csv')" title="Export full tracker to CSV">
+                  <i data-lucide="download" class="lucide-icon-sm"></i>
+                  <span>CSV</span>
+                </button>
+                <button class="browser-btn" onclick="exportLedgerData('json')" title="Export full tracker to JSON">
+                  <i data-lucide="download" class="lucide-icon-sm"></i>
+                  <span>JSON</span>
+                </button>
               </div>
             </div>
 
@@ -508,22 +523,167 @@
             </div>
 
             <div class="ledger-table-wrap">
-              <table>
+              <table class="ledger-table">
                 <thead>
                   <tr>
-                    <th style="width: 85px;">Date</th>
-                    <th>Company</th>
-                    <th>Role</th>
-                    <th>Location</th>
-                    <th>Portal</th>
-                    <th>Status</th>
-                    <th style="width: 60px;">Action</th>
+                    <th style="width: 100px;">DATE</th>
+                    <th>COMPANY</th>
+                    <th>ROLE</th>
+                    <th>LOCATION</th>
+                    <th style="width: 110px;">PORTAL</th>
+                    <th style="width: 120px;">STATUS</th>
+                    <th style="width: 70px; text-align: center;">ACTION</th>
                   </tr>
                 </thead>
                 <tbody id="ledger-tbody">
+                  <!-- Rendered dynamically with 4-state protocol -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+                <!-- TAB 2.5: INTERVIEWS & MAIL INTELLIGENCE VIEW -->
+        <div class="ws-view" id="ws-interviews">
+          <div class="interview-view-container">
+            <!-- Top Action Row -->
+            <div class="interview-top-row">
+              <div class="interview-title-block">
+                <div class="interview-main-title">
+                  <i data-lucide="calendar-check" class="lucide-icon-md text-emerald"></i>
+                  <span>Gmail Recruitment Intelligence & Interview Radar</span>
+                </div>
+                <div class="interview-sub-title">
+                  <span>Connected Inboxes:</span>
+                  <div class="account-pills-row" id="interview-account-pills">
+                    <!-- Populated dynamically via renderAccountPills() -->
+                  </div>
+                  <button class="btn-add-account-mini" onclick="openEmailConfigModal()" title="Manage or Add Gmail Inboxes">+ Manage Inboxes</button>
+                  <span class="interview-sync-status" id="interview-sync-status">73 emails parsed</span>
+                </div>
+              </div>
+              <div class="interview-action-btns">
+                <button class="browser-btn primary" id="btn-sync-gmail" onclick="syncGmailEmails()" title="Scan all enabled Gmail accounts for recruitment messages and interview schedules">
+                  <i data-lucide="refresh-cw" class="lucide-icon-sm"></i>
+                  <span id="btn-sync-gmail-label">Sync All Inboxes</span>
+                </button>
+                <button class="browser-btn" onclick="openPasteEmailModal()" title="Quickly paste a recruiter message or email text to extract interview data">
+                  <i data-lucide="file-plus" class="lucide-icon-sm"></i>
+                  <span>Quick Paste Email</span>
+                </button>
+                <button class="browser-btn" onclick="openEmailConfigModal()" title="Manage multiple Gmail accounts, app passwords, and auto-sync">
+                  <i data-lucide="settings" class="lucide-icon-sm"></i>
+                  <span>Accounts Settings</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Multi-Account Filter Strip -->
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 2px 0;">
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Filter Inbox:</span>
+              <div class="account-pills-row" id="interview-account-filter-strip">
+                <div class="account-pill-chip active" id="acc-filter-all" onclick="filterByAccount('ALL', this)">All Inboxes (73)</div>
+                <!-- Dynamic account filter chips -->
+              </div>
+            </div>
+
+            <!-- Upcoming Interview Hero Card -->
+            <div class="interview-hero-banner" id="interview-hero-banner" style="display: none;">
+              <div class="interview-hero-badge">
+                <span class="interview-pulse-dot"></span>
+                <span>UPCOMING INTERVIEW</span>
+              </div>
+              <div class="interview-hero-details">
+                <div class="interview-hero-company" id="hero-interview-company">NextAstra</div>
+                <div class="interview-hero-role" id="hero-interview-role">AI Engineer - Agent Systems</div>
+                <div class="interview-hero-time" id="hero-interview-time">
+                  <i data-lucide="clock" class="lucide-icon-sm"></i>
+                  <span id="hero-interview-timestr">Scheduled Time</span>
+                </div>
+              </div>
+              <div class="interview-hero-actions">
+                <button class="btn-join-meet" id="hero-btn-join" onclick="openUpcomingMeetingLink()" style="display: none;">
+                  <i data-lucide="video" class="lucide-icon-sm"></i>
+                  <span>Join Google Meet / Zoom</span>
+                </button>
+                <button class="btn-prep-ai" id="hero-btn-prep" onclick="prepUpcomingInterviewAI()">
+                  <i data-lucide="sparkles" class="lucide-icon-sm"></i>
+                  <span>AI Technical Prep</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 5 KPI Metric Cards -->
+            <div class="interview-kpi-grid">
+              <div class="interview-kpi-card kpi-emerald" onclick="filterInterviews('INTERVIEW', null)">
+                <div class="kpi-icon-wrap"><i data-lucide="calendar" class="lucide-icon-md"></i></div>
+                <div class="kpi-content">
+                  <div class="kpi-num" id="kpi-interviews-count">0</div>
+                  <div class="kpi-label">Interviews Scheduled</div>
+                </div>
+              </div>
+              <div class="interview-kpi-card kpi-cyan" onclick="filterInterviews('SHORTLISTED', null)">
+                <div class="kpi-icon-wrap"><i data-lucide="code" class="lucide-icon-md"></i></div>
+                <div class="kpi-content">
+                  <div class="kpi-num" id="kpi-shortlisted-count">0</div>
+                  <div class="kpi-label">Shortlisted / Tests</div>
+                </div>
+              </div>
+              <div class="interview-kpi-card kpi-blue" onclick="filterInterviews('APPLIED', null)">
+                <div class="kpi-icon-wrap"><i data-lucide="mail-check" class="lucide-icon-md"></i></div>
+                <div class="kpi-content">
+                  <div class="kpi-num" id="kpi-applied-count">0</div>
+                  <div class="kpi-label">Applied / Acknowledged</div>
+                </div>
+              </div>
+              <div class="interview-kpi-card kpi-rose" onclick="filterInterviews('REJECTED', null)">
+                <div class="kpi-icon-wrap"><i data-lucide="filter-x" class="lucide-icon-md"></i></div>
+                <div class="kpi-content">
+                  <div class="kpi-num" id="kpi-rejected-count">0</div>
+                  <div class="kpi-label">Rejections Filtered</div>
+                </div>
+              </div>
+              <div class="interview-kpi-card kpi-amber" onclick="filterInterviews('OFFER', null)">
+                <div class="kpi-icon-wrap"><i data-lucide="award" class="lucide-icon-md"></i></div>
+                <div class="kpi-content">
+                  <div class="kpi-num" id="kpi-offer-count">0</div>
+                  <div class="kpi-label">Job Offers</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filter Strip & Live Search -->
+            <div class="interview-filter-row">
+              <div class="interview-filter-strip" id="interview-filter-strip">
+                <div class="l-chip active" id="ichip-all" onclick="filterInterviews('ALL', this)">All (0)</div>
+                <div class="l-chip" id="ichip-interview" onclick="filterInterviews('INTERVIEW', this)">Interviews (0)</div>
+                <div class="l-chip" id="ichip-shortlist" onclick="filterInterviews('SHORTLISTED', this)">Shortlisted (0)</div>
+                <div class="l-chip" id="ichip-applied" onclick="filterInterviews('APPLIED', this)">Applied (0)</div>
+                <div class="l-chip" id="ichip-rejected" onclick="filterInterviews('REJECTED', this)">Rejections (0)</div>
+                <div class="l-chip" id="ichip-offer" onclick="filterInterviews('OFFER', this)">Offers (0)</div>
+              </div>
+              <input type="text" class="interview-search-box" id="interview-search-input"
+                placeholder="Filter by company, recruiter, or keywords..." oninput="filterInterviewsBySearch(this.value)">
+            </div>
+
+            <!-- Email Records Table -->
+            <div class="interview-table-wrap">
+              <table>
+                <thead>
                   <tr>
-                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading ledger
-                      data...</td>
+                    <th style="width: 80px;">Date</th>
+                    <th style="width: 130px;">Account</th>
+                    <th style="width: 140px;">Company</th>
+                    <th style="width: 120px;">Role</th>
+                    <th style="width: 100px;">Stage</th>
+                    <th>Subject & Recruiter Message</th>
+                    <th style="width: 100px;">Meeting Link</th>
+                    <th style="width: 75px;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="interview-tbody">
+                  <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 25px;">Loading recruitment intelligence data...</td>
                   </tr>
                 </tbody>
               </table>
@@ -531,7 +691,108 @@
           </div>
         </div>
 
-        <!-- TAB 3: FLEET MATRIX VIEW -->
+        <!-- TAB 2.6: JOB LEADS & RECOMMENDATION ENGINE -->
+        <div class="ws-view" id="ws-leads">
+          <div class="interview-view-container">
+            <!-- Top Action Row -->
+            <div class="interview-top-row">
+              <div class="interview-title-block">
+                <div class="interview-main-title">
+                  <i data-lucide="sparkles" class="lucide-icon-md text-amber" style="color: #f59e0b;"></i>
+                  <span>Inbox Recommended Job Leads & Alerts</span>
+                </div>
+                <div class="interview-sub-title">
+                  <span>Curated fresher and entry-level job alerts extracted from Indeed, LinkedIn, and Naukri across all 4 Gmail inboxes</span>
+                  <span class="interview-sync-status" id="leads-sync-status">10 leads available</span>
+                </div>
+              </div>
+              <div class="interview-action-btns">
+                <button class="browser-btn primary" id="btn-sync-leads" onclick="syncJobLeadsNow()" title="Scan inboxes for fresh job alert emails and recommendation digests">
+                  <i data-lucide="refresh-cw" class="lucide-icon-sm"></i>
+                  <span id="btn-sync-leads-label">Sync Alert Emails</span>
+                </button>
+                <button class="browser-btn" onclick="openPasteLeadModal()" title="Paste a job alert email text to extract recommended postings and links">
+                  <i data-lucide="file-plus" class="lucide-icon-sm"></i>
+                  <span>Paste Alert Email</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 4 KPI Cards -->
+            <div class="interview-kpi-grid">
+              <div class="interview-kpi-card kpi-emerald">
+                <div class="kpi-header">
+                  <span class="kpi-label">TOTAL LEADS</span>
+                  <div class="kpi-icon-wrap"><i data-lucide="compass" class="lucide-icon-sm"></i></div>
+                </div>
+                <div class="kpi-val" id="kpi-leads-total">10</div>
+                <div class="kpi-desc">Extracted from email digests</div>
+              </div>
+
+              <div class="interview-kpi-card kpi-sky">
+                <div class="kpi-header">
+                  <span class="kpi-label">FRESHER FRIENDLY</span>
+                  <div class="kpi-icon-wrap"><i data-lucide="user-check" class="lucide-icon-sm"></i></div>
+                </div>
+                <div class="kpi-val" id="kpi-leads-fresher">8</div>
+                <div class="kpi-desc">0-2 YOE & fresher matches</div>
+              </div>
+
+              <div class="interview-kpi-card kpi-amber">
+                <div class="kpi-header">
+                  <span class="kpi-label">REMOTE / HYBRID</span>
+                  <div class="kpi-icon-wrap"><i data-lucide="globe" class="lucide-icon-sm"></i></div>
+                </div>
+                <div class="kpi-val" id="kpi-leads-remote">6</div>
+                <div class="kpi-desc">Flexible location roles</div>
+              </div>
+
+              <div class="interview-kpi-card kpi-purple">
+                <div class="kpi-header">
+                  <span class="kpi-label">READY TO APPLY</span>
+                  <div class="kpi-icon-wrap"><i data-lucide="zap" class="lucide-icon-sm"></i></div>
+                </div>
+                <div class="kpi-val" id="kpi-leads-ready">10</div>
+                <div class="kpi-desc">Direct verified URL ready</div>
+              </div>
+            </div>
+
+            <!-- Filter Strip: Platform + Search -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;" id="leads-platform-filters">
+                <button class="stage-pill active" onclick="filterLeadsByPlatform('ALL', this)">All Platforms</button>
+                <button class="stage-pill" onclick="filterLeadsByPlatform('Indeed Alerts', this)">Indeed Alerts</button>
+                <button class="stage-pill" onclick="filterLeadsByPlatform('LinkedIn Matches', this)">LinkedIn Matches</button>
+                <button class="stage-pill" onclick="filterLeadsByPlatform('Naukri Recommendations', this)">Naukri Recommendations</button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="text" id="leads-search-input" placeholder="Search company, role or location..." oninput="filterJobLeads()" style="background: var(--bg-surface); border: 1px solid var(--border-hairline); border-radius: 6px; color: #fff; padding: 4px 10px; font-size: 11px; width: 220px; outline: none;">
+              </div>
+            </div>
+
+            <!-- Leads Table -->
+            <div class="interview-table-wrap">
+              <table class="interview-table">
+                <thead>
+                  <tr>
+                    <th style="width: 100px;">DATE</th>
+                    <th style="width: 130px;">INBOX ACCOUNT</th>
+                    <th style="width: 180px;">COMPANY & LOCATION</th>
+                    <th>ROLE & HIGHLIGHTS</th>
+                    <th style="width: 140px;">PLATFORM</th>
+                    <th style="width: 140px;">FIT BADGE</th>
+                    <th style="width: 130px; text-align: center;">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody id="leads-tbody">
+                  <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Loading recommended leads...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+<!-- TAB 3: FLEET MATRIX VIEW -->
         <div class="ws-view" id="ws-fleet">
           <div class="fleet-matrix-container">
             <div
@@ -821,31 +1082,155 @@
 
   </div>
 
-  <!-- Antigravity Bottom Status Bar -->
+    <!-- Email Config Modal (Multi-Account Management) -->
+  <div id="email-config-modal" class="email-modal-overlay" style="display: none;">
+    <div class="email-modal-card" style="width: 580px;">
+      <div class="email-modal-header">
+        <div class="email-modal-title">
+          <i data-lucide="mail" class="lucide-icon-sm" style="color: #38bdf8;"></i>
+          <span>Manage Connected Gmail Inboxes</span>
+        </div>
+        <button class="email-modal-close" onclick="closeEmailConfigModal()">✕</button>
+      </div>
+      <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5;">
+        Connect all your Gmail accounts used for job applications. JobPilot scans each enabled inbox via SSL and aggregates interview schedules into your unified radar.
+      </div>
+
+      <!-- Configured Accounts List -->
+      <div style="font-size: 11px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.04em;">Configured Inboxes (<span id="modal-accounts-count">0</span>)</div>
+      <div class="account-mgmt-list" id="modal-account-list">
+        <!-- Rendered via renderAccountListInModal() -->
+      </div>
+
+      <!-- Add or Edit Account Section -->
+      <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-hairline); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 11.5px; font-weight: 700; color: #38bdf8;" id="modal-acc-form-title">+ Add or Configure Gmail Account</div>
+        <input type="hidden" id="email-cfg-id" value="">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div>
+            <label style="font-size: 10.5px; color: var(--text-dim); font-weight: 600;">Gmail Address</label>
+            <input type="email" id="email-cfg-address" class="setting-input" placeholder="e.g. your_email@gmail.com">
+          </div>
+          <div>
+            <label style="font-size: 10.5px; color: var(--text-dim); font-weight: 600;">Account Label / Purpose</label>
+            <input type="text" id="email-cfg-label" class="setting-input" placeholder="e.g. Primary, Tech, Applications">
+          </div>
+        </div>
+        <div>
+          <label style="font-size: 10.5px; color: var(--text-dim); font-weight: 600;">Google App Password (16 characters)</label>
+          <input type="password" id="email-cfg-password" class="setting-input" placeholder="Generate at myaccount.google.com/apppasswords">
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px;">
+            Requires 2-Step Verification on Google. Generate an App Password for 'Mail' / 'Windows Computer'.
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+          <button class="browser-btn" id="btn-cancel-edit-acc" style="display: none;" onclick="resetAccountForm()">Cancel Edit</button>
+          <button class="browser-btn primary" onclick="saveEmailAccountUI()">Save Account</button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+        <button class="browser-btn" onclick="closeEmailConfigModal()">Close</button>
+        <button class="browser-btn primary" onclick="syncAllAccountsFromModal()">⚡ Sync All Inboxes Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Paste Email Modal -->
+  <div id="email-paste-modal" class="email-modal-overlay" style="display: none;">
+    <div class="email-modal-card">
+      <div class="email-modal-header">
+        <div class="email-modal-title">
+          <i data-lucide="file-text" class="lucide-icon-sm" style="color: #10b981;"></i>
+          <span>Quick Recruiter Message / Email Parser</span>
+        </div>
+        <button class="email-modal-close" onclick="closePasteEmailModal()">✕</button>
+      </div>
+      <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5;">
+        Paste any recruiter message, interview invitation, or assessment email text below. The AI intelligence engine will extract company, stage, meeting link, and date automatically.
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 10.5px; color: var(--text-dim); font-weight: 600;">Target Inbox (Which account received this?)</label>
+        <select id="email-paste-account" class="setting-input" style="background: #141520; color: #fff; padding: 5px 8px;">
+          <option value="engagevansh@gmail.com">engagevansh@gmail.com (Primary)</option>
+          <option value="xalta26@gmail.com">xalta26@gmail.com (XALTA Dev)</option>
+          <option value="vishurou61@gmail.com">vishurou61@gmail.com (Vishu Applications)</option>
+          <option value="kalsharma908@gmail.com">kalsharma908@gmail.com (Kal Outreach)</option>
+        </select>
+      </div>
+      <textarea id="email-paste-text" style="width: 100%; height: 120px; background: #0c0d13; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px; color: #fff; font-family: var(--font-sans); font-size: 11.5px; resize: vertical; outline: none;" placeholder="Paste email content here (e.g. 'Hi Vansh, we would like to invite you for a Google Meet interview on Friday...')..."></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="browser-btn" onclick="closePasteEmailModal()">Cancel</button>
+        <button class="browser-btn primary" onclick="submitManualEmailPaste()">Parse & Add to Ledger</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Quick Paste Job Alert Email -->
+  <div id="modal-paste-lead" class="email-modal-overlay" style="display: none;" onclick="if(event.target === this) closePasteLeadModal()">
+    <div class="email-modal-box">
+      <div class="email-modal-header">
+        <div class="email-modal-title">
+          <i data-lucide="sparkles" class="lucide-icon-sm" style="color: #f59e0b;"></i>
+          <span>Quick Job Alert Email Parser</span>
+        </div>
+        <button class="email-modal-close" onclick="closePasteLeadModal()">✕</button>
+      </div>
+      <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5;">
+        Paste any job alert, recommended openings digest, or hiring email text from Indeed, LinkedIn, or Naukri. The parser will extract company, role, location, and application link.
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 10.5px; color: var(--text-dim); font-weight: 600;">Receiving Inbox Account</label>
+        <select id="lead-paste-account" class="setting-input" style="background: #141520; color: #fff; padding: 5px 8px;">
+          <option value="engagevansh@gmail.com">engagevansh@gmail.com (Primary)</option>
+          <option value="xalta26@gmail.com">xalta26@gmail.com (XALTA Dev)</option>
+          <option value="vishurou61@gmail.com">vishurou61@gmail.com (Vishu Applications)</option>
+          <option value="kalsharma908@gmail.com">kalsharma908@gmail.com (Kal Outreach)</option>
+        </select>
+      </div>
+      <textarea id="lead-paste-text" style="width: 100%; height: 120px; background: #0c0d13; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px; color: #fff; font-family: var(--font-sans); font-size: 11.5px; resize: vertical; outline: none;" placeholder="Paste job alert email here (e.g. 'Indeed Job Alert: AI Engineer at Google, apply at https://in.indeed.com/viewjob?jk=...')..."></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="browser-btn" onclick="closePasteLeadModal()">Cancel</button>
+        <button class="browser-btn primary" onclick="submitManualLeadPaste()">Parse & Add to Leads</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Precision Utility Bottom Status Dock -->
   <footer class="ag-statusbar" id="ag-statusbar">
     <div class="sb-group">
-      <div class="sb-item"><span>⎇</span> <span>main</span></div>
-      <div class="sb-item" style="color: #4b5563;">•</div>
-      <div class="sb-item"><span>📁</span> <span>improved resume</span></div>
-      <div class="sb-item" style="color: #4b5563;">•</div>
-      <div class="sb-item" id="sb-task-status"><span class="ag-pill-dot" style="width: 5px; height: 5px;"></span>
+      <div class="sb-item">
+        <i data-lucide="git-branch" class="lucide-icon-sm"></i>
+        <span class="text-mono">main</span>
+      </div>
+      <div class="sb-item" style="color: var(--border-subtle);">&bull;</div>
+      <div class="sb-item">
+        <i data-lucide="folder" class="lucide-icon-sm"></i>
+        <span>improved resume</span>
+      </div>
+      <div class="sb-item" style="color: var(--border-subtle);">&bull;</div>
+      <div class="sb-item" id="sb-task-status">
+        <span class="ag-pill-dot" style="width: 6px; height: 6px; background: var(--text-muted);"></span>
         <span>Idle</span>
       </div>
     </div>
 
     <div class="sb-group">
-      <div class="sb-item" style="color: var(--text-dim);">⚡ Ledger: <span id="sb-ledger-total"
-          style="color: #fff; font-weight: 600;">...</span> Verified</div>
+      <div class="sb-item" style="color: var(--text-secondary);">
+        <i data-lucide="database" class="lucide-icon-sm"></i>
+        <span>Ledger: <span id="sb-ledger-total" class="text-mono" style="color: var(--text-primary); font-weight: 510;">...</span> verified</span>
+      </div>
     </div>
 
     <div class="sb-group">
-      <div class="sb-item"><span id="sb-ext-dot" class="ag-pill-dot"
-          style="width: 5px; height: 5px; background: #6b7280; box-shadow: none;"></span> <span
-          id="sb-ext-text">Extension Standby</span></div>
-      <div class="sb-item" style="color: #4b5563;">•</div>
-      <div class="sb-item"><span id="sb-model-pill">Fable5 (9Router)</span></div>
-      <div class="sb-item" style="color: #4b5563;">•</div>
-      <div class="sb-item">UTF-8</div>
+      <div class="sb-item">
+        <span id="sb-ext-dot" class="ag-pill-dot" style="width: 6px; height: 6px; background: var(--status-success); box-shadow: none;"></span>
+        <span id="sb-ext-text" class="text-mono">5056 online</span>
+      </div>
+      <div class="sb-item" style="color: var(--border-subtle);">&bull;</div>
+      <div class="sb-item"><span id="sb-model-pill" class="text-mono">Fable5 / 9Router</span></div>
+      <div class="sb-item" style="color: var(--border-subtle);">&bull;</div>
+      <div class="sb-item text-mono">UTF-8</div>
     </div>
   </footer>
 
@@ -961,6 +1346,10 @@
         paneWorkspace.style.display = 'flex';
       }
 
+      document.querySelectorAll('.oc-tab').forEach(b => b.classList.remove('active'));
+      const activeOcTab = document.getElementById('tab-' + tabName);
+      if (activeOcTab) activeOcTab.classList.add('active');
+
       document.querySelectorAll('.ws-tab-btn').forEach(b => b.classList.remove('active'));
       const activeTabBtn = document.getElementById('wstab-' + tabName);
       if (activeTabBtn) activeTabBtn.classList.add('active');
@@ -973,11 +1362,27 @@
       const targetView = document.getElementById('ws-' + tabName);
       if (targetView) targetView.classList.add('active-ws');
 
+      const topicTitles = {
+        'browser': 'Interactive Job Application Browser',
+        'radar': '20-Platform Hiring Network Radar',
+        'ledger': 'Verified Applications Ledger',
+        'interviews': 'Gmail Recruitment Intelligence & Interview Radar',
+        'leads': 'Inbox Job Recommendations & Hiring Alerts',
+        'fleet': 'Autonomous Multi-Platform Fleet Autopilot',
+        'resume': 'Candidate Profile & Dynamic ATS Studio',
+        'settings': 'Model Gateway & System Settings'
+      };
+      const topicEl = document.getElementById('oc-current-topic');
+      if (topicEl && topicTitles[tabName]) topicEl.innerText = topicTitles[tabName];
+
       if (tabName === 'radar') renderRadarTopology();
       if (tabName === 'ledger') loadLedgerData();
+      if (tabName === 'interviews') loadInterviewsData();
+      if (tabName === 'leads') loadJobLeadsData();
       if (tabName === 'fleet') refreshFleetStatus();
       if (tabName === 'quotas') loadStats();
       if (tabName === 'settings') loadSettingsToUI();
+      if (window.lucide) lucide.createIcons();
     }
 
     // Sessions & Clear
@@ -1451,8 +1856,9 @@
           const res = await window.jobPilotApi.tailorResume({ company, role, jd });
           if (res.ok) {
             showToast(`Tailored ATS resume generated for ${company}! Opening PDF...`);
-            if (res.pdfPath && window.jobPilotApi.openPath) {
-              window.jobPilotApi.openPath(res.pdfPath);
+            const targetPdf = res.pdfPath || res.generatedPath;
+            if (targetPdf && window.jobPilotApi.openPath) {
+              window.jobPilotApi.openPath(targetPdf);
             }
           } else {
             showToast('Tailoring failed: ' + res.error);
@@ -1505,11 +1911,12 @@
         if (window.jobPilotApi && window.jobPilotApi.checkDuplicateJob) {
           const dupRes = await window.jobPilotApi.checkDuplicateJob({ company, role, url: currentUrl });
           if (dupRes && dupRes.isDuplicate) {
+            const rec = dupRes.record || { company: dupRes.company || company, role: dupRes.role || role, date_applied: dupRes.date };
             banner.style.display = 'flex';
             banner.style.background = 'rgba(245, 158, 11, 0.15)';
             banner.style.color = '#fde68a';
             banner.style.borderBottom = '1px solid rgba(245, 158, 11, 0.3)';
-            banner.innerHTML = `<span>⚠️ <strong>Duplicate Application:</strong> You already applied to <strong>${dupRes.record.company}</strong> (${dupRes.record.role}) on ${dupRes.record.date_applied || 'prior date'}.</span><button class="browser-btn" style="padding: 2px 8px; font-size: 10px;" onclick="switchWorkspaceTab('ledger')">View in Ledger</button>`;
+            banner.innerHTML = `<span>⚠️ <strong>Duplicate Application:</strong> You already applied to <strong>${escapeHtml(rec.company)}</strong> (${escapeHtml(rec.role)}) on ${escapeHtml(rec.date_applied || 'prior date')}.</span><button class="browser-btn" style="padding: 2px 8px; font-size: 10px;" onclick="switchWorkspaceTab('ledger')">View in Ledger</button>`;
             return;
           }
         }
@@ -1602,6 +2009,30 @@
       const portal = RADAR_PORTALS.find(p => p.id === activeRadarPortalId) || { name: 'Active Portal' };
 
       if (executionEngine === 'chrome') {
+        const extStatus = await (window.jobPilotApi?.getExtensionStatus ? window.jobPilotApi.getExtensionStatus() : Promise.resolve({ connected: false }));
+        const targetUrl = portal.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
+
+        if (!extStatus || !extStatus.connected) {
+          showToast('Launching Chrome with JobPilot extension auto-enabled...');
+          logRadarTelemetry('ENGINE:CHROME', `Auto-launching Chrome with JobPilot agent loaded on ${portal.name}...`);
+
+          if (window.jobPilotApi && window.jobPilotApi.launchChromeAgent) {
+            await window.jobPilotApi.launchChromeAgent({ url: targetUrl, action: 'autofill' });
+            logRadarTelemetry('SUCCESS', `Chrome window launched with JobPilot extension. Autofill command queued.`);
+          }
+
+          const activeNode = document.querySelector(`.radar-node[data-portal-id="${activeRadarPortalId}"]`);
+          if (activeNode) {
+            const badge = activeNode.querySelector('.radar-node-badge');
+            if (badge) {
+              badge.innerText = 'CHROME ACTIVE';
+              badge.className = 'radar-node-badge completed';
+            }
+          }
+          if (btn) btn.disabled = false;
+          return;
+        }
+
         showToast('Initiating Auto-Apply in personal Chrome browser...');
         logRadarTelemetry('ENGINE:CHROME', `Targeting logged-in Chrome tab on ${portal.name}...`);
 
@@ -1619,7 +2050,7 @@
             await window.jobPilotApi.sendExtensionCommand({ action: 'autofill' });
             logRadarTelemetry('AGENT', 'Candidate schema dispatched: Vansh Sharma (MCA AI & Data Science 2026).');
             logRadarTelemetry('AGENT', 'Injected tailored pitch: 3+ PyTorch and LangChain RAG projects.');
-            logRadarTelemetry('SUCCESS', `Chrome autofill executed on ${portal.name}. Application synced to Ledger.`);
+            logRadarTelemetry('SUCCESS', `Chrome autofill command delivered to active ${portal.name} tab.`);
 
             setTimeout(() => {
               if (activeNode) {
@@ -1629,7 +2060,7 @@
                   badge.className = 'radar-node-badge completed';
                 }
               }
-              showToast('Auto-applied successfully in personal Chrome tab!');
+              showToast('Command executed in personal Chrome tab!');
               if (btn) btn.disabled = false;
             }, 1200);
           } else {
@@ -1808,8 +2239,9 @@
 
         if (res.ok) {
           showToast(`Generated ATS tailored PDF for ${company}! Opening...`);
-          if (res.pdfPath && window.jobPilotApi.openPath) {
-            window.jobPilotApi.openPath(res.pdfPath);
+          const targetPdf = res.pdfPath || res.generatedPath;
+          if (targetPdf && window.jobPilotApi.openPath) {
+            window.jobPilotApi.openPath(targetPdf);
           }
         } else {
           showToast('Generation failed: ' + res.error);
@@ -2012,6 +2444,84 @@
     const radarNodePositions = {};
     let radarCenterPos = null;
     let executionEngine = 'webview';
+    let currentlyApplyingPortalId = null;
+
+    function setPortalApplyingState(portalId, isApplying, meta = {}) {
+      if (!portalId) return;
+      const cleanId = String(portalId).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const matched = RADAR_PORTALS.find(p => p.id === cleanId || cleanId.includes(p.id) || p.id.includes(cleanId));
+      const targetId = matched ? matched.id : activeRadarPortalId;
+      const targetPortal = matched || RADAR_PORTALS.find(p => p.id === activeRadarPortalId) || { name: portalId };
+
+      if (isApplying) {
+        currentlyApplyingPortalId = targetId;
+        activeRadarPortalId = targetId;
+
+        // Auto-switch to radar tab if requested
+        if (meta.autoSwitch) {
+          switchWorkspaceTab('radar');
+        }
+
+        const node = document.querySelector(`.radar-node[data-portal-id="${targetId}"]`);
+        if (node) {
+          node.classList.add('active-target', 'active-applying');
+          const badge = node.querySelector('.radar-node-badge');
+          if (badge) {
+            badge.innerText = '● APPLYING NOW';
+          }
+        }
+
+        let banner = document.getElementById('radar-live-banner');
+        if (!banner) {
+          const vp = document.getElementById('radar-viewport');
+          if (vp) {
+            banner = document.createElement('div');
+            banner.id = 'radar-live-banner';
+            banner.className = 'radar-active-banner';
+            vp.appendChild(banner);
+          }
+        }
+        if (banner) {
+          banner.style.display = 'flex';
+          banner.innerHTML = `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#38bdf8; animation: radarDotPulse 0.8s infinite;"></span> <strong>Active Agent:</strong> Submitting application on <strong>${escapeHtml(targetPortal.name)}</strong> ${meta.company ? `to ${escapeHtml(meta.company)}` : ''}...`;
+        }
+
+        logRadarTelemetry('APPLYING', `Pilot Core engaged on ${targetPortal.name}. Submitting application...`);
+      } else {
+        currentlyApplyingPortalId = null;
+        const node = document.querySelector(`.radar-node[data-portal-id="${targetId}"]`);
+        if (node) {
+          node.classList.remove('active-applying');
+          const badge = node.querySelector('.radar-node-badge');
+          if (badge) {
+            badge.innerText = '✓ APPLIED (Just Now)';
+            badge.className = 'radar-node-badge completed';
+            setTimeout(() => {
+              const count = allLedgerRows.filter(r => {
+                const p = (r.portal || '').toLowerCase();
+                return p.includes(targetId) || p.includes(targetPortal.name.toLowerCase());
+              }).length;
+              if (badge) {
+                badge.innerText = count + ' applied';
+                badge.className = 'radar-node-badge';
+              }
+            }, 5000);
+          }
+        }
+
+        const banner = document.getElementById('radar-live-banner');
+        if (banner) {
+          banner.innerHTML = `✓ <strong>Application Confirmed:</strong> Successfully logged submission on ${escapeHtml(targetPortal.name)}.`;
+          setTimeout(() => {
+            if (!currentlyApplyingPortalId && banner) banner.style.display = 'none';
+          }, 4000);
+        }
+
+        logRadarTelemetry('SUCCESS', `Completed application on ${targetPortal.name}. Synced to Ledger.`);
+      }
+
+      redrawRadarWires();
+    }
 
     function logRadarTelemetry(tag, msg) {
       const logContainer = document.getElementById('radar-telemetry-log');
@@ -2183,7 +2693,8 @@
         if (!pos) return;
         const nx = pos.x;
         const ny = pos.y;
-        const isActive = portal.id === activeRadarPortalId;
+        const isApplying = portal.id === currentlyApplyingPortalId;
+        const isActive = portal.id === activeRadarPortalId || isApplying;
 
         const dx = nx - cx;
         const dy = ny - cy;
@@ -2216,12 +2727,14 @@
             particleGroup.dataset.particlesFor = portal.id;
             linksGroup.appendChild(particleGroup);
           }
+          const pDur = isApplying ? '1.1s' : '2.4s';
+          const pBegin = isApplying ? '0.55s' : '1.2s';
           particleGroup.innerHTML = `
-            <circle r="4.5" class="radar-flow-particle-out">
-              <animateMotion dur="2.4s" repeatCount="indefinite" path="${dPath}" />
+            <circle r="${isApplying ? 5.5 : 4.5}" class="radar-flow-particle-out">
+              <animateMotion dur="${pDur}" repeatCount="indefinite" path="${dPath}" />
             </circle>
-            <circle r="3.5" class="radar-flow-particle-in">
-              <animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite" path="${dPath}" />
+            <circle r="${isApplying ? 4.5 : 3.5}" class="radar-flow-particle-in">
+              <animateMotion dur="${pDur}" begin="${pBegin}" repeatCount="indefinite" path="${dPath}" />
             </circle>
           `;
         } else if (particleGroup) {
@@ -2279,10 +2792,11 @@
           return p.includes(portal.id) || p.includes(portal.name.toLowerCase());
         }).length;
 
-        const isActive = portal.id === activeRadarPortalId;
+        const isApplying = portal.id === currentlyApplyingPortalId;
+        const isActive = portal.id === activeRadarPortalId || isApplying;
 
         const nodeEl = document.createElement('div');
-        nodeEl.className = 'radar-node' + (isActive ? ' active-target' : '');
+        nodeEl.className = 'radar-node' + (isApplying ? ' active-target active-applying' : (isActive ? ' active-target' : ''));
         nodeEl.dataset.portalId = portal.id;
         nodeEl.style.left = pos.x + 'px';
         nodeEl.style.top = pos.y + 'px';
@@ -2291,7 +2805,7 @@
         nodeEl.innerHTML = `
           <div class="radar-node-icon" style="background: ${portal.iconBg};">${portal.iconText}</div>
           <div class="radar-node-title">${portal.name}</div>
-          <div class="radar-node-badge">${isActive ? 'APPLYING NOW' : count + ' applied'}</div>
+          <div class="radar-node-badge">${isApplying ? '● APPLYING NOW' : (isActive ? 'CONNECTED' : count + ' applied')}</div>
         `;
 
         nodeEl.onmousedown = (e) => startDragNode(e, portal.id);
@@ -2435,33 +2949,771 @@
       showToast('JobPilot Autopilot Core monitoring all 12 portal nodes.');
     }
 
-    // Ledger Logic
-    async function loadLedgerData() {
-      if (window.jobPilotApi && window.jobPilotApi.getApplicationsTracker) {
-        allLedgerRows = await window.jobPilotApi.getApplicationsTracker();
-        const count = allLedgerRows.length;
-        document.getElementById('hdr-ledger-count').innerText = count;
-        document.getElementById('ws-ledger-count').innerText = count;
-        document.getElementById('sb-ledger-total').innerText = count;
+    
+    // =====================================================================
+    // GMAIL & INTERVIEW INTELLIGENCE ENGINE (MULTI-ACCOUNT)
+    // =====================================================================
+    let allInterviewRecords = [];
+    let interviewStats = null;
+    let configuredEmailAccounts = [];
+    let currentInterviewFilter = 'ALL';
+    let currentAccountFilter = 'ALL';
+    let currentUpcomingMeetingLink = '';
 
-        const counts = { 'ALL': count };
-        allLedgerRows.forEach(r => {
-          const p = r.portal || 'Direct';
-          counts[p] = (counts[p] || 0) + 1;
-        });
+    const ACCOUNT_COLORS = {
+      'engagevansh@gmail.com': { bg: 'rgba(56, 189, 248, 0.12)', border: 'rgba(56, 189, 248, 0.3)', text: '#38bdf8' },
+      'xalta26@gmail.com': { bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.3)', text: '#c084fc' },
+      'vishurou61@gmail.com': { bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)', text: '#34d399' },
+      'kalsharma908@gmail.com': { bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)', text: '#fbbf24' }
+    };
 
-        const strip = document.getElementById('ledger-filter-strip');
-        strip.innerHTML = '';
-        for (const [portal, cnt] of Object.entries(counts)) {
-          const chip = document.createElement('div');
-          chip.className = 'l-chip' + (currentPortalFilter === portal ? ' active' : '');
-          chip.innerText = `${portal} (${cnt})`;
-          chip.onclick = () => filterByPortal(portal, chip);
-          strip.appendChild(chip);
+    function getAccountColor(acc) {
+      return ACCOUNT_COLORS[acc] || { bg: 'rgba(255, 255, 255, 0.06)', border: 'rgba(255, 255, 255, 0.15)', text: '#cbd5e1' };
+    }
+
+    async function loadInterviewsData() {
+      if (!window.jobPilotApi) return;
+      try {
+        if (window.jobPilotApi.getEmailAccounts) {
+          const accRes = await window.jobPilotApi.getEmailAccounts();
+          if (accRes && accRes.ok) {
+            configuredEmailAccounts = accRes.accounts || [];
+          }
         }
 
-        filterLedger();
-        updateRadarCounts();
+        if (window.jobPilotApi.getInterviewIntelligence) {
+          const res = await window.jobPilotApi.getInterviewIntelligence();
+          if (res && res.ok) {
+            allInterviewRecords = res.records || [];
+            interviewStats = res.stats || {};
+            renderInterviewsUI(allInterviewRecords, interviewStats);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load interview intelligence:', err);
+      }
+    }
+
+    function renderInterviewsUI(records, stats) {
+      // 1. Update KPI badges
+      const ivCnt = stats.interviewCount || 0;
+      const slCnt = stats.shortlistedCount || 0;
+      const apCnt = stats.appliedCount || 0;
+      const rjCnt = stats.rejectedCount || 0;
+      const ofCnt = stats.offerCount || 0;
+      const totCnt = records.length;
+
+      const kpiIv = document.getElementById('kpi-interviews-count');
+      if (kpiIv) kpiIv.innerText = ivCnt;
+      const kpiSl = document.getElementById('kpi-shortlisted-count');
+      if (kpiSl) kpiSl.innerText = slCnt;
+      const kpiAp = document.getElementById('kpi-applied-count');
+      if (kpiAp) kpiAp.innerText = apCnt;
+      const kpiRj = document.getElementById('kpi-rejected-count');
+      if (kpiRj) kpiRj.innerText = rjCnt;
+      const kpiOf = document.getElementById('kpi-offer-count');
+      if (kpiOf) kpiOf.innerText = ofCnt;
+
+      const hdrIv = document.getElementById('hdr-interviews-count');
+      if (hdrIv) hdrIv.innerText = ivCnt;
+
+      const syncStatus = document.getElementById('interview-sync-status');
+      if (syncStatus) syncStatus.innerText = `${totCnt} emails parsed across ${configuredEmailAccounts.length || 4} inboxes`;
+
+      const syncBtnLabel = document.getElementById('btn-sync-gmail-label');
+      if (syncBtnLabel) syncBtnLabel.innerText = `Sync All Inboxes (${configuredEmailAccounts.length || 4})`;
+
+      // 2. Render Connected Account Pills & Filter Strip
+      renderAccountPillsAndFilters(stats.accountCounts || {});
+
+      // 3. Update Category Filter Chips
+      const cAll = document.getElementById('ichip-all');
+      if (cAll) cAll.innerText = `All (${totCnt})`;
+      const cIv = document.getElementById('ichip-interview');
+      if (cIv) cIv.innerText = `Interviews (${ivCnt})`;
+      const cSl = document.getElementById('ichip-shortlist');
+      if (cSl) cSl.innerText = `Shortlisted (${slCnt})`;
+      const cAp = document.getElementById('ichip-applied');
+      if (cAp) cAp.innerText = `Applied (${apCnt})`;
+      const cRj = document.getElementById('ichip-rejected');
+      if (cRj) cRj.innerText = `Rejections (${rjCnt})`;
+      const cOf = document.getElementById('ichip-offer');
+      if (cOf) cOf.innerText = `Offers (${ofCnt})`;
+
+      // 4. Render Upcoming Hero Banner
+      const banner = document.getElementById('interview-hero-banner');
+      const upcoming = stats.upcomingInterview;
+      if (banner && upcoming) {
+        banner.style.display = 'flex';
+        const elComp = document.getElementById('hero-interview-company');
+        if (elComp) elComp.innerText = upcoming.company || 'Upcoming Interview';
+        const elRole = document.getElementById('hero-interview-role');
+        if (elRole) elRole.innerText = upcoming.role || 'AI Engineer Technical Discussion';
+        const elTime = document.getElementById('hero-interview-timestr');
+        if (elTime) elTime.innerText = upcoming.scheduledTime || upcoming.date || 'Scheduled Discussion';
+
+        currentUpcomingMeetingLink = upcoming.meetingLink || '';
+        const joinBtn = document.getElementById('hero-btn-join');
+        if (joinBtn) {
+          joinBtn.style.display = currentUpcomingMeetingLink ? 'inline-flex' : 'none';
+        }
+      } else if (banner) {
+        banner.style.display = 'none';
+      }
+
+      // 5. Render Table with active filters
+      applyCombinedFilters();
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderAccountPillsAndFilters(accountCounts) {
+      // Subbar Account Pills
+      const pillsContainer = document.getElementById('interview-account-pills');
+      if (pillsContainer) {
+        pillsContainer.innerHTML = '';
+        const accountsToDisplay = configuredEmailAccounts.length > 0 ? configuredEmailAccounts : [
+          { email: 'engagevansh@gmail.com', label: 'Primary' },
+          { email: 'xalta26@gmail.com', label: 'XALTA Dev' },
+          { email: 'vishurou61@gmail.com', label: 'Vishu' },
+          { email: 'kalsharma908@gmail.com', label: 'Kal' }
+        ];
+
+        accountsToDisplay.forEach(acc => {
+          const email = acc.email;
+          const count = accountCounts[email] || 0;
+          const col = getAccountColor(email);
+          const pill = document.createElement('span');
+          pill.className = 'account-pill-chip';
+          pill.style.borderColor = col.border;
+          pill.style.color = col.text;
+          pill.innerHTML = `<span style="width: 5px; height: 5px; border-radius: 50%; background: ${col.text};"></span> <span>${escapeHtml(email.split('@')[0])} (${count})</span>`;
+          pill.onclick = () => filterByAccount(email, null);
+          pillsContainer.appendChild(pill);
+        });
+      }
+
+      // Account Filter Strip
+      const filterStrip = document.getElementById('interview-account-filter-strip');
+      if (filterStrip) {
+        filterStrip.innerHTML = '';
+        const total = allInterviewRecords.length;
+        const allChip = document.createElement('div');
+        allChip.className = 'account-pill-chip' + (currentAccountFilter === 'ALL' ? ' active' : '');
+        allChip.innerText = `All Inboxes (${total})`;
+        allChip.onclick = () => filterByAccount('ALL', allChip);
+        filterStrip.appendChild(allChip);
+
+        const accountsToDisplay = configuredEmailAccounts.length > 0 ? configuredEmailAccounts : [
+          { email: 'engagevansh@gmail.com', label: 'Primary' },
+          { email: 'xalta26@gmail.com', label: 'XALTA Dev' },
+          { email: 'vishurou61@gmail.com', label: 'Vishu' },
+          { email: 'kalsharma908@gmail.com', label: 'Kal' }
+        ];
+
+        accountsToDisplay.forEach(acc => {
+          const email = acc.email;
+          const count = accountCounts[email] || 0;
+          const col = getAccountColor(email);
+          const chip = document.createElement('div');
+          chip.className = 'account-pill-chip' + (currentAccountFilter === email ? ' active' : '');
+          chip.innerHTML = `<span style="width: 5px; height: 5px; border-radius: 50%; background: ${col.text};"></span> <span>${escapeHtml(email)} (${count})</span>`;
+          chip.onclick = () => filterByAccount(email, chip);
+          filterStrip.appendChild(chip);
+        });
+      }
+
+      // Quick Paste dropdown options
+      const selectPaste = document.getElementById('email-paste-account');
+      if (selectPaste && configuredEmailAccounts.length > 0) {
+        selectPaste.innerHTML = '';
+        configuredEmailAccounts.forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = acc.email;
+          opt.innerText = `${acc.email} (${acc.label || 'Gmail'})`;
+          selectPaste.appendChild(opt);
+        });
+      }
+    }
+
+    function renderInterviewTable(records) {
+      const tbody = document.getElementById('interview-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (!records || records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">No recruitment emails match this filter.</td></tr>';
+        return;
+      }
+
+      records.forEach(r => {
+        const tr = document.createElement('tr');
+
+        // Category Tag
+        let stageClass = 'stage-applied';
+        const cat = (r.category || '').toUpperCase();
+        if (cat === 'INTERVIEW') stageClass = 'stage-interview';
+        else if (cat === 'SHORTLISTED' || cat === 'ASSESSMENT') stageClass = 'stage-shortlisted';
+        else if (cat === 'REJECTED') stageClass = 'stage-rejected';
+        else if (cat === 'OFFER') stageClass = 'stage-offer';
+
+        // Account Color Badge
+        const accEmail = r.account || 'engagevansh@gmail.com';
+        const col = getAccountColor(accEmail);
+        const accBadge = `<span class="account-tag-cell" style="border-color: ${col.border}; color: ${col.text}; background: ${col.bg};">${escapeHtml(accEmail.split('@')[0])}</span>`;
+
+        // Meeting Link
+        let meetingHtml = '<span style="color: var(--text-muted); font-size: 11px;">-</span>';
+        if (r.meetingLink && (r.meetingLink.startsWith('http://') || r.meetingLink.startsWith('https://'))) {
+          meetingHtml = `<button class="btn-table-join" onclick="window.jobPilotApi.openExternal('${escapeHtml(r.meetingLink)}')"><i data-lucide="video" style="width: 11px; height: 11px;"></i> Join Meet</button>`;
+        }
+
+        const safeCompany = escapeHtml(r.company || 'Unknown');
+        const safeRole = escapeHtml(r.role || 'Candidate');
+        const safeSubject = escapeHtml(r.subject || '');
+        const safeSender = escapeHtml(r.sender || '');
+        const safeDate = escapeHtml(r.date || '');
+
+        tr.innerHTML = `
+          <td style="color: #94a3b8; font-family: var(--font-mono); font-size: 11px;">${safeDate}</td>
+          <td>${accBadge}</td>
+          <td style="font-weight: 700; color: #fff;">${safeCompany}</td>
+          <td style="color: #cbd5e1;">${safeRole}</td>
+          <td><span class="stage-pill ${stageClass}">${cat || 'APPLIED'}</span></td>
+          <td>
+            <div style="font-weight: 500; color: #e2e8f0; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${safeSubject}</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">From: ${safeSender}</div>
+          </td>
+          <td>${meetingHtml}</td>
+          <td>
+            <button class="btn-table-prep" onclick="prepInterviewWithAI('${safeCompany}', '${safeRole}')" title="Generate Technical Prep in AI Chat">Prep AI</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function applyCombinedFilters() {
+      const q = (document.getElementById('interview-search-input')?.value || '').toLowerCase();
+      const filtered = allInterviewRecords.filter(r => {
+        const matchesCat = (currentInterviewFilter === 'ALL') || (r.category === currentInterviewFilter);
+        const matchesAccount = (currentAccountFilter === 'ALL') || ((r.account || '').toLowerCase() === currentAccountFilter.toLowerCase());
+        const matchesQuery = !q ||
+          (r.company && r.company.toLowerCase().includes(q)) ||
+          (r.role && r.role.toLowerCase().includes(q)) ||
+          (r.subject && r.subject.toLowerCase().includes(q)) ||
+          (r.sender && r.sender.toLowerCase().includes(q)) ||
+          (r.account && r.account.toLowerCase().includes(q));
+        return matchesCat && matchesAccount && matchesQuery;
+      });
+
+      renderInterviewTable(filtered);
+    }
+
+    function filterInterviews(cat, chipEl) {
+      currentInterviewFilter = cat;
+      document.querySelectorAll('#interview-filter-strip .l-chip').forEach(c => c.classList.remove('active'));
+      if (chipEl) {
+        chipEl.classList.add('active');
+      } else {
+        const targetChip = document.getElementById('ichip-' + cat.toLowerCase());
+        if (targetChip) targetChip.classList.add('active');
+      }
+      applyCombinedFilters();
+    }
+
+    function filterByAccount(accountEmail, chipEl) {
+      currentAccountFilter = accountEmail;
+      document.querySelectorAll('#interview-account-filter-strip .account-pill-chip').forEach(c => c.classList.remove('active'));
+      if (chipEl) {
+        chipEl.classList.add('active');
+      } else {
+        const stripChips = document.querySelectorAll('#interview-account-filter-strip .account-pill-chip');
+        stripChips.forEach(c => {
+          if (c.innerText.includes(accountEmail) || (accountEmail === 'ALL' && c.innerText.includes('All Inboxes'))) {
+            c.classList.add('active');
+          }
+        });
+      }
+      applyCombinedFilters();
+    }
+
+    function filterInterviewsBySearch(query) {
+      applyCombinedFilters();
+    }
+
+    function openUpcomingMeetingLink() {
+      if (currentUpcomingMeetingLink && window.jobPilotApi) {
+        window.jobPilotApi.openExternal(currentUpcomingMeetingLink);
+      }
+    }
+
+    function prepUpcomingInterviewAI() {
+      const comp = document.getElementById('hero-interview-company')?.innerText || 'Target Company';
+      const role = document.getElementById('hero-interview-role')?.innerText || 'AI Engineer';
+      prepInterviewWithAI(comp, role);
+    }
+
+    function prepInterviewWithAI(company, role) {
+      setLayoutMode('split');
+      const input = document.getElementById('agent-prompt-input');
+      if (input) {
+        input.value = `Prepare a complete technical interview prep roadmap for ${company} for the ${role} position. Include expected coding topics, system design questions, and recruiter questions.`;
+        input.focus();
+      }
+      showToast(`Loaded interview prep prompt for ${company}`);
+    }
+
+    async function syncGmailEmails(accountEmail) {
+      const btn = document.getElementById('btn-sync-gmail');
+      if (btn) btn.disabled = true;
+      const targetMsg = accountEmail ? `account ${accountEmail}` : 'all configured Gmail inboxes';
+      showToast(`Connecting via IMAP SSL to ${targetMsg}...`);
+
+      if (window.jobPilotApi && window.jobPilotApi.syncGmailInbox) {
+        try {
+          const res = await window.jobPilotApi.syncGmailInbox(accountEmail);
+          if (res && res.ok) {
+            showToast(res.message || 'Gmail sync complete!');
+            await loadInterviewsData();
+            await loadLedgerData();
+          } else {
+            showToast('Sync error: ' + (res?.error || 'Check credentials in Accounts Settings'));
+          }
+        } catch (e) {
+          showToast('Sync failed: ' + e.message);
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+    }
+
+    // Modal: Multi-Account Management
+    function openEmailConfigModal() {
+      const m = document.getElementById('email-config-modal');
+      if (m) m.style.display = 'flex';
+      renderAccountListInModal();
+      resetAccountForm();
+    }
+
+    function closeEmailConfigModal() {
+      const m = document.getElementById('email-config-modal');
+      if (m) m.style.display = 'none';
+    }
+
+    function renderAccountListInModal() {
+      const listEl = document.getElementById('modal-account-list');
+      const countEl = document.getElementById('modal-accounts-count');
+      if (countEl) countEl.innerText = configuredEmailAccounts.length;
+      if (!listEl) return;
+
+      listEl.innerHTML = '';
+      if (!configuredEmailAccounts || configuredEmailAccounts.length === 0) {
+        listEl.innerHTML = '<div style="font-size: 11px; color: var(--text-muted); padding: 8px;">No accounts configured. Add one below.</div>';
+        return;
+      }
+
+      configuredEmailAccounts.forEach(acc => {
+        const item = document.createElement('div');
+        item.className = 'account-item-card';
+
+        const statusTag = acc.hasPassword
+          ? '<span class="account-status-badge status-configured">Password Saved</span>'
+          : '<span class="account-status-badge status-pending">No Password</span>';
+
+        const enabledText = acc.enabled !== false ? 'Active' : 'Paused';
+        const enabledClass = acc.enabled !== false ? 'text-emerald' : '';
+
+        item.innerHTML = `
+          <div class="account-item-info">
+            <div class="account-item-email">${escapeHtml(acc.email)}</div>
+            <div class="account-item-label">${escapeHtml(acc.label || 'Gmail')} • ${statusTag}</div>
+          </div>
+          <div class="account-item-actions">
+            <button class="browser-btn" style="font-size: 10px; padding: 2px 7px;" onclick="syncGmailEmails('${escapeHtml(acc.email)}')">Sync</button>
+            <button class="browser-btn" style="font-size: 10px; padding: 2px 7px;" onclick="editAccountInModal('${escapeHtml(acc.id)}')">Edit</button>
+            <button class="browser-btn" style="font-size: 10px; padding: 2px 7px; color: #ef4444;" onclick="removeAccountInModal('${escapeHtml(acc.id)}')">✕</button>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    function editAccountInModal(id) {
+      const acc = configuredEmailAccounts.find(a => a.id === id);
+      if (!acc) return;
+      document.getElementById('email-cfg-id').value = acc.id;
+      document.getElementById('email-cfg-address').value = acc.email;
+      document.getElementById('email-cfg-label').value = acc.label || '';
+      document.getElementById('email-cfg-password').value = '';
+      document.getElementById('modal-acc-form-title').innerText = `Edit Account: ${acc.email}`;
+      document.getElementById('btn-cancel-edit-acc').style.display = 'inline-block';
+    }
+
+    function resetAccountForm() {
+      document.getElementById('email-cfg-id').value = '';
+      document.getElementById('email-cfg-address').value = '';
+      document.getElementById('email-cfg-label').value = '';
+      document.getElementById('email-cfg-password').value = '';
+      document.getElementById('modal-acc-form-title').innerText = '+ Add or Configure Gmail Account';
+      const cancelBtn = document.getElementById('btn-cancel-edit-acc');
+      if (cancelBtn) cancelBtn.style.display = 'none';
+    }
+
+    async function saveEmailAccountUI() {
+      const id = document.getElementById('email-cfg-id')?.value.trim();
+      const email = document.getElementById('email-cfg-address')?.value.trim();
+      const label = document.getElementById('email-cfg-label')?.value.trim();
+      const appPassword = document.getElementById('email-cfg-password')?.value.trim();
+
+      if (!email) {
+        showToast('Please enter a Gmail address.');
+        return;
+      }
+
+      if (window.jobPilotApi && window.jobPilotApi.saveEmailAccount) {
+        const payload = {
+          id: id || `acc_${Date.now()}`,
+          email,
+          label: label || email.split('@')[0],
+          appPassword,
+          imapHost: 'imap.gmail.com',
+          imapPort: 993,
+          enabled: true
+        };
+        const res = await window.jobPilotApi.saveEmailAccount(payload);
+        if (res && res.ok) {
+          showToast(`Saved account: ${email}`);
+          configuredEmailAccounts = res.accounts || [];
+          renderAccountListInModal();
+          resetAccountForm();
+          await loadInterviewsData();
+        } else {
+          showToast('Failed to save account: ' + (res?.error || 'Unknown error'));
+        }
+      }
+    }
+
+    async function removeAccountInModal(id) {
+      if (window.jobPilotApi && window.jobPilotApi.removeEmailAccount) {
+        await window.jobPilotApi.removeEmailAccount(id);
+        configuredEmailAccounts = configuredEmailAccounts.filter(a => a.id !== id && a.email !== id);
+        renderAccountListInModal();
+        await loadInterviewsData();
+        showToast('Account removed from workstation.');
+      }
+    }
+
+    async function syncAllAccountsFromModal() {
+      closeEmailConfigModal();
+      await syncGmailEmails();
+    }
+
+    // Modal: Quick Paste Email
+    function openPasteEmailModal() {
+      const m = document.getElementById('email-paste-modal');
+      if (m) m.style.display = 'flex';
+      const txt = document.getElementById('email-paste-text');
+      if (txt) {
+        txt.value = '';
+        txt.focus();
+      }
+    }
+
+    function closePasteEmailModal() {
+      const m = document.getElementById('email-paste-modal');
+      if (m) m.style.display = 'none';
+    }
+
+    async function submitManualEmailPaste() {
+      const text = document.getElementById('email-paste-text')?.value.trim();
+      const account = document.getElementById('email-paste-account')?.value || 'engagevansh@gmail.com';
+
+      if (!text) {
+        showToast('Please paste email text first.');
+        return;
+      }
+
+      if (window.jobPilotApi && window.jobPilotApi.parseManualEmail) {
+        showToast('Parsing recruiter email...');
+        const res = await window.jobPilotApi.parseManualEmail(text, account);
+        if (res && res.ok) {
+          showToast(`Added: ${res.record?.company || 'Recruiter message'} to ${account}`);
+          closePasteEmailModal();
+          await loadInterviewsData();
+          await loadLedgerData();
+        } else {
+          showToast('Could not parse: ' + (res?.error || 'Unknown format'));
+        }
+      }
+    }
+
+    // =====================================================================
+    // JOB LEADS & RECOMMENDATION ENGINE JAVASCRIPT
+    // =====================================================================
+    let allJobLeads = [];
+    let currentLeadsPlatformFilter = 'ALL';
+
+    async function loadJobLeadsData() {
+      if (!window.jobPilotApi || !window.jobPilotApi.getJobLeads) return;
+      try {
+        const res = await window.jobPilotApi.getJobLeads();
+        if (res && res.ok) {
+          allJobLeads = res.leads || [];
+          renderJobLeadsUI(allJobLeads);
+        }
+      } catch (err) {
+        console.error('Failed to load job leads:', err);
+      }
+    }
+
+    function renderJobLeadsUI(leads) {
+      const totalCount = leads.length;
+      const fresherCount = leads.filter(l => (l.fitBadge || '').toLowerCase().includes('fresher') || (l.role || '').toLowerCase().includes('fresher') || (l.snippet || '').toLowerCase().includes('fresher')).length;
+      const remoteCount = leads.filter(l => (l.location || '').toLowerCase().includes('remote') || (l.location || '').toLowerCase().includes('hybrid')).length;
+      const readyCount = leads.filter(l => l.url && (l.url.startsWith('http://') || l.url.startsWith('https://'))).length;
+
+      const hdrEl = document.getElementById('hdr-leads-count');
+      if (hdrEl) hdrEl.innerText = totalCount;
+      const syncStatusEl = document.getElementById('leads-sync-status');
+      if (syncStatusEl) syncStatusEl.innerText = `${totalCount} leads available`;
+
+      const kpiTotal = document.getElementById('kpi-leads-total');
+      if (kpiTotal) kpiTotal.innerText = totalCount;
+      const kpiFresher = document.getElementById('kpi-leads-fresher');
+      if (kpiFresher) kpiFresher.innerText = fresherCount;
+      const kpiRemote = document.getElementById('kpi-leads-remote');
+      if (kpiRemote) kpiRemote.innerText = remoteCount;
+      const kpiReady = document.getElementById('kpi-leads-ready');
+      if (kpiReady) kpiReady.innerText = readyCount;
+
+      filterJobLeads();
+    }
+
+    function filterLeadsByPlatform(platform, btnEl) {
+      currentLeadsPlatformFilter = platform;
+      document.querySelectorAll('#leads-platform-filters .stage-pill').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      filterJobLeads();
+    }
+
+    function filterJobLeads() {
+      const q = (document.getElementById('leads-search-input')?.value || '').toLowerCase();
+      const filtered = allJobLeads.filter(l => {
+        const matchesPlatform = (currentLeadsPlatformFilter === 'ALL') || (l.platform === currentLeadsPlatformFilter);
+        const matchesQuery = !q ||
+          (l.company && l.company.toLowerCase().includes(q)) ||
+          (l.role && l.role.toLowerCase().includes(q)) ||
+          (l.location && l.location.toLowerCase().includes(q)) ||
+          (l.snippet && l.snippet.toLowerCase().includes(q)) ||
+          (l.account && l.account.toLowerCase().includes(q));
+        return matchesPlatform && matchesQuery;
+      });
+      renderJobLeadsTable(filtered);
+    }
+
+    function renderJobLeadsTable(leads) {
+      const tbody = document.getElementById('leads-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (!leads || leads.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No job recommendation leads found matching filters.</td></tr>';
+        return;
+      }
+
+      leads.forEach(lead => {
+        const tr = document.createElement('tr');
+        const accEmail = lead.account || 'engagevansh@gmail.com';
+        const col = getAccountColor(accEmail);
+        const accBadge = `<span class="account-tag-cell" style="border-color: ${col.border}; color: ${col.text}; background: ${col.bg};">${escapeHtml(accEmail.split('@')[0])}</span>`;
+
+        const safeCompany = escapeHtml(lead.company || 'Unknown');
+        const safeRole = escapeHtml(lead.role || 'Role');
+        const safeLoc = escapeHtml(lead.location || 'India');
+        const safePlatform = escapeHtml(lead.platform || 'Job Alert');
+        const safeBadge = escapeHtml(lead.fitBadge || 'Entry-Level Match');
+        const safeSnippet = escapeHtml(lead.snippet || '');
+        const safeDate = escapeHtml(lead.date || '');
+        const rawUrl = lead.url || '';
+
+        tr.innerHTML = `
+          <td style="color: #94a3b8; font-family: var(--font-mono); font-size: 11px;">${safeDate}</td>
+          <td>${accBadge}</td>
+          <td>
+            <div style="font-weight: 700; color: #fff;">${safeCompany}</div>
+            <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 2px;">📍 ${safeLoc}</div>
+          </td>
+          <td>
+            <div style="font-weight: 600; color: #38bdf8;">${safeRole}</div>
+            <div style="font-size: 11px; color: #cbd5e1; margin-top: 3px; max-width: 360px; line-height: 1.4;">${safeSnippet}</div>
+          </td>
+          <td><span class="p-tag">${safePlatform}</span></td>
+          <td>
+            <span class="stage-pill stage-shortlisted" style="font-size: 10px; padding: 2px 8px;">${safeBadge}</span>
+          </td>
+          <td style="text-align: center;">
+            <button class="browser-btn primary" style="font-size: 11px; padding: 4px 10px; width: 100%; justify-content: center;" onclick="applyJobLeadInBrowser('${escapeHtml(rawUrl)}', '${safeCompany}', '${safeRole}')">
+              <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
+              <span>Apply in Browser</span>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function applyJobLeadInBrowser(url, company, role) {
+      if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+        showToast('Invalid job URL.');
+        return;
+      }
+      switchWorkspaceTab('browser');
+      const urlBar = document.getElementById('browser-url-bar');
+      const webview = document.getElementById('job-webview');
+      if (urlBar) urlBar.value = url;
+      if (webview) webview.src = url;
+      showToast(`Loaded ${company || 'job'} in Browser - Ready for Auto-Apply!`);
+    }
+
+    async function syncJobLeadsNow() {
+      const btn = document.getElementById('btn-sync-leads');
+      const label = document.getElementById('btn-sync-leads-label');
+      if (btn) btn.disabled = true;
+      if (label) label.innerText = 'Scanning Inboxes...';
+      showToast('Scanning Gmail inboxes for job alert recommendations...');
+
+      try {
+        if (window.jobPilotApi && window.jobPilotApi.syncJobLeads) {
+          const res = await window.jobPilotApi.syncJobLeads();
+          if (res && res.ok) {
+            allJobLeads = res.leads || [];
+            renderJobLeadsUI(allJobLeads);
+            showToast(`Found ${allJobLeads.length} recommended job leads!`);
+          } else {
+            showToast('Scan completed. Leads up to date.');
+          }
+        }
+      } catch (e) {
+        showToast('Sync error: ' + e.message);
+      } finally {
+        if (btn) btn.disabled = false;
+        if (label) label.innerText = 'Sync Alert Emails';
+      }
+    }
+
+    function openPasteLeadModal() {
+      const modal = document.getElementById('modal-paste-lead');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closePasteLeadModal() {
+      const modal = document.getElementById('modal-paste-lead');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function submitManualLeadPaste() {
+      const text = document.getElementById('lead-paste-text')?.value.trim();
+      const account = document.getElementById('lead-paste-account')?.value || 'engagevansh@gmail.com';
+
+      if (!text) {
+        showToast('Please paste email text first.');
+        return;
+      }
+
+      if (window.jobPilotApi && window.jobPilotApi.parseJobLeadEmail) {
+        showToast('Parsing job alert email...');
+        const res = await window.jobPilotApi.parseJobLeadEmail(text, account);
+        if (res && res.ok) {
+          showToast(`Added lead: ${res.lead?.company || 'Job posting'}`);
+          closePasteLeadModal();
+          await loadJobLeadsData();
+        } else {
+          showToast('Could not parse: ' + (res?.error || 'Unknown format'));
+        }
+      }
+    }
+
+
+    // Ledger Logic (Precision Utility 4-State Protocol)
+    function renderLedgerLoadingState() {
+      const tbody = document.getElementById('ledger-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = Array(5).fill(0).map(() => `
+        <tr class="ledger-skeleton-row">
+          <td><div class="skeleton-shimmer" style="width: 70px; height: 16px;"></div></td>
+          <td><div class="skeleton-shimmer" style="width: 140px; height: 16px;"></div></td>
+          <td><div class="skeleton-shimmer" style="width: 120px; height: 16px;"></div></td>
+          <td><div class="skeleton-shimmer" style="width: 90px; height: 16px;"></div></td>
+          <td><div class="skeleton-shimmer" style="width: 60px; height: 16px;"></div></td>
+          <td><div class="skeleton-shimmer" style="width: 70px; height: 16px;"></div></td>
+          <td><div class="skeleton-shimmer" style="width: 45px; height: 16px;"></div></td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadLedgerData() {
+      const getFn = window.jobPilotApi?.getApplicationsTracker || window.jobPilotApi?.getTrackerData;
+      if (getFn) {
+        if (!allLedgerRows || allLedgerRows.length === 0) {
+          renderLedgerLoadingState();
+        }
+        try {
+          const res = await getFn();
+          allLedgerRows = Array.isArray(res) ? res : (res?.rows || []);
+          const count = allLedgerRows.length;
+          const hdrCount = document.getElementById('hdr-ledger-count');
+          if (hdrCount) hdrCount.innerText = count;
+          const wsCount = document.getElementById('ws-ledger-count');
+          if (wsCount) wsCount.innerText = count;
+          const sbCount = document.getElementById('sb-ledger-total');
+          if (sbCount) sbCount.innerText = count;
+
+          const counts = { 'ALL': count };
+          allLedgerRows.forEach(r => {
+            const p = r.portal || 'Direct';
+            counts[p] = (counts[p] || 0) + 1;
+          });
+
+          const strip = document.getElementById('ledger-filter-strip');
+          if (strip) {
+            strip.innerHTML = '';
+            for (const [portal, cnt] of Object.entries(counts)) {
+              const chip = document.createElement('div');
+              chip.className = 'l-chip' + (currentPortalFilter === portal ? ' active' : '');
+              chip.innerText = `${portal} (${cnt})`;
+              chip.onclick = () => filterByPortal(portal, chip);
+              strip.appendChild(chip);
+            }
+          }
+
+          filterLedger();
+          if (typeof updateRadarCounts === 'function') updateRadarCounts();
+        } catch (err) {
+          console.error('Failed to load ledger data:', err);
+          const tbody = document.getElementById('ledger-tbody');
+          if (tbody) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 36px 20px;">
+                  <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 8px; background: var(--status-error-bg); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-button); padding: 16px 24px;">
+                    <div style="display: flex; align-items: center; gap: 6px; color: var(--status-error); font-size: 13px; font-weight: 510;">
+                      <i data-lucide="alert-triangle" style="width: 16px; height: 16px;"></i>
+                      <span>Failed to load ledger data</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(err.message || 'Verification read error')}</div>
+                    <button class="browser-btn" onclick="loadLedgerData()" style="margin-top: 4px; font-size: 12px;">Retry Sync</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+            if (window.lucide) lucide.createIcons();
+          }
+        }
       }
     }
 
@@ -2474,27 +3726,47 @@
 
     function renderLedgerTable(rows) {
       const tbody = document.getElementById('ledger-tbody');
+      if (!tbody) return;
       tbody.innerHTML = '';
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 48px 24px;">
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <i data-lucide="inbox" style="width: 32px; height: 32px; color: var(--text-muted); stroke-width: 1.5;"></i>
+                <div style="font-size: 14px; font-weight: 510; color: var(--text-primary); margin-top: 4px;">No application records found</div>
+                <div style="font-size: 12px; color: var(--text-muted); max-width: 320px; line-height: 1.4;">Applications submitted via in-app browser or Chrome extension bridge will appear here automatically.</div>
+                <button class="browser-btn primary" onclick="openManualEntryModal()" style="margin-top: 8px; font-size: 12px; padding: 6px 14px;">
+                  <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                  <span>Record Application</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
       rows.slice(0, 150).forEach(r => {
         const tr = document.createElement('tr');
         const rawUrl = String(r.url || '');
         const hasUrl = rawUrl.startsWith('http://') || rawUrl.startsWith('https://');
 
         tr.innerHTML = `
-          <td style="color: var(--text-muted); font-family: var(--font-mono); font-size: 10.5px;">${escapeHtml(r.date || '')}</td>
-          <td style="font-weight: 600; color: #fff;">${escapeHtml(r.company || '')}</td>
-          <td style="color: #cbd5e1;">${escapeHtml(r.role || '')}</td>
-          <td style="color: var(--text-dim);">${escapeHtml(r.location || '')}</td>
+          <td style="color: var(--text-muted); font-family: var(--font-mono); font-size: 12px;">${escapeHtml(r.date || '')}</td>
+          <td style="font-weight: 510; color: var(--text-primary);">${escapeHtml(r.company || '')}</td>
+          <td style="color: var(--text-secondary);">${escapeHtml(r.role || '')}</td>
+          <td style="color: var(--text-muted); font-size: 12px;">${escapeHtml(r.location || '')}</td>
           <td><span class="p-tag">${escapeHtml(r.portal || '')}</span></td>
-          <td><span style="color: #10b981; font-weight: 600;">✓ ${escapeHtml(r.status || 'Submitted')}</span></td>
+          <td><span class="ledger-status-pill"><span style="width: 5px; height: 5px; border-radius: 50%; background: var(--status-success);"></span> ${escapeHtml(r.status || 'Submitted')}</span></td>
         `;
 
         const tdAction = document.createElement('td');
+        tdAction.style.textAlign = 'center';
         if (hasUrl) {
           const btn = document.createElement('button');
-          btn.className = 'browser-btn';
-          btn.style.cssText = 'padding: 2px 6px; font-size: 10px;';
-          btn.textContent = 'Open';
+          btn.className = 'ledger-btn-open';
+          btn.innerHTML = '<i data-lucide="external-link" style="width: 12px; height: 12px;"></i><span>Open</span>';
           btn.addEventListener('click', () => {
             if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
               openJobInWs(rawUrl);
@@ -2505,13 +3777,15 @@
           tdAction.appendChild(btn);
         } else {
           const span = document.createElement('span');
-          span.style.cssText = 'color: #4b5563; font-size: 10px;';
-          span.textContent = 'Direct';
+          span.style.cssText = 'color: var(--text-muted); font-size: 12px; font-family: var(--font-mono);';
+          span.textContent = 'direct';
           tdAction.appendChild(span);
         }
         tr.appendChild(tdAction);
         tbody.appendChild(tr);
       });
+
+      if (window.lucide) lucide.createIcons();
     }
 
     function filterLedger() {
@@ -2706,12 +3980,28 @@
     if (window.jobPilotApi && window.jobPilotApi.onTaskLog) {
       window.jobPilotApi.onTaskLog((msg) => {
         appendTelemetry(msg);
+
+        // Auto-detect which portal JobPilot is currently targeting and illuminate it on radar
+        const m = msg.match(/\[(CUTSHORT|HIRIST|FOUNDIT|INDEED|WELLFOUND|UNSTOP|YC|INSTAHYRE|CUVETTE|NAUKRI|LINKEDIN)\]/i);
+        if (m) {
+          const portalKey = m[1].toLowerCase();
+          const isApp = msg.toLowerCase().includes('applying') || msg.toLowerCase().includes('scanning') || msg.toLowerCase().includes('submitting') || msg.toLowerCase().includes('executing');
+          const isDone = msg.toLowerCase().includes('complete') || msg.toLowerCase().includes('submitted') || msg.toLowerCase().includes('logged');
+          if (isApp) {
+            setPortalApplyingState(portalKey, true, { autoSwitch: false });
+          } else if (isDone) {
+            setPortalApplyingState(portalKey, false);
+          }
+        }
       });
     }
 
     if (window.jobPilotApi && window.jobPilotApi.onTrackerUpdated) {
       window.jobPilotApi.onTrackerUpdated(() => {
         loadLedgerData();
+        if (currentlyApplyingPortalId) {
+          setPortalApplyingState(currentlyApplyingPortalId, false);
+        }
       });
     }
 
@@ -2752,25 +4042,64 @@
       });
     }
 
+    if (window.jobPilotApi && window.jobPilotApi.onPortalApplying) {
+      window.jobPilotApi.onPortalApplying(({ portal, active, meta }) => {
+        const portalKey = (portal || '').toLowerCase();
+        setPortalApplyingState(portalKey, active, meta);
+      });
+    }
+
+    if (window.jobPilotApi && window.jobPilotApi.onAgentTelemetry) {
+      window.jobPilotApi.onAgentTelemetry((t) => {
+        logRadarTelemetry('AGENT', `[${(t.portal || 'TAB').toUpperCase()}] ${t.message}`);
+      });
+    }
+
     function dismissActiveBanner() {
       const banner = document.getElementById('chrome-active-banner');
       if (banner) banner.style.display = 'none';
     }
 
     async function applyToActiveChromeJob() {
+      const extStatus = await (window.jobPilotApi?.getExtensionStatus ? window.jobPilotApi.getExtensionStatus() : Promise.resolve({ connected: false }));
+      const targetUrl = (lastActiveJob && lastActiveJob.url) || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
+
+      if (!extStatus || !extStatus.connected) {
+        showToast('Auto-launching browser with JobPilot Autonomous Agent...');
+        logRadarTelemetry('DISPATCH', `Auto-launching browser with JobPilot autonomous agent loaded on ${targetUrl}...`);
+        if (window.jobPilotApi && window.jobPilotApi.launchChromeAgent) {
+          await window.jobPilotApi.launchChromeAgent({ url: targetUrl, action: 'start_autonomous_apply' });
+        }
+        return;
+      }
+
       if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
-        logRadarTelemetry('DISPATCH', 'Forwarding autofill command to user Chrome browser...');
-        await window.jobPilotApi.sendExtensionCommand({ action: 'autofill' });
-        logRadarTelemetry('SUCCESS', 'Autofill command received and executed in personal Chrome tab.');
-        showToast('Delivered autofill command to Google Chrome tab');
+        logRadarTelemetry('DISPATCH', 'Dispatching autonomous apply agent into active browser tab...');
+        await window.jobPilotApi.sendExtensionCommand({ action: 'start_autonomous_apply' });
+        const portal = (lastActiveJob?.portal || 'general').toLowerCase();
+        setPortalApplyingState(portal, true, { company: lastActiveJob?.company, role: lastActiveJob?.title });
+        logRadarTelemetry('SUCCESS', 'Autonomous apply agent dispatched to active tab.');
+        showToast('⚡ JobPilot Autonomous Agent active in browser tab');
       }
     }
 
     async function pitchActiveChromeJob() {
+      const extStatus = await (window.jobPilotApi?.getExtensionStatus ? window.jobPilotApi.getExtensionStatus() : Promise.resolve({ connected: false }));
+      const targetUrl = (lastActiveJob && lastActiveJob.url) || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
+
+      if (!extStatus || !extStatus.connected) {
+        showToast('Launching Chrome with JobPilot extension auto-enabled...');
+        logRadarTelemetry('DISPATCH', `Auto-launching Chrome with JobPilot agent loaded for pitch injection...`);
+        if (window.jobPilotApi && window.jobPilotApi.launchChromeAgent) {
+          await window.jobPilotApi.launchChromeAgent({ url: targetUrl, action: 'inject_pitch' });
+        }
+        return;
+      }
+
       if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
         logRadarTelemetry('DISPATCH', 'Injecting tailored candidate pitch into active Chrome form...');
         await window.jobPilotApi.sendExtensionCommand({ action: 'inject_pitch' });
-        logRadarTelemetry('SUCCESS', 'Pitch successfully injected into Chrome tab.');
+        logRadarTelemetry('SUCCESS', 'Pitch successfully delivered to Chrome tab.');
         showToast('Delivered pitch injection to Google Chrome tab');
       }
     }
@@ -2828,15 +4157,29 @@
       const model = document.getElementById('cfg-model-name').value.trim();
 
       if (window.jobPilotApi && window.jobPilotApi.setModelConfig) {
-        const res = await window.jobPilotApi.setModelConfig({ provider, routerUrl: url, token, model });
-        if (res.ok && res.isAlive) {
-          appendTelemetry('[SETTINGS] Gateway connected. Model set to ' + model);
-          document.getElementById('router-port-text').innerText = `${provider}: ${model}`;
-          document.getElementById('router-port-text').style.color = '#10b981';
-          document.getElementById('dock-model-label').innerText = `${model} (${provider})`;
-          showToast('Configuration saved (200 OK)');
-        } else {
-          showToast('Configuration saved, but gateway is offline');
+        try {
+          const res = await window.jobPilotApi.setModelConfig({ provider, routerUrl: url, token, model });
+          if (res && res.ok) {
+            appendTelemetry('[SETTINGS] Gateway connected. Model set to ' + model);
+            const portText = document.getElementById('router-port-text');
+            if (portText) {
+              portText.innerText = `${provider}: ${model}`;
+              portText.style.color = res.isAlive ? '#10b981' : '#f59e0b';
+            }
+            const dockLabel = document.getElementById('dock-model-label');
+            if (dockLabel) {
+              dockLabel.innerText = `${model} (${provider})`;
+            }
+            if (res.isAlive) {
+              showToast('Configuration saved (200 OK)');
+            } else {
+              showToast('Configuration saved, but gateway is offline');
+            }
+          } else {
+            showToast('Failed to save configuration: ' + (res?.error || 'Unknown error'));
+          }
+        } catch (e) {
+          showToast('Error saving configuration: ' + e.message);
         }
       }
     }
@@ -2890,11 +4233,16 @@
 
     async function checkExtensionPing() {
       try {
-        const res = await fetch('http://127.0.0.1:5056/api/status');
-        const data = await res.json();
-        if (data.ok) showToast('Bridge port 5056 active and healthy!');
+        if (window.jobPilotApi && window.jobPilotApi.getExtensionStatus) {
+          const status = await window.jobPilotApi.getExtensionStatus();
+          if (status && status.connected) {
+            showToast('Extension companion is connected and active!');
+          } else {
+            showToast('Bridge active on port 5056 (awaiting extension ping)');
+          }
+        }
       } catch (e) {
-        showToast('Bridge error: ' + e.message);
+        showToast('Bridge check error: ' + e.message);
       }
     }
 
@@ -2941,10 +4289,15 @@
         e.preventDefault();
         switchWorkspaceTab('radar');
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === '6') {
+        e.preventDefault();
+        switchWorkspaceTab('interviews');
+      }
     });
 
     // Init
     loadLedgerData();
+    loadJobLeadsData();
     loadStats();
     loadSettingsToUI();
     initPortalDropdown();
