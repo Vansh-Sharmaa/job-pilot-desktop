@@ -80,6 +80,7 @@
     else if (host.includes('ashbyhq')) portal = 'Ashby';
     else if (host.includes('workday')) portal = 'Workday';
     else if (host.includes('smartrecruiters')) portal = 'SmartRecruiters';
+    else if (host.includes('nexgenhiring')) portal = 'NexGen Hiring';
     else if (host.includes('google.com/forms')) portal = 'Google Forms';
 
     let title = document.title;

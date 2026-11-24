@@ -1446,7 +1446,8 @@
       { id: 'glassdoor', name: 'Glassdoor', category: 'Salary & Reviews', badge: 'GD', bg: '#059669', url: 'https://www.glassdoor.co.in/Job/india-ai-engineer-jobs-SRCH_IL.0,5_IN115_KO6,17.htm' },
       { id: 'levels', name: 'Levels.fyi', category: 'High Compensation', badge: 'LV', bg: '#0284c7', url: 'https://www.levels.fyi/jobs?keyword=AI%20Engineer' },
       { id: 'turing', name: 'Turing', category: 'US Remote Tech', badge: 'TU', bg: '#2563eb', url: 'https://www.turing.com/jobs' },
-      { id: 'dice', name: 'Dice Tech', category: 'US Tech Hiring', badge: 'DC', bg: '#dc2626', url: 'https://www.dice.com/jobs?q=AI%20Engineer' }
+      { id: 'dice', name: 'Dice Tech', category: 'US Tech Hiring', badge: 'DC', bg: '#dc2626', url: 'https://www.dice.com/jobs?q=AI%20Engineer' },
+      { id: 'nexgenhiring', name: 'NexGen Hiring', category: 'Aggregator', badge: 'NX', bg: '#0284c7', url: 'https://nexgenhiring.in/' }
     ];
 
     function initPortalDropdown() {
@@ -2421,6 +2422,7 @@
       if (u.includes('instahyre')) return 'instahyre';
       if (u.includes('wellfound')) return 'wellfound';
       if (u.includes('foundit')) return 'foundit';
+      if (u.includes('nexgenhiring')) return 'nexgenhiring';
       if (u.includes('workatastartup') || u.includes('ycombinator')) return 'ycstartup';
       return activeRadarPortalId;
     }
