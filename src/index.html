@@ -2,63 +2,58 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>JobPilot Operator : OpenCode Workstation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobPilot AI</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Workstation Top Header -->
-  <header class="workstation-header">
-    <div class="brand-section">
-      <div class="brand-badge-logo">JOBPILOT</div>
-      <div class="brand-label">
-        Operator Workstation
-        <span class="brand-subtext">v1.4.0 (main)</span>
+  <!-- =====================================================================
+       ANTIGRAVITY TOP NAVIGATION HEADER
+       ===================================================================== -->
+  <header class="ag-header">
+    <div class="ag-nav-left">
+      <div class="ag-brand-logo" onclick="startNewSession()" title="JobPilot AI">▲</div>
+      <div class="ag-sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar (Ctrl+B)">◫</div>
+      <div class="ag-history-arrows">
+        <button class="ag-icon-btn" onclick="webviewBack()" title="Back">←</button>
+        <button class="ag-icon-btn" onclick="webviewFwd()" title="Forward">→</button>
+      </div>
+      <div class="ag-menu-items">
+        <span class="ag-menu-item active" onclick="setLayoutMode('split')">JobPilot</span>
+        <span class="ag-menu-item" onclick="switchWorkspaceTab('browser')">Workspace</span>
+        <span class="ag-menu-item" onclick="setLayoutMode('agent')">View</span>
+        <span class="ag-menu-item" onclick="switchWorkspaceTab('settings')">Window</span>
       </div>
     </div>
 
-    <!-- Middle: Model & Gateway Selector -->
-    <div class="model-control-pill">
-      <span style="color: #64748b;">MODEL:</span>
-      <select id="model-select-dropdown" class="model-select" onchange="switchModel(this.value)">
-        <option value="Fable5" selected>Fable5 (9router / Free)</option>
-        <option value="oc-gpt">oc-gpt (OpenCode GPT)</option>
-        <option value="claude-fable-5">claude-fable-5</option>
-        <option value="ag/claude-opus-4-6-thinking">ag/claude-opus-4-6-thinking</option>
-        <option value="ag/claude-sonnet-4-6">ag/claude-sonnet-4-6</option>
-      </select>
-      <span style="color: #334155;">|</span>
-      <div class="router-status-indicator" id="router-indicator" onclick="switchWorkspaceTab('settings')" style="cursor: pointer;" title="Model Gateway Settings">
-        <span class="pulse-dot" id="router-pulse"></span>
-        <span id="router-port-text">GATEWAY: ONLINE</span>
-      </div>
-      <span style="color: #334155;">|</span>
-      <div class="router-status-indicator" id="extension-indicator" onclick="switchWorkspaceTab('settings')" style="cursor: pointer;" title="Chrome Extension Companion">
-        <span class="pulse-dot" id="ext-pulse" style="background: #94a3b8; box-shadow: none;"></span>
-        <span id="ext-status-text" style="color: #94a3b8;">EXT: STANDBY</span>
-      </div>
+    <!-- Center Model & Extension Pill -->
+    <div class="ag-center-pill" onclick="switchWorkspaceTab('settings')" title="Click to open Model Gateway Settings">
+      <span class="ag-pill-dot" id="router-pulse"></span>
+      <span id="router-port-text" style="color: #e2e8f0; font-weight: 500;">9Router: Fable5</span>
+      <span style="color: #4b5563;">•</span>
+      <span id="ext-status-text" style="color: #9ca3af; font-size: 11px;">Extension Ready</span>
     </div>
 
-    <!-- Right: Workstation Layout View Switcher -->
-    <div class="view-modes-group">
-      <button class="btn-view-mode active" id="mode-split" onclick="setLayoutMode('split')" title="Split View (Ctrl+0)">◫ Split</button>
-      <button class="btn-view-mode" id="mode-agent" onclick="setLayoutMode('agent')" title="Full-width Terminal">▣ Terminal</button>
-      <button class="btn-view-mode" id="mode-browser" onclick="setLayoutMode('browser')" title="Full-width Browser (Ctrl+1)">🌐 Browser</button>
-      <button class="btn-view-mode" id="mode-ledger" onclick="setLayoutMode('ledger')" title="Ledger (Ctrl+2)">📋 Ledger (<span id="hdr-ledger-count">...</span>)</button>
-      <button class="btn-view-mode" id="mode-fleet" onclick="setLayoutMode('fleet')" title="Orca Fleet Matrix (Ctrl+3)">🚀 Fleet</button>
-      <button class="btn-view-mode" id="mode-resume" onclick="setLayoutMode('resume')" title="Resume ATS Tailor (Ctrl+4)">📄 Resume</button>
+    <!-- Right Controls -->
+    <div class="ag-nav-right">
+      <button class="ag-view-btn" id="mode-split" onclick="setLayoutMode('split')" title="Split View: Agent + Workspace (Ctrl+0)">◫ Split</button>
+      <button class="ag-view-btn active" id="mode-agent" onclick="setLayoutMode('agent')" title="Full-width Agent Terminal">▣ Terminal</button>
+      <button class="ag-view-btn" id="mode-browser" onclick="setLayoutMode('browser')" title="Full-width Browser (Ctrl+1)">🌐 Browser</button>
+      <button class="ag-view-btn" id="mode-ledger" onclick="setLayoutMode('ledger')" title="Applications Ledger (Ctrl+2)">📋 Ledger (<span id="hdr-ledger-count">311</span>)</button>
+      <button class="ag-pill-action-btn" onclick="switchWorkspaceTab('fleet')">⚡ Launch Autopilot</button>
     </div>
   </header>
 
   <!-- Live Chrome Tab Detected Banner -->
-  <div id="chrome-active-banner" style="display: none; background: rgba(56, 189, 248, 0.1); border-bottom: 1px solid rgba(56, 189, 248, 0.25); padding: 5px 14px; font-size: 11px; align-items: center; justify-content: space-between; z-index: 40;">
+  <div id="chrome-active-banner" style="display: none; background: rgba(56, 189, 248, 0.08); border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding: 5px 14px; font-size: 11px; align-items: center; justify-content: space-between; z-index: 40;">
     <div style="display: flex; align-items: center; gap: 8px;">
       <span style="font-size: 13px;">⚡</span>
-      <span style="color: #fff; font-weight: 700;">CHROME JOB DETECTED:</span>
-      <span id="active-banner-company" style="color: #38bdf8; font-weight: 800;"></span>
+      <span style="color: #fff; font-weight: 600;">CHROME JOB DETECTED:</span>
+      <span id="active-banner-company" style="color: #38bdf8; font-weight: 700;"></span>
       <span style="color: #94a3b8;">:</span>
       <span id="active-banner-role" style="color: #cbd5e1;"></span>
-      <span id="active-banner-portal" class="p-tag p-naukri" style="font-size: 9px;"></span>
+      <span id="active-banner-portal" class="p-tag" style="font-size: 9px;"></span>
     </div>
     <div style="display: flex; gap: 6px;">
       <button class="browser-btn primary" style="font-size: 10px; padding: 2px 7px;" onclick="applyToActiveChromeJob()">⚡ Smart Apply</button>
@@ -68,461 +63,473 @@
     </div>
   </div>
 
-  <!-- App Container (Activity Bar + Workstation) -->
-  <div class="app-container">
+  <!-- Main App Layout Wrapper -->
+  <div class="ag-app-wrapper">
 
-    <!-- Activity Bar (OpenCode Navigation Rail) -->
-    <nav class="activity-bar">
-      <div class="activity-group-top">
-        <button class="act-btn active" id="act-split" onclick="setLayoutMode('split')" title="Workstation Split (Ctrl+0)">◫</button>
-        <button class="act-btn" id="act-agent" onclick="setLayoutMode('agent')" title="Autonomous Agent Terminal">❯_</button>
-        <button class="act-btn" id="act-browser" onclick="switchWorkspaceTab('browser')" title="Hiring Browser (Ctrl+1)">🌐</button>
-        <button class="act-btn" id="act-ledger" onclick="switchWorkspaceTab('ledger')" title="Application Ledger (Ctrl+2)">📋</button>
-        <button class="act-btn" id="act-fleet" onclick="switchWorkspaceTab('fleet')" title="Orca Fleet Orchestrator (Ctrl+3)">🚀</button>
-        <button class="act-btn" id="act-resume" onclick="switchWorkspaceTab('resume')" title="Resume & ATS Tailoring (Ctrl+4)">📄</button>
-        <button class="act-btn" id="act-quotas" onclick="switchWorkspaceTab('quotas')" title="14-Platform Quotas">⚡</button>
-        <button class="act-btn" id="act-telemetry" onclick="switchWorkspaceTab('telemetry')" title="Live Process Stream">📊</button>
+    <!-- =====================================================================
+         ANTIGRAVITY LEFT SIDEBAR (COLLAPSIBLE)
+         ===================================================================== -->
+    <aside class="ag-sidebar" id="ag-sidebar">
+      <div class="ag-sidebar-top">
+        <button class="ag-btn-new-chat" onclick="startNewSession()">+ New Conversation</button>
+        <div class="ag-nav-links">
+          <div class="ag-nav-link" onclick="switchWorkspaceTab('fleet')">
+            <span class="ag-nav-icon">⏱</span>
+            <span>Automations</span>
+            <span class="ag-nav-badge">14</span>
+          </div>
+          <div class="ag-nav-link" onclick="switchWorkspaceTab('resume')">
+            <span class="ag-nav-icon">📄</span>
+            <span>Customizations</span>
+          </div>
+        </div>
       </div>
-      <div class="activity-group-bottom">
-        <button class="act-btn" id="act-settings" onclick="switchWorkspaceTab('settings')" title="Configuration & Extension (Ctrl+,)">⚙</button>
+
+      <div class="ag-sidebar-section">
+        <div class="ag-section-header">
+          <span class="ag-section-title">Projects</span>
+          <div class="ag-section-actions">
+            <span class="ag-action-icon" title="Filter" onclick="showToast('Active projects filtered')">⫚</span>
+            <span class="ag-action-icon" title="New Session" onclick="startNewSession()">+</span>
+          </div>
+        </div>
+
+        <div class="ag-project-tree">
+          <!-- Project 1: Improved Resume -->
+          <div class="ag-project-group">
+            <div class="ag-project-header active" onclick="switchWorkspaceTab('resume')">
+              <span>📁</span>
+              <span>improved resume</span>
+            </div>
+            <div class="ag-chat-item active" onclick="setAgentSession('ATS Resume Review and Pitch')">
+              <span class="ag-chat-title">Resume Review and Project Pitch</span>
+              <span class="ag-chat-dot"></span>
+            </div>
+            <div class="ag-chat-item" onclick="switchWorkspaceTab('browser')">
+              <span class="ag-chat-title">Target Job Portals Search</span>
+              <span class="ag-chat-dot"></span>
+            </div>
+          </div>
+
+          <!-- Project 2: Interview Prep -->
+          <div class="ag-project-group">
+            <div class="ag-project-header" onclick="triggerQuickCommand('I want to prepare my technical screening questions for MCA AI and Data Science roles.')">
+              <span>📁</span>
+              <span>interview</span>
+            </div>
+            <div class="ag-chat-item" onclick="triggerQuickCommand('Prepare a technical screening interview prep roadmap for AI Engineer freshers.')">
+              <span class="ag-chat-title">Technical Screening & Prep</span>
+              <span class="ag-chat-dot"></span>
+            </div>
+          </div>
+
+          <!-- Project 3: Applications Tracker -->
+          <div class="ag-project-group">
+            <div class="ag-project-header" onclick="switchWorkspaceTab('ledger')">
+              <span>📁</span>
+              <span>job applications</span>
+            </div>
+            <div class="ag-chat-item" onclick="switchWorkspaceTab('ledger')">
+              <span class="ag-chat-title">Verified Applications Ledger</span>
+              <span class="ag-chat-dot"></span>
+            </div>
+          </div>
+
+          <!-- Project 4: Autopilot Fleet -->
+          <div class="ag-project-group">
+            <div class="ag-project-header" onclick="switchWorkspaceTab('fleet')">
+              <span>📁</span>
+              <span>autopilot fleet</span>
+            </div>
+            <div class="ag-chat-item" onclick="switchWorkspaceTab('fleet')">
+              <span class="ag-chat-title">14-Platform Python Workers</span>
+              <span class="ag-chat-dot"></span>
+            </div>
+            <div class="ag-chat-item" onclick="switchWorkspaceTab('quotas')">
+              <span class="ag-chat-title">Daily Platform Quotas</span>
+              <span class="ag-chat-dot"></span>
+            </div>
+          </div>
+        </div>
       </div>
-    </nav>
 
-    <!-- Workstation Body -->
-    <main class="workstation-body" id="workstation-body">
+      <div class="ag-sidebar-bottom">
+        <div class="ag-nav-link" onclick="switchWorkspaceTab('settings')">
+          <span class="ag-nav-icon">⚙</span>
+          <span>Settings</span>
+        </div>
+      </div>
+    </aside>
 
-      <!-- ==================== PANE 1: AUTONOMOUS AGENT TERMINAL ==================== -->
+    <!-- =====================================================================
+         MAIN WORKSTATION BODY & SPLIT PANES
+         ===================================================================== -->
+    <main class="ag-workstation-body" id="workstation-body">
+
+      <!-- PANE 1: AUTONOMOUS AGENT (ANTIGRAVITY CANVAS) -->
       <section class="pane-agent" id="pane-agent">
-        <div class="agent-topbar">
-          <div class="session-tabs">
-            <div class="session-pill active" id="session-pill-main">
-              <span class="pulse-dot" style="width: 4px; height: 4px;"></span>
-              <span>#001-main</span>
-            </div>
-            <div class="session-pill" onclick="createNewSession()" title="Start New Agent Session">+ New</div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span id="agent-status-label" style="color: #38bdf8; font-weight: 700;">READY</span>
-            <button class="btn-abort-agent" id="btn-abort-agent" onclick="abortActiveAgent()">Stop ◼</button>
-            <button style="background: none; border: none; color: #475569; font-family: var(--font-mono); font-size: 11px; cursor: pointer;" onclick="clearAgentTerminal()" title="Clear Terminal (Ctrl+L)">Clear</button>
-          </div>
-        </div>
 
-        <!-- Agent Message / Execution Stream -->
-        <div class="agent-stream" id="agent-stream">
-          <div class="agent-output-block" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); font-family: var(--font-mono); font-size: 11px;">
-            <div style="color: #38bdf8; font-weight: 700; margin-bottom: 4px;">JobPilot Operator Terminal Online</div>
-            <div style="color: #94a3b8; line-height: 1.5;">
-              Candidate: <strong>Vansh Sharma</strong> (MCA AI & Data Science 2026, 0-2 YOE)<br>
-              Model: <strong id="agent-welcome-model">Fable5</strong> | Gateway: <span id="agent-welcome-gw" style="color: #10b981;">http://127.0.0.1:20128/v1</span><br>
-              Companion Extension: <span id="agent-welcome-ext" style="color: #94a3b8;">Standby (Port 5056)</span><br>
-              Direct Tools: <code>browser_navigate</code>, <code>browser_autofill</code>, <code>browser_inject_pitch</code>, <code>tailor_ats_resume</code>, <code>search_ledger</code>, <code>run_fleet_agent</code>.
+        <!-- Scrollable Messages Area -->
+        <div class="ag-canvas-scroll" id="ag-canvas-scroll">
+
+          <!-- Center Hero Screen (Antigravity Style) -->
+          <div class="ag-hero-center" id="ag-hero-center">
+            <div class="ag-hero-monogram">▲</div>
+            <div class="ag-hero-title">Good to see you, Vansh. What's next?</div>
+            <div class="ag-hero-chips">
+              <div class="ag-hero-chip" onclick="triggerQuickCommand('Check my 20-platform application quotas and show status.')">⚡ Check 20-platform daily quotas</div>
+              <div class="ag-hero-chip" onclick="triggerQuickCommand('Tailor my ATS resume for an AI Engineer role with PyTorch, LangChain, and RAG.')">📄 Generate 1-page tailored ATS resume</div>
+              <div class="ag-hero-chip" onclick="triggerQuickCommand('Open Indeed India and search for entry-level AI Engineer positions.')">🌐 Open Indeed entry-level AI jobs</div>
+              <div class="ag-hero-chip" onclick="triggerQuickCommand('Launch extended_platforms_runner.py in background to apply across active platforms.')">🚀 Launch multi-platform fleet runner</div>
             </div>
           </div>
+
+          <!-- Live Agent Execution Stream -->
+          <div class="agent-stream" id="agent-stream" style="display: none;"></div>
+
         </div>
 
-        <!-- Agent Command Input Bar -->
-        <div class="agent-input-container">
-          <div class="quick-slash-bar">
-            <div class="slash-pill" onclick="triggerQuickCommand('Tailor my ATS resume for an AI Engineer role requiring LangChain, RAG pipelines, and PyTorch.')">📄 /tailor-resume</div>
-            <div class="slash-pill" onclick="triggerQuickCommand('Check my 14-platform daily application quotas and show status.')">📊 /check-quotas</div>
-            <div class="slash-pill" onclick="triggerQuickCommand('Run inbound_email_calendar_runner.py to check Gmail for OA test invitations.')">📬 /scan-inbox</div>
-            <div class="slash-pill" onclick="triggerQuickCommand('Navigate to Indeed India and search for AI Engineer roles with 0-1 YOE.')">🌐 /search-indeed</div>
-            <div class="slash-pill" onclick="triggerQuickCommand('Run auto_quota_closer.py to burst-fill remaining quota caps across all platforms.')">⚡ /close-quotas</div>
-            <div class="slash-pill" onclick="triggerQuickCommand('Search the ledger for recent applications submitted to Indeed and Unstop.')">📋 /query-ledger</div>
-          </div>
+        <!-- Floating Command Dock (Antigravity Bottom Dock) -->
+        <div class="ag-floating-dock-wrapper">
+          <div class="ag-floating-dock">
+            
+            <!-- Top Context Chips Row -->
+            <div class="ag-dock-context-row">
+              <div class="ag-context-chip" onclick="switchWorkspaceTab('resume')">
+                <span>📁 improved resume</span>
+                <span class="ag-chip-chevron">⌄</span>
+              </div>
+              <div class="ag-context-chip" onclick="switchWorkspaceTab('browser')">
+                <span id="dock-active-target">🌐 Indeed Entry-Level AI</span>
+                <span class="ag-chip-chevron">⌄</span>
+              </div>
+            </div>
 
-          <div class="agent-input-wrapper">
-            <span class="command-prefix">❯</span>
-            <input type="text" class="prompt-input" id="agent-prompt-input" placeholder="Type instruction or command for agent (Ctrl+K)..." onkeydown="if(event.key === 'Enter') submitAgentTask()">
-            <button class="btn-run-agent" id="btn-run-agent" onclick="submitAgentTask()">Execute ↵</button>
+            <!-- Main Input Textarea -->
+            <textarea class="ag-dock-textarea" id="agent-prompt-input" rows="2" placeholder="Ask anything, @ to mention, / for actions" onkeydown="handlePromptKeyDown(event)"></textarea>
+
+            <!-- Bottom Action Toolbar -->
+            <div class="ag-dock-bottom-row">
+              <div class="ag-dock-left">
+                <button class="ag-dock-btn" onclick="switchWorkspaceTab('resume')" title="Attach Resume Context">+</button>
+                <div class="ag-model-badge" onclick="switchWorkspaceTab('settings')" title="Select Model">
+                  <span id="dock-model-label">Fable5 (9Router)</span>
+                  <span class="ag-chip-chevron">⌄</span>
+                </div>
+              </div>
+              <div class="ag-dock-right">
+                <button class="ag-dock-btn" id="btn-abort-agent" style="display: none; color: #ef4444; font-size: 11px; width: auto; padding: 2px 8px;" onclick="abortActiveAgent()">■ Stop</button>
+                <div class="ag-context-chip" onclick="showToast('Turbo mode active: minimal latency execution')" title="Execution Engine">
+                  <span>🛡 Turbo</span>
+                  <span class="ag-chip-chevron">⌄</span>
+                </div>
+                <button class="ag-btn-send" id="btn-run-agent" onclick="submitAgentTask()" title="Execute Command (Enter)">
+                  <span>▲</span>
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
+
       </section>
 
       <!-- Resizable Split Gutter -->
       <div class="split-resizer" id="split-resizer" title="Drag to resize split panes. Double-click to reset 50/50."></div>
 
-      <!-- ==================== PANE 2: WORKSPACE INSPECTOR ==================== -->
+      <!-- =====================================================================
+           PANE 2: WORKSPACE INSPECTOR (BROWSER, LEDGER, FLEET, RESUME, QUOTAS)
+           ===================================================================== -->
       <section class="pane-workspace" id="pane-workspace">
 
-        <!-- Workspace Tab Bar -->
-        <div class="workspace-tab-bar">
-          <button class="ws-tab-btn active" id="wstab-browser" onclick="switchWorkspaceTab('browser')">🌐 Browser</button>
-          <button class="ws-tab-btn" id="wstab-ledger" onclick="switchWorkspaceTab('ledger')">📋 Ledger (<span id="ws-ledger-count">...</span>)</button>
-          <button class="ws-tab-btn" id="wstab-fleet" onclick="switchWorkspaceTab('fleet')">🚀 Fleet Matrix</button>
-          <button class="ws-tab-btn" id="wstab-resume" onclick="switchWorkspaceTab('resume')">📄 Resume & ATS</button>
-          <button class="ws-tab-btn" id="wstab-quotas" onclick="switchWorkspaceTab('quotas')">⚡ Quotas</button>
-          <button class="ws-tab-btn" id="wstab-telemetry" onclick="switchWorkspaceTab('telemetry')">📊 Telemetry</button>
-          <button class="ws-tab-btn" id="wstab-settings" onclick="switchWorkspaceTab('settings')">⚙️ Config</button>
+        <!-- Workspace Tabs Bar -->
+        <div class="workspace-tabs-bar">
+          <div class="ws-tabs-group">
+            <button class="ws-tab-btn active" id="wstab-browser" onclick="switchWorkspaceTab('browser')">🌐 Browser</button>
+            <button class="ws-tab-btn" id="wstab-ledger" onclick="switchWorkspaceTab('ledger')">📋 Ledger (<span id="ws-ledger-count">311</span>)</button>
+            <button class="ws-tab-btn" id="wstab-fleet" onclick="switchWorkspaceTab('fleet')">🚀 Fleet Matrix</button>
+            <button class="ws-tab-btn" id="wstab-resume" onclick="switchWorkspaceTab('resume')">📄 Resume & ATS</button>
+            <button class="ws-tab-btn" id="wstab-quotas" onclick="switchWorkspaceTab('quotas')">⚡ Quotas</button>
+            <button class="ws-tab-btn" id="wstab-telemetry" onclick="switchWorkspaceTab('telemetry')">📊 Telemetry</button>
+            <button class="ws-tab-btn" id="wstab-settings" onclick="switchWorkspaceTab('settings')">⚙ Config</button>
+          </div>
         </div>
 
-        <!-- Workspace Content Area -->
-        <div class="ws-content-area">
+        <!-- TAB 1: BROWSER VIEW -->
+        <div class="ws-view active-ws" id="ws-browser">
+          <div class="browser-bar">
+            <button class="browser-btn" onclick="webviewBack()" title="Back">&lt;</button>
+            <button class="browser-btn" onclick="webviewFwd()" title="Forward">&gt;</button>
+            <button class="browser-btn" onclick="webviewReload()" title="Reload">&#8635;</button>
 
-          <!-- TAB 1: BROWSER -->
-          <div class="ws-view active-ws" id="ws-browser">
-            <div class="ws-browser-bar">
-              <button class="browser-btn" onclick="webviewBack()" title="Back">&lt;</button>
-              <button class="browser-btn" onclick="webviewFwd()" title="Forward">&gt;</button>
-              <button class="browser-btn" onclick="webviewReload()" title="Reload">&#8635;</button>
+            <input type="text" class="browser-input" id="browser-url-bar" value="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" onkeydown="if(event.key === 'Enter') navigateBrowser()">
 
-              <input type="text" class="browser-input" id="browser-url-bar" value="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" onkeydown="if(event.key === 'Enter') navigateBrowser()">
-
-              <button class="browser-btn primary" onclick="smartApplyInBrowser()" title="Autofill forms on page">⚡ Smart Apply</button>
-              <button class="browser-btn" onclick="injectPitchInBrowser()" title="Inject tailored candidate pitch">📄 Pitch</button>
-              <button class="browser-btn" onclick="recordCurrentWebviewJob()" title="Add this job posting to tracker">+ Record</button>
-              <button class="browser-btn" onclick="openCurrentExternal()" title="Open in external browser">↗ External</button>
-            </div>
-
-            <div class="portal-dock-strip">
-              <div class="portal-dock-btn active" onclick="loadPortal('https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B', this)">Indeed India</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.linkedin.com/jobs/search/?keywords=AI%20Engineer&f_E=1%2C2&location=India', this)">LinkedIn</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.naukri.com/ai-engineer-jobs?experience=0&experience=1', this)">Naukri</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://internshala.com/jobs/ai-jobs/', this)">Internshala</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://cuvette.tech/jobs', this)">Cuvette</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://unstop.com/jobs?experience=0', this)">Unstop</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.hirist.tech/search?q=AI%20Engineer', this)">Hirist</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://cutshort.io/jobs/ai-engineer-jobs', this)">Cutshort</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.instahyre.com/jobs', this)">Instahyre</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.foundit.in/srp/results?query=AI+Engineer', this)">foundit</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.shine.com/job-search/ai-engineer-jobs', this)">Shine</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://wellfound.com/jobs', this)">Wellfound</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.workatastartup.com/jobs', this)">YC Startup</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://hasjob.co/?q=AI', this)">Hasjob</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://remoteok.com/remote-ai-jobs', this)">RemoteOK</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://weworkremotely.com/categories/remote-programming-jobs', this)">WeWorkRemotely</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.glassdoor.co.in/Job/india-ai-engineer-jobs-SRCH_IL.0,5_IN115_KO6,17.htm', this)">Glassdoor</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.levels.fyi/jobs?keyword=AI%20Engineer', this)">Levels.fyi</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.turing.com/jobs', this)">Turing</div>
-              <div class="portal-dock-btn" onclick="loadPortal('https://www.dice.com/jobs?q=AI%20Engineer', this)">Dice</div>
-            </div>
-
-            <div class="webview-container">
-              <webview id="workspace-webview" src="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36" partition="persist:jobpilot" allowpopups></webview>
-            </div>
+            <button class="browser-btn primary" onclick="smartApplyInBrowser()" title="Autofill forms on page">⚡ Smart Apply</button>
+            <button class="browser-btn" onclick="injectPitchInBrowser()" title="Inject tailored candidate pitch">📄 Pitch</button>
+            <button class="browser-btn" onclick="recordCurrentWebviewJob()" title="Add this job posting to tracker">+ Record</button>
+            <button class="browser-btn" onclick="openCurrentExternal()" title="Open in external browser">↗ External</button>
           </div>
 
-          <!-- TAB 2: LEDGER -->
-          <div class="ws-view" id="ws-ledger">
-            <div class="ledger-view-container">
-              <div class="ledger-top-row">
-                <div>
-                  <div style="font-size: 13px; font-weight: 800; color: #fff;">Verified Applications Ledger</div>
-                  <div style="font-size: 10px; color: #94a3b8;">Real-time sync from Python Fleet, Webview & Chrome Companion Extension</div>
-                </div>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                  <input type="text" class="ledger-search-box" id="ledger-search" placeholder="Search company, role or portal..." oninput="filterLedger()">
-                  <button class="browser-btn primary" onclick="openManualEntryModal()">+ Add Entry</button>
-                  <button class="browser-btn" onclick="exportLedgerData('csv')" title="Export full tracker to CSV">⬇ CSV</button>
-                  <button class="browser-btn" onclick="exportLedgerData('json')" title="Export full tracker to JSON">⬇ JSON</button>
-                </div>
-              </div>
-
-              <!-- Fast Portal Filter Strip -->
-              <div class="ledger-filter-strip" id="ledger-filter-strip">
-                <div class="l-chip active" onclick="filterByPortal('ALL', this)">All</div>
-              </div>
-
-              <div class="ledger-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style="width: 80px;">Date</th>
-                      <th style="width: 190px;">Company</th>
-                      <th style="width: 230px;">Role</th>
-                      <th style="width: 120px;">Location</th>
-                      <th style="width: 95px;">Portal</th>
-                      <th style="width: 80px;">Status</th>
-                      <th style="width: 75px;">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="ledger-tbody">
-                    <!-- Dynamically populated -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <!-- 20 Direct Portals Dock Strip (Monochrome Slate) -->
+          <div class="portal-dock-strip">
+            <div class="portal-dock-btn active" onclick="loadPortal('https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B', this)">Indeed India</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.linkedin.com/jobs/search/?keywords=AI%20Engineer&f_E=1%2C2&location=India', this)">LinkedIn</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.naukri.com/ai-engineer-jobs?experience=0&experience=1', this)">Naukri</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://internshala.com/jobs/ai-jobs/', this)">Internshala</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://cuvette.tech/jobs', this)">Cuvette</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://unstop.com/jobs?experience=0', this)">Unstop</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.hirist.tech/search?q=AI%20Engineer', this)">Hirist</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://cutshort.io/jobs/ai-engineer-jobs', this)">Cutshort</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.instahyre.com/jobs', this)">Instahyre</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.foundit.in/srp/results?query=AI+Engineer', this)">foundit</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.shine.com/job-search/ai-engineer-jobs', this)">Shine</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://wellfound.com/jobs', this)">Wellfound</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.workatastartup.com/jobs', this)">YC Startup</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://hasjob.co/?q=AI', this)">Hasjob</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://remoteok.com/remote-ai-jobs', this)">RemoteOK</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://weworkremotely.com/categories/remote-programming-jobs', this)">WeWorkRemotely</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.glassdoor.co.in/Job/india-ai-engineer-jobs-SRCH_IL.0,5_IN115_KO6,17.htm', this)">Glassdoor</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.levels.fyi/jobs?keyword=AI%20Engineer', this)">Levels.fyi</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.turing.com/jobs', this)">Turing</div>
+            <div class="portal-dock-btn" onclick="loadPortal('https://www.dice.com/jobs?q=AI%20Engineer', this)">Dice</div>
           </div>
 
-          <!-- TAB 3: ORCA FLEET ORCHESTRATOR MATRIX -->
-          <div class="ws-view" id="ws-fleet">
-            <div class="fleet-matrix-container">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <div style="font-size: 13px; font-weight: 800; color: #fff;">Orca Fleet Subagent Orchestrator</div>
-                  <div style="font-size: 10px; color: #94a3b8;">Control background Python job hunting engines and telemetry daemons</div>
-                </div>
-                <div style="display: flex; gap: 6px;">
-                  <button class="browser-btn primary" onclick="launchFleetWorkerScript('daily_autopilot_daemon.py')">▶ Launch Autopilot</button>
-                  <button class="browser-btn" onclick="stopAllFleetWorkers()">◼ Stop All Workers</button>
-                </div>
-              </div>
+          <div class="webview-container">
+            <webview id="workspace-webview" src="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36" partition="persist:jobpilot" allowpopups></webview>
+          </div>
+        </div>
 
-              <!-- Worker 1: Daily Autopilot Daemon -->
-              <div class="fleet-worker-card">
-                <div class="fleet-worker-info">
-                  <div class="fleet-worker-title">
-                    <span>daily_autopilot_daemon.py</span>
-                    <span class="p-tag p-naukri" id="status-tag-autopilot">STANDBY</span>
-                  </div>
-                  <div class="fleet-worker-sub">Continuous background automation filling daily quotas across 14 platforms</div>
-                </div>
-                <div style="display: flex; gap: 6px;">
-                  <button class="browser-btn" id="btn-run-autopilot" onclick="launchFleetWorkerScript('daily_autopilot_daemon.py')">▶ Run</button>
-                  <button class="browser-btn" onclick="killFleetWorkerScript('daily_autopilot_daemon.py')">◼ Stop</button>
-                </div>
+        <!-- TAB 2: LEDGER VIEW -->
+        <div class="ws-view" id="ws-ledger">
+          <div class="ledger-view-container">
+            <div class="ledger-top-row">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;">Verified Applications Ledger</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Real-time synchronized records from fleet workers and Chrome extension</div>
               </div>
-
-              <!-- Worker 2: Inbound Email & Calendar Runner -->
-              <div class="fleet-worker-card">
-                <div class="fleet-worker-info">
-                  <div class="fleet-worker-title">
-                    <span>inbound_email_calendar_runner.py</span>
-                    <span class="p-tag p-unstop" id="status-tag-inbound">PORT 5055 LINKED</span>
-                  </div>
-                  <div class="fleet-worker-sub">Scans Gmail for OA test links, recruiter calendar invites, and Google screening forms</div>
-                </div>
-                <div style="display: flex; gap: 6px;">
-                  <button class="browser-btn" id="btn-run-inbound" onclick="launchFleetWorkerScript('inbound_email_calendar_runner.py')">▶ Run</button>
-                  <button class="browser-btn" onclick="killFleetWorkerScript('inbound_email_calendar_runner.py')">◼ Stop</button>
-                </div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <input type="text" class="ledger-search-box" id="ledger-search" placeholder="Search company, role or portal..." oninput="filterLedger()">
+                <button class="browser-btn primary" onclick="openManualEntryModal()">+ Add Entry</button>
+                <button class="browser-btn" onclick="exportLedgerData('csv')" title="Export full tracker to CSV">⬇ CSV</button>
+                <button class="browser-btn" onclick="exportLedgerData('json')" title="Export full tracker to JSON">⬇ JSON</button>
               </div>
+            </div>
 
-              <!-- Worker 3: Auto Quota Closer -->
-              <div class="fleet-worker-card">
-                <div class="fleet-worker-info">
-                  <div class="fleet-worker-title">
-                    <span>auto_quota_closer.py</span>
-                    <span class="p-tag p-indeed" id="status-tag-closer">READY</span>
-                  </div>
-                  <div class="fleet-worker-sub">Immediate burst engine to top off unfilled quota caps across active portals</div>
-                </div>
-                <div style="display: flex; gap: 6px;">
-                  <button class="browser-btn" id="btn-run-closer" onclick="launchFleetWorkerScript('auto_quota_closer.py')">▶ Run Burst</button>
-                  <button class="browser-btn" onclick="killFleetWorkerScript('auto_quota_closer.py')">◼ Stop</button>
-                </div>
+            <!-- Portal Filter Strip -->
+            <div class="ledger-filter-strip" id="ledger-filter-strip">
+              <div class="l-chip active" onclick="filterByPortal('ALL', this)">All</div>
+            </div>
+
+            <div class="ledger-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 85px;">Date</th>
+                    <th>Company</th>
+                    <th>Role</th>
+                    <th>Location</th>
+                    <th>Portal</th>
+                    <th>Status</th>
+                    <th style="width: 60px;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-tbody">
+                  <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading ledger data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: FLEET MATRIX VIEW -->
+        <div class="ws-view" id="ws-fleet">
+          <div class="fleet-matrix-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; border-bottom: 1px solid var(--border-hairline);">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;">Autonomous Fleet Process Matrix</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Direct background worker control with real PIDs and process logs</div>
               </div>
-
-              <!-- Worker 4: Assessment Prep Engine -->
-              <div class="fleet-worker-card">
-                <div class="fleet-worker-info">
-                  <div class="fleet-worker-title">
-                    <span>assessment_prep_engine.py</span>
-                    <span class="p-tag p-cuvette" id="status-tag-assessment">READY</span>
-                  </div>
-                  <div class="fleet-worker-sub">Synthesizes optimal code solutions and complexity analyses for technical screening assessments</div>
-                </div>
-                <div style="display: flex; gap: 6px;">
-                  <button class="browser-btn" id="btn-run-assessment" onclick="launchFleetWorkerScript('assessment_prep_engine.py')">▶ Run Prep</button>
-                  <button class="browser-btn" onclick="killFleetWorkerScript('assessment_prep_engine.py')">◼ Stop</button>
-                </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="browser-btn primary" onclick="launchFleetWorker('extended_platforms_runner.py')">⚡ Run Fleet Autopilot</button>
+                <button class="browser-btn" onclick="stopAllFleetWorkers()" style="color: #ef4444;">Kill All Workers</button>
+                <button class="browser-btn" onclick="refreshFleetStatus()">Refresh</button>
               </div>
+            </div>
 
-              <!-- Worker 5: 14-Platform Extended Swarm -->
+            <div style="display: flex; flex-direction: column; gap: 8px;" id="fleet-workers-list">
               <div class="fleet-worker-card">
                 <div class="fleet-worker-info">
                   <div class="fleet-worker-title">
                     <span>extended_platforms_runner.py</span>
-                    <span class="p-tag p-cutshort" id="status-tag-swarm">STANDBY</span>
+                    <span class="p-tag" id="status-tag-extended">STANDBY</span>
                   </div>
-                  <div class="fleet-worker-sub">Direct multi-platform worker executing simultaneous portal application runs</div>
+                  <div class="fleet-worker-sub">Multi-platform batch worker executing automated runs across configured portals</div>
                 </div>
                 <div style="display: flex; gap: 6px;">
-                  <button class="browser-btn" id="btn-run-swarm" onclick="launchFleetWorkerScript('extended_platforms_runner.py')">▶ Run Swarm</button>
-                  <button class="browser-btn" onclick="killFleetWorkerScript('extended_platforms_runner.py')">◼ Stop</button>
+                  <button class="browser-btn primary" onclick="launchFleetWorker('extended_platforms_runner.py')">Start</button>
+                  <button class="browser-btn" onclick="killFleetWorker('extended_platforms_runner.py')">Stop</button>
                 </div>
               </div>
 
-            </div>
-          </div>
-
-          <!-- TAB 4: RESUME & DYNAMIC ATS TAILOR -->
-          <div class="ws-view" id="ws-resume">
-            <div class="resume-view-container">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <div style="font-size: 13px; font-weight: 800; color: #fff;">Resume & Dynamic ATS Tailoring Engine</div>
-                  <div style="font-size: 10px; color: #94a3b8;">Generate verified 1-page ATS tailored PDF resumes matched to specific Job Descriptions</div>
+              <div class="fleet-worker-card">
+                <div class="fleet-worker-info">
+                  <div class="fleet-worker-title">
+                    <span>auto_quota_closer.py</span>
+                    <span class="p-tag" id="status-tag-closer">STANDBY</span>
+                  </div>
+                  <div class="fleet-worker-sub">Targeted runner that fills remaining daily quota caps across portals</div>
                 </div>
                 <div style="display: flex; gap: 6px;">
-                  <button class="browser-btn primary" onclick="openMasterResumePdf()">📂 Open Master Resume PDF</button>
-                  <button class="browser-btn" onclick="openTailoredFolder()">📁 Open Tailored Folder</button>
+                  <button class="browser-btn primary" onclick="launchFleetWorker('auto_quota_closer.py')">Start</button>
+                  <button class="browser-btn" onclick="killFleetWorker('auto_quota_closer.py')">Stop</button>
                 </div>
               </div>
 
-              <!-- ATS Tailor Form Card -->
-              <div class="setting-card">
-                <div style="font-weight: 700; color: #38bdf8; font-family: var(--font-mono);">DYNAMIC ATS TAILOR</div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                  <div class="setting-field">
-                    <span class="setting-label">Target Company</span>
-                    <input type="text" class="setting-input" id="tailor-company" placeholder="e.g. Google, Zomato, TCS">
+              <div class="fleet-worker-card">
+                <div class="fleet-worker-info">
+                  <div class="fleet-worker-title">
+                    <span>inbound_email_calendar_runner.py</span>
+                    <span class="p-tag" id="status-tag-email">STANDBY</span>
                   </div>
-                  <div class="setting-field">
-                    <span class="setting-label">Target Role</span>
-                    <input type="text" class="setting-input" id="tailor-role" value="AI Engineer" placeholder="e.g. AI Engineer, Python Developer">
-                  </div>
+                  <div class="fleet-worker-sub">Monitors inbox for recruiter replies and OA test invites</div>
                 </div>
-
-                <div class="setting-field">
-                  <span class="setting-label">Job Description / Requirements Snippet</span>
-                  <textarea class="setting-input" id="tailor-jd" rows="4" style="resize: vertical; font-size: 11px; line-height: 1.4;" placeholder="Paste job requirements or key skills from the posting (e.g. LangChain, RAG pipelines, PyTorch, FastAPI, Docker)..."></textarea>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                  <button class="browser-btn primary" id="btn-generate-tailor" onclick="executeAtsResumeTailor()">⚡ Generate ATS Tailored PDF</button>
-                  <span id="tailor-status-text" style="font-size: 10px; color: #94a3b8; font-family: var(--font-mono);">Ready</span>
-                </div>
-              </div>
-
-              <!-- ATS Domain Match Analysis -->
-              <div class="setting-card">
-                <div style="font-weight: 700; color: #10b981; font-family: var(--font-mono);">ATS KEYWORD ALIGNMENT SCORES</div>
-                <div class="resume-score-grid">
-                  <div class="score-box">
-                    <div class="score-value" id="score-genai">100%</div>
-                    <div class="score-label">GenAI & RAG</div>
-                  </div>
-                  <div class="score-box">
-                    <div class="score-value" id="score-ml">95%</div>
-                    <div class="score-label">Machine Learning</div>
-                  </div>
-                  <div class="score-box">
-                    <div class="score-value" id="score-backend">90%</div>
-                    <div class="score-label">FastAPI & Python</div>
-                  </div>
-                  <div class="score-box">
-                    <div class="score-value" id="score-vision">85%</div>
-                    <div class="score-label">Computer Vision</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Candidate Summary Dossier -->
-              <div class="setting-card">
-                <div style="font-weight: 700; color: #fff; font-family: var(--font-mono);">VERIFIED DOSSIER DATA</div>
-                <div style="color: #cbd5e1; font-size: 11px; line-height: 1.6;">
-                  <strong>Candidate:</strong> Vansh Sharma | <strong>Education:</strong> MCA in AI & Data Science (Class of 2026)<br>
-                  <strong>Target Tier:</strong> 0 - 2 YOE (Fresher, Intern, Associate AI/ML Engineer)<br>
-                  <strong>Core Stack:</strong> Python, PyTorch, LangChain, RAG Pipelines, FastAPI, Docker, SQL, Algorithms<br>
-                  <strong>Notice Period:</strong> Immediate | <strong>Locations:</strong> Gurgaon, Delhi NCR, Bengaluru, Remote
+                <div style="display: flex; gap: 6px;">
+                  <button class="browser-btn primary" onclick="launchFleetWorker('inbound_email_calendar_runner.py')">Start</button>
+                  <button class="browser-btn" onclick="killFleetWorker('inbound_email_calendar_runner.py')">Stop</button>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- TAB 5: FLEET QUOTAS -->
-          <div class="ws-view" id="ws-quotas">
-            <div class="quotas-view-container" style="padding: 12px; overflow-y: auto;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <div>
-                  <div style="font-size: 13px; font-weight: 800; color: #fff;">14-Platform Daily Quota Matrix</div>
-                  <div style="font-size: 10px; color: #94a3b8;">Automatic midnight reset | 311 Daily Fleet Target Capped</div>
-                </div>
-                <button class="browser-btn primary" onclick="launchFleetWorkerScript('auto_quota_closer.py')">⚡ Fill Quotas</button>
+        <!-- TAB 4: RESUME & DYNAMIC ATS TAILOR -->
+        <div class="ws-view" id="ws-resume">
+          <div class="resume-view-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-hairline); padding-bottom: 8px;">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;">Dynamic ATS Resume Studio</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Real-time tailored 1-page PDF generation via tailor_resume.py</div>
               </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="browser-btn primary" onclick="openMasterResumePdf()">📄 Open Master PDF</button>
+                <button class="browser-btn" onclick="openResumeFolder()">📁 Open Directory</button>
+              </div>
+            </div>
 
-              <div class="quota-grid" id="quota-cards-grid">
-                <!-- Dynamically populated -->
+            <div class="resume-score-grid">
+              <div class="score-box">
+                <div class="score-value">98%</div>
+                <div class="score-label">GenAI & RAG</div>
+              </div>
+              <div class="score-box">
+                <div class="score-value">95%</div>
+                <div class="score-label">Deep Learning</div>
+              </div>
+              <div class="score-box">
+                <div class="score-value">96%</div>
+                <div class="score-label">FastAPI & Microservices</div>
+              </div>
+              <div class="score-box">
+                <div class="score-value">94%</div>
+                <div class="score-label">Computer Vision</div>
+              </div>
+            </div>
+
+            <div class="setting-card">
+              <div style="font-weight: 600; color: #fff; font-size: 12px; margin-bottom: 4px;">Dynamic ATS Tailoring Engine</div>
+              <div class="setting-field">
+                <span class="setting-label">Target Company</span>
+                <input type="text" class="setting-input" id="tailor-company-input" placeholder="e.g. Swiggy, Zepto, Microsoft">
+              </div>
+              <div class="setting-field">
+                <span class="setting-label">Target Role</span>
+                <input type="text" class="setting-input" id="tailor-role-input" value="AI Engineer" placeholder="e.g. AI Engineer, ML Engineer">
+              </div>
+              <div class="setting-field">
+                <span class="setting-label">Job Description / Keywords Snippet</span>
+                <textarea class="setting-input" id="tailor-jd-input" rows="3" placeholder="Paste requirements (e.g. PyTorch, LangChain, vector databases, high-throughput microservices)..."></textarea>
+              </div>
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+                <button class="browser-btn primary" id="btn-generate-tailored-resume" onclick="generateTailoredResume()">⚡ Generate ATS Tailored PDF</button>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- TAB 6: TELEMETRY -->
-          <div class="ws-view" id="ws-telemetry">
-            <div class="telemetry-view-container">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: 700; color: #94a3b8; font-size: 11px; text-transform: uppercase;">Live Subagent Process Stream</span>
-                <button style="background: none; border: none; color: #64748b; font-family: var(--font-mono); font-size: 11px; cursor: pointer;" onclick="clearTelemetry()">Clear</button>
+        <!-- TAB 5: QUOTAS VIEW -->
+        <div class="ws-view" id="ws-quotas">
+          <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px; height: 100%; overflow: hidden;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-hairline); padding-bottom: 6px;">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;">20-Platform Rate Limits & Safety Quotas</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Strict daily caps preventing portal rate limits or account flags</div>
               </div>
-              <div class="telemetry-log-feed" id="telemetry-log-feed">
-[SYSTEM] JobPilot Operator Workstation online.
-[ORCHESTRATOR] 5 background fleet workers registered.
-[BRIDGE] Extension bridge active on port 5056.
-[AGENT] Autonomous tools loaded. Standing by for instructions.
+              <button class="browser-btn" onclick="loadStats()">↻ Sync Quotas</button>
+            </div>
+            <div class="quota-grid" id="quota-cards-grid">
+              <!-- Rendered via loadStats() -->
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 6: TELEMETRY LOGS -->
+        <div class="ws-view" id="ws-telemetry">
+          <div style="padding: 12px; display: flex; flex-direction: column; height: 100%; gap: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-hairline); padding-bottom: 6px;">
+              <span style="font-weight: 600; color: #fff; font-size: 12px;">Live Process Telemetry</span>
+              <button class="browser-btn" onclick="document.getElementById('telemetry-log-feed').innerText = ''">Clear Feed</button>
+            </div>
+            <div class="telemetry-log-feed" id="telemetry-log-feed" style="flex: 1; overflow-y: auto; font-family: var(--font-mono); font-size: 11px; line-height: 1.6; color: var(--text-dim); white-space: pre-wrap;">[TELEMETRY] Operator workstation session initialized.
+[TELEMETRY] Listening for companion extension pings on port 5056...
+[TELEMETRY] Model Gateway active on http://127.0.0.1:20128/v1</div>
+          </div>
+        </div>
+
+        <!-- TAB 7: SETTINGS & MODEL CONFIG -->
+        <div class="ws-view" id="ws-settings">
+          <div class="settings-view-container">
+            <div class="setting-card">
+              <div style="font-weight: 600; color: #fff; font-size: 12px;">Model Gateway Provider</div>
+              <div class="setting-field">
+                <span class="setting-label">Preset Provider</span>
+                <select class="setting-input" id="cfg-provider-preset" onchange="applyProviderPreset(this.value)">
+                  <option value="9router">9Router (Local Gateway: Fable5)</option>
+                  <option value="openrouter">OpenRouter (Direct Cloud API)</option>
+                  <option value="groq">Groq (Ultra-Fast Inference)</option>
+                  <option value="ollama">Ollama (Local Offline)</option>
+                  <option value="custom">Custom Endpoint</option>
+                </select>
+              </div>
+              <div class="setting-field">
+                <span class="setting-label">Gateway Endpoint URL</span>
+                <input type="text" class="setting-input" id="cfg-router-url" value="http://127.0.0.1:20128/v1">
+              </div>
+              <div class="setting-field">
+                <span class="setting-label">Authorization Token / API Key</span>
+                <input type="password" class="setting-input" id="cfg-router-token" value="sk-25a6421c7e67b2b5-edzmhl-9843071e">
+              </div>
+              <div class="setting-field">
+                <span class="setting-label">Model Identifier</span>
+                <input type="text" class="setting-input" id="cfg-model-name" value="Fable5">
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 6px;">
+                <button class="browser-btn primary" onclick="saveModelSettings()">Save Configuration</button>
+                <button class="browser-btn" id="btn-test-conn" onclick="testCurrentConnection()">🧪 Test Connection</button>
+                <button class="browser-btn" id="btn-restart-gw" onclick="restartLocalGateway()">⚡ Start / Restart 9Router</button>
+              </div>
+            </div>
+
+            <div class="setting-card">
+              <div style="font-weight: 600; color: #fff; font-size: 12px;">Chrome Extension Companion</div>
+              <div style="color: var(--text-muted); font-size: 11.5px; line-height: 1.5;">
+                Load the companion extension in your regular Google Chrome browser to autofill forms and sync applications directly to your desktop ledger without entering credentials inside Electron.
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 4px;">
+                <button class="browser-btn primary" onclick="openExtensionFolder()">📁 Open Extension Folder</button>
+                <button class="browser-btn" onclick="checkExtensionPing()">Test Bridge Ping</button>
               </div>
             </div>
           </div>
-
-          <!-- TAB 7: CONFIG & EXTENSION SETUP -->
-          <div class="ws-view" id="ws-settings">
-            <div class="settings-view-container">
-              <div style="font-size: 13px; font-weight: 800; color: #fff;">Workstation Configuration & Connectivity</div>
-
-              <!-- CARD 1: MODEL PROVIDER -->
-              <div class="setting-card">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div style="font-weight: 700; color: #38bdf8; font-family: var(--font-mono);">AI MODEL GATEWAY & PROVIDER</div>
-                  <div id="cfg-latency-badge" style="font-size: 10px; font-family: var(--font-mono); color: #10b981;">STATUS: READY</div>
-                </div>
-
-                <div class="setting-field">
-                  <span class="setting-label">Provider Preset</span>
-                  <select class="setting-input" id="cfg-provider-preset" onchange="onProviderPresetChange(this.value)">
-                    <option value="9router">9Router (Local Gateway - Free / Fable5)</option>
-                    <option value="openrouter">OpenRouter Cloud (Any Model / OpenAI Compatible)</option>
-                    <option value="groq">Groq Cloud (Fastest Inference / Llama 3.3)</option>
-                    <option value="ollama">Ollama Local (Offline Private LLM)</option>
-                    <option value="custom">Custom OpenAI-compatible Endpoint</option>
-                  </select>
-                </div>
-                
-                <div class="setting-field">
-                  <span class="setting-label">Gateway Base URL</span>
-                  <input type="text" class="setting-input" id="cfg-router-url" value="http://127.0.0.1:20128/v1">
-                </div>
-
-                <div class="setting-field">
-                  <div style="display: flex; justify-content: space-between;">
-                    <span class="setting-label">Bearer Token / API Key</span>
-                    <span style="font-size: 10px; color: #38bdf8; cursor: pointer;" onclick="toggleTokenVisibility()">Show / Hide</span>
-                  </div>
-                  <input type="password" class="setting-input" id="cfg-router-token" value="sk-25a6421c7e67b2b5-edzmhl-9843071e">
-                </div>
-
-                <div class="setting-field">
-                  <span class="setting-label">Active Model Identifier</span>
-                  <input type="text" class="setting-input" id="cfg-model-name" value="Fable5">
-                </div>
-
-                <div style="display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
-                  <button class="browser-btn primary" onclick="saveModelSettings()">💾 Save Configuration</button>
-                  <button class="browser-btn" id="btn-test-conn" onclick="testCurrentConnection()">🧪 Test Connection</button>
-                  <button class="browser-btn" id="btn-restart-gw" onclick="restartLocalGateway()">⚡ Start / Restart 9Router</button>
-                </div>
-              </div>
-
-              <!-- CARD 2: BROWSER COMPANION EXTENSION -->
-              <div class="setting-card">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div style="font-weight: 700; color: #a78bfa; font-family: var(--font-mono);">CHROME / EDGE BROWSER EXTENSION COMPANION</div>
-                  <div id="cfg-ext-badge" style="font-size: 10px; font-family: var(--font-mono); color: #94a3b8;">BRIDGE: 127.0.0.1:5056</div>
-                </div>
-
-                <div style="font-size: 11px; color: #cbd5e1; line-height: 1.5;">
-                  Connect JobPilot to your live personal Chrome, Edge, or Brave browser. The companion extension inspects active job postings, triggers 1-click form autofill, and logs submitted applications back into this app.
-                </div>
-
-                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-hairline); border-radius: 5px; padding: 10px;">
-                  <div style="font-weight: 700; color: #fff; font-size: 11px; margin-bottom: 4px;">Install in 3 quick steps:</div>
-                  <ol style="margin-left: 16px; color: #94a3b8; font-size: 10px; line-height: 1.6;">
-                    <li>Open <code style="color: #38bdf8;">chrome://extensions</code> in your browser.</li>
-                    <li>Turn on <strong>Developer mode</strong> (top right toggle).</li>
-                    <li>Click <strong>Load unpacked</strong> and select the extension folder opened below.</li>
-                  </ol>
-                </div>
-
-                <div style="display: flex; gap: 8px;">
-                  <button class="browser-btn primary" onclick="openExtensionFolder()">📂 Open Extension Folder</button>
-                  <button class="browser-btn" onclick="checkExtensionPing()">⚡ Test Bridge Handshake</button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
         </div>
 
       </section>
@@ -535,7 +542,7 @@
   <div id="manual-entry-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 700; font-size: 12px; color: #fff;">Record Application Manually</span>
+        <span style="font-weight: 600; font-size: 13px; color: #fff;">Record Application Manually</span>
         <button style="background: none; border: none; color: #64748b; font-size: 14px; cursor: pointer;" onclick="closeManualEntryModal()">✕</button>
       </div>
 
@@ -545,8 +552,8 @@
       </div>
 
       <div class="setting-field">
-        <span class="setting-label">Job Role</span>
-        <input type="text" class="setting-input" id="manual-role" placeholder="e.g. AI Engineer">
+        <span class="setting-label">Job Title / Role</span>
+        <input type="text" class="setting-input" id="manual-role" value="AI Engineer" placeholder="e.g. AI Engineer">
       </div>
 
       <div class="setting-field">
@@ -556,7 +563,7 @@
 
       <div class="setting-field">
         <span class="setting-label">Portal</span>
-        <input type="text" class="setting-input" id="manual-portal" value="LinkedIn" placeholder="e.g. LinkedIn, Indeed, Direct">
+        <input type="text" class="setting-input" id="manual-portal" value="LinkedIn" placeholder="e.g. LinkedIn, Indeed, Internshala">
       </div>
 
       <div class="setting-field">
@@ -571,25 +578,25 @@
     </div>
   </div>
 
-  <!-- Bottom Operator Status Bar -->
-  <footer class="workstation-statusbar" id="workstation-statusbar">
+  <!-- Antigravity Bottom Status Bar -->
+  <footer class="ag-statusbar" id="ag-statusbar">
     <div class="sb-group">
       <div class="sb-item"><span>⎇</span> <span>main</span></div>
-      <div class="sb-item" style="color: #64748b;">|</div>
-      <div class="sb-item"><span>📁</span> <span>job-agents</span></div>
-      <div class="sb-item" style="color: #64748b;">|</div>
-      <div class="sb-item" id="sb-task-status"><span class="pulse-dot" style="width: 5px; height: 5px;"></span> <span>Idle</span></div>
+      <div class="sb-item" style="color: #4b5563;">•</div>
+      <div class="sb-item"><span>📁</span> <span>improved resume</span></div>
+      <div class="sb-item" style="color: #4b5563;">•</div>
+      <div class="sb-item" id="sb-task-status"><span class="ag-pill-dot" style="width: 5px; height: 5px;"></span> <span>Idle</span></div>
     </div>
 
     <div class="sb-group">
-      <div class="sb-item" style="color: #10b981;">⚡ Ledger: <span id="sb-ledger-total">...</span> Verified</div>
+      <div class="sb-item" style="color: var(--text-dim);">⚡ Ledger: <span id="sb-ledger-total" style="color: #fff; font-weight: 600;">...</span> Verified</div>
     </div>
 
     <div class="sb-group">
-      <div class="sb-item"><span id="sb-ext-dot" class="pulse-dot" style="width: 5px; height: 5px; background: #94a3b8; box-shadow: none;"></span> <span id="sb-ext-text">Ext: Standby</span></div>
-      <div class="sb-item" style="color: #64748b;">|</div>
-      <div class="sb-item"><span>🧠</span> <span id="sb-model-pill">9Router: Fable5</span></div>
-      <div class="sb-item" style="color: #64748b;">|</div>
+      <div class="sb-item"><span id="sb-ext-dot" class="ag-pill-dot" style="width: 5px; height: 5px; background: #6b7280; box-shadow: none;"></span> <span id="sb-ext-text">Extension Standby</span></div>
+      <div class="sb-item" style="color: #4b5563;">•</div>
+      <div class="sb-item"><span id="sb-model-pill">Fable5 (9Router)</span></div>
+      <div class="sb-item" style="color: #4b5563;">•</div>
       <div class="sb-item">UTF-8</div>
     </div>
   </footer>
@@ -609,9 +616,15 @@
     const telemetryFeed = document.getElementById('telemetry-log-feed');
     const abortBtn = document.getElementById('btn-abort-agent');
 
-    // =================================================================
-    // RESIZABLE SPLIT PANES
-    // =================================================================
+    // Sidebar Toggle
+    function toggleSidebar() {
+      const sb = document.getElementById('ag-sidebar');
+      if (sb) {
+        sb.classList.toggle('collapsed');
+      }
+    }
+
+    // Split Resizer
     const resizer = document.getElementById('split-resizer');
     const paneAgent = document.getElementById('pane-agent');
     const paneWorkspace = document.getElementById('pane-workspace');
@@ -627,7 +640,7 @@
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
       const totalWidth = document.getElementById('workstation-body').offsetWidth;
-      const newWidth = Math.max(300, Math.min(totalWidth - 340, e.clientX - 44));
+      const newWidth = Math.max(320, Math.min(totalWidth - 340, e.clientX - 240));
       const pct = (newWidth / totalWidth) * 100;
       paneAgent.style.width = pct + '%';
     });
@@ -646,18 +659,11 @@
       showToast('Split layout reset to 48/52');
     });
 
-    // =================================================================
-    // VIEW MODES & ACTIVITY BAR
-    // =================================================================
+    // Layout Modes
     function setLayoutMode(mode) {
-      document.querySelectorAll('.btn-view-mode').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.act-btn').forEach(b => b.classList.remove('active'));
-      
+      document.querySelectorAll('.ag-view-btn').forEach(b => b.classList.remove('active'));
       const activeBtn = document.getElementById('mode-' + mode);
       if (activeBtn) activeBtn.classList.add('active');
-
-      const actBtn = document.getElementById('act-' + mode);
-      if (actBtn) actBtn.classList.add('active');
 
       if (mode === 'split') {
         paneAgent.style.display = 'flex';
@@ -683,10 +689,6 @@
       const activeTabBtn = document.getElementById('wstab-' + tabName);
       if (activeTabBtn) activeTabBtn.classList.add('active');
 
-      document.querySelectorAll('.act-btn').forEach(b => b.classList.remove('active'));
-      const actBtn = document.getElementById('act-' + tabName);
-      if (actBtn) actBtn.classList.add('active');
-
       document.querySelectorAll('.ws-view').forEach(v => v.classList.remove('active-ws'));
       const targetView = document.getElementById('ws-' + tabName);
       if (targetView) targetView.classList.add('active-ws');
@@ -697,100 +699,38 @@
       if (tabName === 'settings') loadSettingsToUI();
     }
 
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
-        e.preventDefault();
-        clearAgentTerminal();
-        showToast('Console cleared');
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        document.getElementById('agent-prompt-input').focus();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === '0') {
-        e.preventDefault();
-        setLayoutMode('split');
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === '1') {
-        e.preventDefault();
-        switchWorkspaceTab('browser');
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === '2') {
-        e.preventDefault();
-        switchWorkspaceTab('ledger');
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === '3') {
-        e.preventDefault();
-        switchWorkspaceTab('fleet');
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === '4') {
-        e.preventDefault();
-        switchWorkspaceTab('resume');
-      }
-      if (e.key === 'Escape' && abortBtn.style.display === 'inline-block') {
-        abortActiveAgent();
-      }
-    });
-
-    // Session Management
-    function createNewSession() {
-      currentSessionId++;
+    // Sessions & Clear
+    function startNewSession() {
       conversationHistory = [];
       agentStream.innerHTML = '';
-      
-      const welcome = document.createElement('div');
-      welcome.className = 'agent-output-block';
-      welcome.style.cssText = 'background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); font-family: var(--font-mono); font-size: 11px;';
-      welcome.innerHTML = `
-        <div style="color: #38bdf8; font-weight: 700; margin-bottom: 4px;">Session #${String(currentSessionId).padStart(3, '0')} Initialized</div>
-        <div style="color: #94a3b8; line-height: 1.5;">Fresh context loaded. Previous memory isolated. Ready for instructions.</div>
-      `;
-      agentStream.appendChild(welcome);
-
-      document.getElementById('session-pill-main').innerHTML = `
-        <span class="pulse-dot" style="width: 4px; height: 4px;"></span>
-        <span>#${String(currentSessionId).padStart(3, '0')}-session</span>
-      `;
-      showToast('Created new operator session.');
+      agentStream.style.display = 'none';
+      const hero = document.getElementById('ag-hero-center');
+      if (hero) hero.style.display = 'flex';
+      document.getElementById('agent-prompt-input').value = '';
+      showToast('New conversation initialized');
     }
 
-    // Toast Notification
-    function showToast(msg) {
-      const c = document.getElementById('toast-container');
-      const item = document.createElement('div');
-      item.className = 'toast-msg';
-      item.innerText = msg;
-      c.appendChild(item);
-      setTimeout(() => {
-        item.style.opacity = '0';
-        item.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => item.remove(), 300);
-      }, 2800);
+    function setAgentSession(title) {
+      startNewSession();
+      showToast('Loaded: ' + title);
     }
 
     // Browser Controls
-    webview.addEventListener('did-navigate', (e) => { urlBar.value = e.url; });
-    webview.addEventListener('did-navigate-in-page', (e) => { urlBar.value = e.url; });
-    webview.addEventListener('new-window', (e) => {
-      if (e.url) loadPortal(e.url);
-    });
+    function webviewBack() { if (webview && webview.canGoBack()) webview.goBack(); }
+    function webviewFwd() { if (webview && webview.canGoForward()) webview.goForward(); }
+    function webviewReload() { if (webview) webview.reload(); }
 
-    function webviewBack() { if (webview.canGoBack()) webview.goBack(); }
-    function webviewFwd() { if (webview.canGoForward()) webview.goForward(); }
-    function webviewReload() { webview.reload(); }
     function navigateBrowser() {
       let u = urlBar.value.trim();
-      if (!u) return;
       if (!u.startsWith('http://') && !u.startsWith('https://')) {
         u = 'https://' + u;
       }
-      webview.loadURL(u);
+      webview.src = u;
     }
 
     function loadPortal(url, btnEl) {
-      webview.loadURL(url);
       urlBar.value = url;
+      webview.src = url;
       if (btnEl) {
         document.querySelectorAll('.portal-dock-btn').forEach(b => b.classList.remove('active'));
         btnEl.classList.add('active');
@@ -806,7 +746,7 @@
     }
 
     function recordCurrentWebviewJob() {
-      const u = urlBar.value;
+      const u = webview.getURL();
       let title = 'AI Engineer Posting';
       let company = 'Target Tech Company';
       let portal = 'Webview';
@@ -865,104 +805,89 @@
       showToast('Executing smart form autofill...');
       const script = `
         (function() {
-          const profile = {
-            name: "Vansh Sharma",
-            firstName: "Vansh",
-            lastName: "Sharma",
-            email: "engagevansh@gmail.com",
-            phone: "+919999999999",
-            education: "Master of Computer Applications (MCA) in AI & Data Science",
-            gradYear: "2026",
-            experience: "1",
-            notice: "Immediate"
+          let filled = 0;
+          const map = {
+            'name': 'Vansh Sharma',
+            'full_name': 'Vansh Sharma',
+            'first_name': 'Vansh',
+            'last_name': 'Sharma',
+            'email': 'engagevansh@gmail.com',
+            'phone': '+919999999999',
+            'mobile': '+919999999999',
+            'linkedin': 'https://linkedin.com/in/vansh-sharma',
+            'github': 'https://github.com/Vansh-Sharmaa',
+            'degree': 'MCA in AI & Data Science (Class of 2026)',
+            'experience': '0-2 YOE (Fresher / Intern / Associate)',
+            'notice': 'Immediate'
           };
-          const inputs = document.querySelectorAll('input, select, textarea');
-          let count = 0;
-          inputs.forEach(el => {
-            const name = (el.name || el.id || el.placeholder || '').toLowerCase();
-            if (name.includes('first') || name.includes('fname')) { el.value = profile.firstName; count++; }
-            else if (name.includes('last') || name.includes('lname')) { el.value = profile.lastName; count++; }
-            else if (name.includes('name') && !name.includes('company')) { el.value = profile.name; count++; }
-            else if (name.includes('email')) { el.value = profile.email; count++; }
-            else if (name.includes('phone') || name.includes('mobile')) { el.value = profile.phone; count++; }
-            else if (name.includes('exp')) { el.value = profile.experience; count++; }
-            else if (name.includes('notice')) { el.value = profile.notice; count++; }
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
+          document.querySelectorAll('input, textarea').forEach(el => {
+            const attr = (el.name + ' ' + el.id + ' ' + el.placeholder).toLowerCase();
+            for (const [k, v] of Object.entries(map)) {
+              if (attr.includes(k) && !el.value) {
+                el.value = v;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                filled++;
+                break;
+              }
+            }
           });
-          return count;
+          return filled;
         })();
       `;
       webview.executeJavaScript(script).then(cnt => {
-        showToast('Autofilled ' + cnt + ' fields.');
-        appendTelemetry('[BROWSER] Smart Apply completed (' + cnt + ' fields populated)');
-      }).catch(() => {
-        showToast('Autofill dispatched to view.');
+        showToast(`Smart Apply: autofilled ${cnt} form fields.`);
+      }).catch(err => {
+        showToast('Smart Apply: ' + err.message);
       });
     }
 
     function injectPitchInBrowser() {
-      const pitchText = "MCA in AI & Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and architecting production Python/FastAPI microservices. Immediate joiner.";
+      const pitch = 'MCA in AI and Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and scaling Python FastAPI microservices. Immediate joiner.';
       const script = `
         (function() {
-          const textareas = document.querySelectorAll('textarea');
-          let count = 0;
-          textareas.forEach(t => {
-            t.value = ${JSON.stringify(pitchText)};
-            t.dispatchEvent(new Event('input', { bubbles: true }));
-            t.dispatchEvent(new Event('change', { bubbles: true }));
-            count++;
-          });
-          return count;
+          const ta = document.querySelector('textarea');
+          if (ta) {
+            ta.value = ${JSON.stringify(pitch)};
+            ta.dispatchEvent(new Event('input', { bubbles: true }));
+            return true;
+          }
+          return false;
         })();
       `;
-      webview.executeJavaScript(script).then(cnt => {
-        showToast('Injected cover pitch into active form.');
-        appendTelemetry('[BROWSER] Candidate pitch injected (' + cnt + ' fields)');
-      }).catch(() => {
-        showToast('Pitch injected into view.');
+      webview.executeJavaScript(script).then(ok => {
+        if (ok) showToast('Tailored candidate pitch injected into textarea.');
+        else showToast('No textarea found on active page.');
       });
     }
 
-    function appendTelemetry(text) {
-      telemetryFeed.innerText += '\n' + text;
-      telemetryFeed.scrollTop = telemetryFeed.scrollHeight;
-    }
-    function clearTelemetry() {
-      telemetryFeed.innerText = '[SYSTEM] Telemetry buffer cleared.';
-    }
-
-    // =================================================================
-    // RESUME & DYNAMIC ATS TAILORING
-    // =================================================================
+    // Dynamic ATS Resume Studio
     async function openMasterResumePdf() {
       if (window.jobPilotApi && window.jobPilotApi.openResumePdf) {
-        const res = await window.jobPilotApi.openResumePdf();
-        if (res.ok) {
-          showToast('Opened master resume PDF.');
-        } else {
-          showToast('Error opening resume: ' + res.error);
-        }
+        await window.jobPilotApi.openResumePdf();
+        showToast('Opened Vansh_Sharma_Resume.pdf in system viewer');
       }
     }
 
-    function openTailoredFolder() {
+    function openResumeFolder() {
       if (window.jobPilotApi && window.jobPilotApi.openPath) {
-        window.jobPilotApi.openPath('D:\\improved resume\\tailored');
-        showToast('Opened tailored resume folder in Explorer');
+        window.jobPilotApi.openPath('D:\\improved resume');
       }
     }
 
-    async function executeAtsResumeTailor() {
-      const company = document.getElementById('tailor-company').value.trim() || 'Target Company';
-      const role = document.getElementById('tailor-role').value.trim() || 'AI Engineer';
-      const jd = document.getElementById('tailor-jd').value.trim();
+    async function generateTailoredResume() {
+      const company = document.getElementById('tailor-company-input').value.trim();
+      const role = document.getElementById('tailor-role-input').value.trim();
+      const jd = document.getElementById('tailor-jd-input').value.trim();
 
-      const btn = document.getElementById('btn-generate-tailor');
-      const statusText = document.getElementById('tailor-status-text');
+      if (!company) {
+        showToast('Please enter target company name.');
+        return;
+      }
+
+      const btn = document.getElementById('btn-generate-tailored-resume');
       btn.disabled = true;
-      btn.innerText = 'Analyzing & Generating...';
-      statusText.innerText = 'Analyzing keywords...';
+      btn.innerText = '⏳ Compiling 1-Page ATS PDF...';
 
       if (window.jobPilotApi && window.jobPilotApi.tailorResume) {
         const res = await window.jobPilotApi.tailorResume({ company, role, jd });
@@ -970,29 +895,27 @@
         btn.innerText = '⚡ Generate ATS Tailored PDF';
 
         if (res.ok) {
-          statusText.innerText = 'Generated: ' + res.generatedPath.split('\\').pop();
-          showToast('1-Page ATS resume PDF generated!');
-          if (res.generatedPath && window.jobPilotApi.openPath) {
-            window.jobPilotApi.openPath(res.generatedPath);
+          showToast(`Generated ATS tailored PDF for ${company}! Opening...`);
+          if (res.pdfPath && window.jobPilotApi.openPath) {
+            window.jobPilotApi.openPath(res.pdfPath);
           }
         } else {
-          statusText.innerText = 'Failed: ' + res.error;
           showToast('Generation failed: ' + res.error);
         }
       }
     }
 
-    // =================================================================
-    // AUTONOMOUS AGENT CONSOLE
-    // =================================================================
+    // Autonomous Agent Console
     function triggerQuickCommand(cmd) {
       document.getElementById('agent-prompt-input').value = cmd;
       submitAgentTask();
     }
 
-    function clearAgentTerminal() {
-      agentStream.innerHTML = '';
-      conversationHistory = [];
+    function handlePromptKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitAgentTask();
+      }
     }
 
     function abortActiveAgent() {
@@ -1002,11 +925,6 @@
       }
     }
 
-    async function submitAgentTaskWithText(taskText) {
-      document.getElementById('agent-prompt-input').value = taskText;
-      return submitAgentTask();
-    }
-
     async function submitAgentTask() {
       const input = document.getElementById('agent-prompt-input');
       const task = input.value.trim();
@@ -1014,23 +932,27 @@
 
       input.value = '';
       const runBtn = document.getElementById('btn-run-agent');
-      const statusLabel = document.getElementById('agent-status-label');
       const sbTask = document.getElementById('sb-task-status');
-      
+
+      // Hide hero screen and show messages
+      const hero = document.getElementById('ag-hero-center');
+      if (hero) hero.style.display = 'none';
+      agentStream.style.display = 'flex';
+
       runBtn.disabled = true;
       abortBtn.style.display = 'inline-block';
-      statusLabel.innerText = 'EXECUTING';
-      statusLabel.style.color = '#f59e0b';
-      sbTask.innerHTML = '<span class="pulse-dot" style="background: #f59e0b; width: 5px; height: 5px;"></span> <span style="color: #f59e0b;">Agent Executing...</span>';
+      sbTask.innerHTML = '<span class="ag-pill-dot" style="background: #f59e0b; box-shadow: 0 0 6px #f59e0b; width: 5px; height: 5px;"></span> <span style="color: #f59e0b;">Agent Executing...</span>';
 
       // 1. Render User Command
       const userEl = document.createElement('div');
       userEl.className = 'agent-user-command';
-      userEl.innerHTML = `<span class="command-prefix">❯</span><span>${escapeHtml(task)}</span>`;
+      userEl.innerText = task;
       agentStream.appendChild(userEl);
-      agentStream.scrollTop = agentStream.scrollHeight;
 
-      // 2. Container for this turn
+      const scrollContainer = document.getElementById('ag-canvas-scroll');
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+
+      // 2. Container for Turn
       const turnContainer = document.createElement('div');
       turnContainer.style.display = 'flex';
       turnContainer.style.flexDirection = 'column';
@@ -1044,8 +966,8 @@
             if (res.reasoning) {
               const thEl = document.createElement('details');
               thEl.className = 'agent-thought-card';
-              thEl.open = true;
-              thEl.innerHTML = `<summary>⚙ Reasoning Process</summary><div>${escapeHtml(res.reasoning)}</div>`;
+              thEl.open = false;
+              thEl.innerHTML = `<summary>⚙ Reasoning Process</summary><div style="margin-top: 6px;">${escapeHtml(res.reasoning)}</div>`;
               turnContainer.appendChild(thEl);
             }
 
@@ -1058,370 +980,145 @@
             conversationHistory.push({ role: 'assistant', content: res.reply });
           } else if (res.isGatewayOffline || (res.error && res.error.includes('ECONNREFUSED'))) {
             const cardEl = document.createElement('div');
-            cardEl.className = 'agent-output-block';
-            cardEl.style.cssText = 'border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.05); padding: 12px;';
+            cardEl.className = 'agent-thought-card';
+            cardEl.style.borderColor = 'rgba(245, 158, 11, 0.4)';
             cardEl.innerHTML = `
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 14px;">⚡</span>
-                  <strong style="color: #f59e0b; font-size: 11px; font-family: var(--font-mono);">AI MODEL GATEWAY NOT REACHABLE</strong>
-                </div>
-                <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 4px;">${escapeHtml(res.endpoint || '127.0.0.1:20128')}</span>
-              </div>
-              <div style="color: #cbd5e1; font-size: 11px; line-height: 1.5; margin-bottom: 10px;">
-                The local model router is offline. Click Auto-Start below to boot the gateway and retry, or configure OpenRouter / Groq / Ollama in Settings.
-              </div>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                <button class="browser-btn primary" id="btn-self-heal-action" onclick="autoRepairAndRetry('${escapeHtml(task)}')">⚡ Auto-Start 9Router & Retry</button>
-                <button class="browser-btn" onclick="switchWorkspaceTab('settings')">⚙ Open Model Config</button>
+              <div style="color: #f59e0b; font-weight: 600; margin-bottom: 4px;">⚡ Gateway Unreachable: ${escapeHtml(res.endpoint || '127.0.0.1:20128')}</div>
+              <div style="color: var(--text-muted); font-size: 11.5px; margin-bottom: 8px;">The local model router is offline. Click Auto-Start below to boot the gateway and retry.</div>
+              <div style="display: flex; gap: 6px;">
+                <button class="browser-btn primary" onclick="autoRepairAndRetry('${escapeHtml(task)}')">⚡ Auto-Start 9Router & Retry</button>
+                <button class="browser-btn" onclick="switchWorkspaceTab('settings')">Open Config</button>
               </div>
             `;
             turnContainer.appendChild(cardEl);
           } else {
             const errEl = document.createElement('div');
-            errEl.className = 'agent-output-block';
+            errEl.className = 'agent-thought-card';
             errEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-            errEl.innerHTML = `<span style="color: #ef4444; font-weight: 700;">[Agent Error]:</span> ${escapeHtml(res.error)}`;
+            errEl.innerHTML = `<span style="color: #ef4444; font-weight: 600;">[Agent Error]:</span> ${escapeHtml(res.error)}`;
             turnContainer.appendChild(errEl);
           }
         }
       } catch (e) {
         const errEl = document.createElement('div');
-        errEl.className = 'agent-output-block';
+        errEl.className = 'agent-thought-card';
         errEl.innerHTML = `<span style="color: #ef4444;">[Execution Exception]: ${escapeHtml(e.message)}</span>`;
         turnContainer.appendChild(errEl);
       } finally {
         runBtn.disabled = false;
         abortBtn.style.display = 'none';
-        statusLabel.innerText = 'READY';
-        statusLabel.style.color = '#38bdf8';
-        sbTask.innerHTML = '<span class="pulse-dot" style="width: 5px; height: 5px;"></span> <span>Idle</span>';
-        agentStream.scrollTop = agentStream.scrollHeight;
+        sbTask.innerHTML = '<span class="ag-pill-dot" style="width: 5px; height: 5px;"></span> <span>Idle</span>';
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
     }
 
     async function autoRepairAndRetry(taskText) {
-      const btn = document.getElementById('btn-self-heal-action');
-      if (btn) {
-        btn.disabled = true;
-        btn.innerText = '⏳ Initializing 9Router...';
-      }
       showToast('Launching 9Router daemon...');
-
       if (window.jobPilotApi && window.jobPilotApi.restartRouter) {
         const res = await window.jobPilotApi.restartRouter();
         if (res.ok) {
-          showToast('Gateway online! Retrying instruction...');
-          document.getElementById('router-port-text').innerText = 'GATEWAY: ONLINE';
-          document.getElementById('router-port-text').style.color = '#10b981';
-          document.getElementById('router-pulse').style.background = '#10b981';
-          submitAgentTaskWithText(taskText);
+          showToast('Gateway online! Retrying...');
+          document.getElementById('agent-prompt-input').value = taskText;
+          submitAgentTask();
         } else {
           showToast('Could not start gateway. Check Settings.');
-          if (btn) {
-            btn.disabled = false;
-            btn.innerText = '⚡ Try Starting Again';
-          }
         }
       }
+    }
+
+    // Markdown Parser
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     function formatMarkdown(text) {
       if (!text) return '';
-      let formatted = text.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
-        const id = 'code-' + Math.random().toString(36).substring(2, 9);
-        return `
-          <div class="code-block-wrap">
-            <div class="code-block-header">
-              <span>${lang || 'code'}</span>
-              <button style="background: none; border: none; color: #38bdf8; font-family: var(--font-mono); font-size: 10px; cursor: pointer;" onclick="copyCodeBlock('${id}')">Copy</button>
-            </div>
-            <pre class="code-block-content" id="${id}">${escapeHtml(code.trim())}</pre>
-          </div>
-        `;
+      let escaped = escapeHtml(text);
+      escaped = escaped.replace(/```([\s\S]*?)```/g, (match, code) => {
+        return `<pre style="background: #0d0d12; border: 1px solid var(--border-hairline); border-radius: 6px; padding: 10px; margin: 8px 0; overflow-x: auto; font-family: var(--font-mono); font-size: 11.5px; color: #7dd3fc;"><code>${code.trim()}</code></pre>`;
       });
-
-      formatted = formatted.replace(/^### (.*$)/gim, '<h4 style="color: #38bdf8; margin: 8px 0 4px 0;">$1</h4>');
-      formatted = formatted.replace(/^## (.*$)/gim, '<h3 style="color: #fff; margin: 10px 0 6px 0;">$1</h3>');
-      formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 4px; color: #38bdf8; font-family: var(--font-mono); font-size: 11px;">$1</code>');
-      formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      formatted = formatted.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
-      return formatted;
+      escaped = escaped.replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px; font-family: var(--font-mono); font-size: 11px;">$1</code>');
+      escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #fff;">$1</strong>');
+      escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      escaped = escaped.replace(/\n/g, '<br>');
+      return escaped;
     }
 
-    function copyCodeBlock(id) {
-      const el = document.getElementById(id);
-      if (el) {
-        navigator.clipboard.writeText(el.innerText);
-        showToast('Code copied to clipboard.');
-      }
-    }
-
-    // Tool execution events
-    if (window.jobPilotApi && window.jobPilotApi.onAgentToolEvent) {
-      window.jobPilotApi.onAgentToolEvent((evt) => {
-        if (evt.type === 'start') {
-          const card = document.createElement('div');
-          card.className = 'tool-exec-card';
-          card.id = 'tool-card-' + evt.id;
-          card.innerHTML = `
-            <div class="tool-header">
-              <span class="tool-name-badge">⟐ ${escapeHtml(evt.name)}</span>
-              <span class="tool-status-badge" style="color: #f59e0b;">RUNNING...</span>
-            </div>
-            <div class="tool-body">${escapeHtml(JSON.stringify(evt.args, null, 2))}</div>
-          `;
-          agentStream.appendChild(card);
-          agentStream.scrollTop = agentStream.scrollHeight;
-        } else if (evt.type === 'end') {
-          const card = document.getElementById('tool-card-' + evt.id);
-          if (card) {
-            const badge = card.querySelector('.tool-status-badge');
-            if (badge) {
-              badge.innerText = 'COMPLETED ✓';
-              badge.style.color = '#10b981';
-            }
-            const body = card.querySelector('.tool-body');
-            if (body) {
-              body.innerHTML = `<div><strong>Arguments:</strong></div>${body.innerHTML}<div><strong>Result:</strong></div>${escapeHtml(JSON.stringify(evt.result, null, 2))}`;
-            }
-          }
-          agentStream.scrollTop = agentStream.scrollHeight;
-        }
-      });
-    }
-
-    // Browser actions from agent
-    if (window.jobPilotApi && window.jobPilotApi.onAgentBrowserAction) {
-      window.jobPilotApi.onAgentBrowserAction((data) => {
-        if (data.action === 'navigate') {
-          loadPortal(data.url);
-          showToast('Navigated browser to ' + data.url);
-        } else if (data.action === 'autofill') {
-          smartApplyInBrowser();
-        } else if (data.action === 'inject_pitch') {
-          injectPitchInBrowser();
-        }
-      });
-    }
-
-    // Extension Real-Time Events
-    if (window.jobPilotApi && window.jobPilotApi.onExtensionStatusChanged) {
-      window.jobPilotApi.onExtensionStatusChanged((data) => {
-        const pulse = document.getElementById('ext-pulse');
-        const text = document.getElementById('ext-status-text');
-        const sbDot = document.getElementById('sb-ext-dot');
-        const sbText = document.getElementById('sb-ext-text');
-        const welcomeExt = document.getElementById('agent-welcome-ext');
-        const cfgExtBadge = document.getElementById('cfg-ext-badge');
-
-        if (data.connected) {
-          pulse.style.background = '#10b981';
-          pulse.style.boxShadow = '0 0 8px #10b981';
-          text.innerText = 'EXT: ONLINE';
-          text.style.color = '#10b981';
-
-          sbDot.style.background = '#10b981';
-          sbDot.style.boxShadow = '0 0 6px #10b981';
-          sbText.innerText = 'Ext: Online';
-          sbText.style.color = '#10b981';
-
-          if (welcomeExt) {
-            welcomeExt.innerText = 'Connected (Port 5056)';
-            welcomeExt.style.color = '#10b981';
-          }
-          if (cfgExtBadge) {
-            cfgExtBadge.innerText = 'CONNECTED (Port 5056)';
-            cfgExtBadge.style.color = '#10b981';
-          }
-        }
-      });
-    }
-
-    if (window.jobPilotApi && window.jobPilotApi.onExtensionActiveJob) {
-      window.jobPilotApi.onExtensionActiveJob((job) => {
-        lastActiveJob = job;
-        const banner = document.getElementById('chrome-active-banner');
-        document.getElementById('active-banner-company').innerText = job.company || 'Unknown Company';
-        document.getElementById('active-banner-role').innerText = job.role || 'Job Posting';
-        const portalEl = document.getElementById('active-banner-portal');
-        portalEl.innerText = job.portal || 'Chrome Tab';
-        portalEl.className = getPortalBadgeClass(job.portal);
-        banner.style.display = 'flex';
-      });
-    }
-
-    function dismissActiveBanner() {
-      document.getElementById('chrome-active-banner').style.display = 'none';
-    }
-
-    function applyToActiveChromeJob() {
-      if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
-        window.jobPilotApi.sendExtensionCommand({ action: 'autofill' });
-        showToast('Dispatched Smart Apply to Chrome!');
-      }
-    }
-
-    function pitchActiveChromeJob() {
-      if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
-        window.jobPilotApi.sendExtensionCommand({ action: 'inject_pitch' });
-        showToast('Dispatched pitch injection to Chrome!');
-      }
-    }
-
-    function saveActiveChromeJobToLedger() {
-      if (lastActiveJob && window.jobPilotApi && window.jobPilotApi.addTrackerEntry) {
-        window.jobPilotApi.addTrackerEntry({
-          company: lastActiveJob.company || 'Direct',
-          role: lastActiveJob.role || 'AI Engineer',
-          location: lastActiveJob.location || 'India',
-          portal: lastActiveJob.portal || 'Extension',
-          url: lastActiveJob.url || '',
-          status: 'Submitted'
-        }).then(() => {
-          showToast(`Recorded ${lastActiveJob.company} to ledger.`);
-          loadLedgerData();
-          dismissActiveBanner();
-        });
-      }
-    }
-
-    // Python fleet task logging
-    if (window.jobPilotApi && window.jobPilotApi.onTaskLog) {
-      window.jobPilotApi.onTaskLog((text) => {
-        appendTelemetry(text.trim());
-      });
-    }
-
-    // Tracker update notification
-    if (window.jobPilotApi && window.jobPilotApi.onTrackerUpdated) {
-      window.jobPilotApi.onTrackerUpdated(() => {
-        loadLedgerData();
-        showToast('Ledger updated with new application.');
-      });
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    // =================================================================
-    // ORCA FLEET SUBAGENT ORCHESTRATOR
-    // =================================================================
-    async function refreshFleetStatus() {
-      if (!window.jobPilotApi || !window.jobPilotApi.getFleetProcesses) return;
-      const res = await window.jobPilotApi.getFleetProcesses();
-      if (res.ok) {
-        const runningMap = new Map();
-        res.processes.forEach(p => runningMap.set(p.name, p));
-
-        updateWorkerUI('autopilot', runningMap.has('daily_autopilot_daemon.py'), runningMap.get('daily_autopilot_daemon.py'));
-        updateWorkerUI('inbound', runningMap.has('inbound_email_calendar_runner.py'), runningMap.get('inbound_email_calendar_runner.py'));
-        updateWorkerUI('closer', runningMap.has('auto_quota_closer.py'), runningMap.get('auto_quota_closer.py'));
-        updateWorkerUI('assessment', runningMap.has('assessment_prep_engine.py'), runningMap.get('assessment_prep_engine.py'));
-        updateWorkerUI('swarm', runningMap.has('extended_platforms_runner.py'), runningMap.get('extended_platforms_runner.py'));
-      }
-    }
-
-    function updateWorkerUI(key, isRunning, info) {
-      const tag = document.getElementById('status-tag-' + key);
-      const btn = document.getElementById('btn-run-' + key);
-      if (!tag) return;
-
-      if (isRunning) {
-        tag.innerText = `RUNNING (PID ${info.pid})`;
-        tag.className = 'p-tag p-unstop';
-        if (btn) {
-          btn.innerText = 'Running...';
-          btn.disabled = true;
-        }
-      } else {
-        tag.innerText = 'STANDBY';
-        tag.className = 'p-tag p-default';
-        if (btn) {
-          btn.innerText = '▶ Run';
-          btn.disabled = false;
-        }
-      }
-    }
-
-    async function launchFleetWorkerScript(scriptName) {
-      showToast('Launching ' + scriptName + '...');
-      appendTelemetry('[ORCA ORCHESTRATOR] Dispatched worker: ' + scriptName);
-      if (window.jobPilotApi && window.jobPilotApi.launchFleetWorker) {
-        const res = await window.jobPilotApi.launchFleetWorker(scriptName);
-        if (res.ok) {
-          showToast(`Worker ${scriptName} active (PID ${res.pid})`);
-          refreshFleetStatus();
-        } else {
-          showToast(`Failed to launch: ${res.error}`);
-        }
-      }
-    }
-
-    async function killFleetWorkerScript(scriptName) {
-      if (window.jobPilotApi && window.jobPilotApi.killFleetWorker) {
-        const res = await window.jobPilotApi.killFleetWorker(scriptName);
-        if (res.ok) {
-          showToast(`Stopped ${scriptName}`);
-          refreshFleetStatus();
-        }
-      }
-    }
-
-    async function stopAllFleetWorkers() {
-      if (window.jobPilotApi && window.jobPilotApi.stopTask) {
-        await window.jobPilotApi.stopTask();
-        showToast('All fleet workers terminated.');
-        refreshFleetStatus();
-      }
-    }
-
-    // =================================================================
-    // LEDGER DATA & MODAL
-    // =================================================================
+    // Ledger Logic
     async function loadLedgerData() {
-      if (!window.jobPilotApi || !window.jobPilotApi.getTrackerData) return;
-      const res = await window.jobPilotApi.getTrackerData();
-      if (res.ok) {
-        allLedgerRows = res.rows;
-        document.getElementById('ws-ledger-count').innerText = allLedgerRows.length;
-        document.getElementById('hdr-ledger-count').innerText = allLedgerRows.length;
-        document.getElementById('sb-ledger-total').innerText = allLedgerRows.length;
-        populateFilterChips(allLedgerRows);
+      if (window.jobPilotApi && window.jobPilotApi.getApplicationsTracker) {
+        allLedgerRows = await window.jobPilotApi.getApplicationsTracker();
+        const count = allLedgerRows.length;
+        document.getElementById('hdr-ledger-count').innerText = count;
+        document.getElementById('ws-ledger-count').innerText = count;
+        document.getElementById('sb-ledger-total').innerText = count;
+
+        const counts = { 'ALL': count };
+        allLedgerRows.forEach(r => {
+          const p = r.portal || 'Direct';
+          counts[p] = (counts[p] || 0) + 1;
+        });
+
+        const strip = document.getElementById('ledger-filter-strip');
+        strip.innerHTML = '';
+        for (const [portal, cnt] of Object.entries(counts)) {
+          const chip = document.createElement('div');
+          chip.className = 'l-chip' + (currentPortalFilter === portal ? ' active' : '');
+          chip.innerText = `${portal} (${cnt})`;
+          chip.onclick = () => filterByPortal(portal, chip);
+          strip.appendChild(chip);
+        }
+
         filterLedger();
       }
     }
 
-    function populateFilterChips(rows) {
-      const counts = { 'ALL': rows.length };
-      rows.forEach(r => {
-        const p = r.portal || 'Other';
-        counts[p] = (counts[p] || 0) + 1;
+    function filterByPortal(portalName, chipEl) {
+      currentPortalFilter = portalName;
+      document.querySelectorAll('.l-chip').forEach(c => c.classList.remove('active'));
+      if (chipEl) chipEl.classList.add('active');
+      filterLedger();
+    }
+
+    function renderLedgerTable(rows) {
+      const tbody = document.getElementById('ledger-tbody');
+      tbody.innerHTML = '';
+      rows.slice(0, 150).forEach(r => {
+        const tr = document.createElement('tr');
+        const hasUrl = r.url && r.url.startsWith('http');
+        tr.innerHTML = `
+          <td style="color: var(--text-muted); font-family: var(--font-mono); font-size: 10.5px;">${r.date}</td>
+          <td style="font-weight: 600; color: #fff;">${escapeHtml(r.company)}</td>
+          <td style="color: #cbd5e1;">${escapeHtml(r.role)}</td>
+          <td style="color: var(--text-dim);">${escapeHtml(r.location)}</td>
+          <td><span class="p-tag">${escapeHtml(r.portal)}</span></td>
+          <td><span style="color: #10b981; font-weight: 600;">✓ ${escapeHtml(r.status)}</span></td>
+          <td>${hasUrl ? `<button class="browser-btn" style="padding: 2px 6px; font-size: 10px;" onclick="openJobInWs('${r.url}')">Open</button>` : '<span style="color: #4b5563; font-size: 10px;">Direct</span>'}</td>
+        `;
+        tbody.appendChild(tr);
       });
+    }
 
-      const strip = document.getElementById('ledger-filter-strip');
-      strip.innerHTML = '';
+    function filterLedger() {
+      const q = (document.getElementById('ledger-search')?.value || '').toLowerCase();
+      const filtered = allLedgerRows.filter(r => {
+        const matchesPortal = (currentPortalFilter === 'ALL') || (r.portal && r.portal.toLowerCase().includes(currentPortalFilter.toLowerCase()));
+        const matchesQuery = !q || (r.company && r.company.toLowerCase().includes(q)) || (r.role && r.role.toLowerCase().includes(q)) || (r.portal && r.portal.toLowerCase().includes(q)) || (r.location && r.location.toLowerCase().includes(q));
+        return matchesPortal && matchesQuery;
+      });
+      renderLedgerTable(filtered);
+    }
 
-      for (const [portal, count] of Object.entries(counts)) {
-        const chip = document.createElement('div');
-        chip.className = 'l-chip' + (currentPortalFilter === portal ? ' active' : '');
-        chip.innerText = `${portal} (${count})`;
-        chip.onclick = () => filterByPortal(portal, chip);
-        strip.appendChild(chip);
-      }
+    function openJobInWs(url) {
+      switchWorkspaceTab('browser');
+      loadPortal(url);
+      showToast('Opened job URL in browser');
     }
 
     function openManualEntryModal() {
       document.getElementById('manual-entry-modal').style.display = 'flex';
     }
-
     function closeManualEntryModal() {
       document.getElementById('manual-entry-modal').style.display = 'none';
     }
@@ -1434,7 +1131,7 @@
       const url = document.getElementById('manual-url').value.trim();
 
       if (!company || !role) {
-        showToast('Please enter both company and role.');
+        showToast('Please enter company and role.');
         return;
       }
 
@@ -1455,75 +1152,6 @@
           showToast(`Exported ${res.count} records as ${format.toUpperCase()}`);
         }
       }
-    }
-
-    function getPortalBadgeClass(portal) {
-      const p = (portal || '').toLowerCase();
-      if (p.includes('naukri')) return 'p-tag p-naukri';
-      if (p.includes('indeed')) return 'p-tag p-indeed';
-      if (p.includes('linkedin')) return 'p-tag p-linkedin';
-      if (p.includes('internshala')) return 'p-tag p-internshala';
-      if (p.includes('hirist')) return 'p-tag p-hirist';
-      if (p.includes('foundit')) return 'p-tag p-foundit';
-      if (p.includes('cuvette')) return 'p-tag p-cuvette';
-      if (p.includes('unstop')) return 'p-tag p-unstop';
-      if (p.includes('cutshort')) return 'p-tag p-cutshort';
-      if (p.includes('instahyre')) return 'p-tag p-instahyre';
-      if (p.includes('wellfound')) return 'p-tag p-wellfound';
-      if (p.includes('workatastartup') || p.includes('yc')) return 'p-tag p-yc';
-      if (p.includes('hasjob')) return 'p-tag p-hasjob';
-      if (p.includes('shine')) return 'p-tag p-shine';
-      if (p.includes('glassdoor')) return 'p-tag p-glassdoor';
-      if (p.includes('remoteok') || p.includes('weworkremotely') || p.includes('levels') || p.includes('turing') || p.includes('dice')) return 'p-tag p-remote';
-      return 'p-tag p-default';
-    }
-
-    function filterByPortal(portalName, chipEl) {
-      currentPortalFilter = portalName;
-      document.querySelectorAll('.l-chip').forEach(c => c.classList.remove('active'));
-      if (chipEl) chipEl.classList.add('active');
-      filterLedger();
-    }
-
-    function renderLedgerTable(rows) {
-      const tbody = document.getElementById('ledger-tbody');
-      tbody.innerHTML = '';
-      rows.slice(0, 150).forEach(r => {
-        const tr = document.createElement('tr');
-        const hasUrl = r.url && r.url.startsWith('http');
-        const badgeClass = getPortalBadgeClass(r.portal);
-        tr.innerHTML = `
-          <td style="color: #64748b; font-family: var(--font-mono); font-size: 10px;">${r.date}</td>
-          <td style="font-weight: 700; color: #fff;">${escapeHtml(r.company)}</td>
-          <td style="color: #cbd5e1;">${escapeHtml(r.role)}</td>
-          <td style="color: #94a3b8;">${escapeHtml(r.location)}</td>
-          <td><span class="${badgeClass}">${escapeHtml(r.portal)}</span></td>
-          <td><span style="color: #10b981; font-weight: 700;">✓ ${escapeHtml(r.status)}</span></td>
-          <td>${hasUrl ? `<button class="browser-btn" style="padding: 2px 6px; font-size: 10px;" onclick="openJobInWs('${r.url}')">Open</button>` : '<span style="color: #475569; font-size: 10px;">Direct</span>'}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function filterLedger() {
-      const q = (document.getElementById('ledger-search')?.value || '').toLowerCase();
-      const filtered = allLedgerRows.filter(r => {
-        const matchesPortal = (currentPortalFilter === 'ALL') || 
-          (r.portal && r.portal.toLowerCase().includes(currentPortalFilter.toLowerCase()));
-        const matchesQuery = !q || 
-          (r.company && r.company.toLowerCase().includes(q)) ||
-          (r.role && r.role.toLowerCase().includes(q)) ||
-          (r.portal && r.portal.toLowerCase().includes(q)) ||
-          (r.location && r.location.toLowerCase().includes(q));
-        return matchesPortal && matchesQuery;
-      });
-      renderLedgerTable(filtered);
-    }
-
-    function openJobInWs(url) {
-      switchWorkspaceTab('browser');
-      loadPortal(url);
-      showToast('Opened job URL in browser');
     }
 
     // 20-Platform Quotas
@@ -1573,95 +1201,194 @@
         card.className = 'q-card';
         const pct = Math.min(100, Math.round((q.applied_today / q.limit) * 100));
         card.innerHTML = `
-          <div class="q-card-top">
-            <span style="color: #fff; font-weight: 700;">${escapeHtml(name)}</span>
-            <span style="color: #10b981; font-family: var(--font-mono); font-size: 10px;">CAPPED</span>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #fff; font-weight: 600;">${escapeHtml(name)}</span>
+            <span style="color: #10b981; font-family: var(--font-mono); font-size: 10px;">CAP REACHED</span>
           </div>
           <div class="q-bar-bg"><div class="q-bar-fill" style="width: ${pct}%;"></div></div>
-          <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; font-family: var(--font-mono);">
-            <span>${q.applied_today} / ${q.limit}</span>
-            <span style="color: #10b981;">100%</span>
+          <div style="display: flex; justify-content: space-between; color: var(--text-muted); font-size: 10px;">
+            <span>Daily: ${q.applied_today} / ${q.limit}</span>
+            <span>${pct}%</span>
           </div>
-          <button class="browser-btn" style="margin-top: 4px; font-size: 10px; padding: 2px 6px; justify-content: center;" onclick="openJobInWs('${q.url}')">Open Portal</button>
         `;
         container.appendChild(card);
       }
     }
 
-    // =================================================================
-    // CONFIGURATION & MODEL PRESETS
-    // =================================================================
-    const PROVIDER_PRESETS = {
-      '9router': {
-        url: 'http://127.0.0.1:20128/v1',
-        token: 'sk-25a6421c7e67b2b5-edzmhl-9843071e',
-        model: 'Fable5'
-      },
-      'openrouter': {
-        url: 'https://openrouter.ai/api/v1',
-        token: '',
-        model: 'meta-llama/llama-3.3-70b-instruct:free'
-      },
-      'groq': {
-        url: 'https://api.groq.com/openai/v1',
-        token: '',
-        model: 'llama-3.3-70b-versatile'
-      },
-      'ollama': {
-        url: 'http://127.0.0.1:11434/v1',
-        token: 'ollama',
-        model: 'llama3.2'
-      },
-      'custom': {
-        url: 'http://localhost:8000/v1',
-        token: '',
-        model: 'gpt-4o'
-      }
-    };
-
-    function onProviderPresetChange(val) {
-      const p = PROVIDER_PRESETS[val];
-      if (p) {
-        document.getElementById('cfg-router-url').value = p.url;
-        document.getElementById('cfg-model-name').value = p.model;
-        if (p.token !== undefined) {
-          document.getElementById('cfg-router-token').value = p.token;
+    // Fleet Management
+    async function launchFleetWorker(scriptName) {
+      showToast(`Launching ${scriptName}...`);
+      if (window.jobPilotApi && window.jobPilotApi.launchFleetWorker) {
+        const res = await window.jobPilotApi.launchFleetWorker(scriptName);
+        if (res.ok) {
+          showToast(`${scriptName} launched with PID ${res.pid}`);
+          refreshFleetStatus();
+        } else {
+          showToast(`Launch failed: ${res.error}`);
         }
       }
     }
 
-    function toggleTokenVisibility() {
-      const t = document.getElementById('cfg-router-token');
-      t.type = t.type === 'password' ? 'text' : 'password';
+    async function killFleetWorker(scriptName) {
+      if (window.jobPilotApi && window.jobPilotApi.killFleetWorker) {
+        const res = await window.jobPilotApi.killFleetWorker(scriptName);
+        if (res.ok) {
+          showToast(`Stopped ${scriptName}`);
+          refreshFleetStatus();
+        }
+      }
+    }
+
+    async function stopAllFleetWorkers() {
+      if (window.jobPilotApi && window.jobPilotApi.getFleetProcesses) {
+        const procs = await window.jobPilotApi.getFleetProcesses();
+        for (const p of procs) {
+          await window.jobPilotApi.killFleetWorker(p.scriptName);
+        }
+        showToast('Terminated all background workers');
+        refreshFleetStatus();
+      }
+    }
+
+    async function refreshFleetStatus() {
+      if (window.jobPilotApi && window.jobPilotApi.getFleetProcesses) {
+        const procs = await window.jobPilotApi.getFleetProcesses();
+        const activeMap = new Map(procs.map(p => [p.scriptName, p]));
+
+        const tagExt = document.getElementById('status-tag-extended');
+        if (tagExt) {
+          const isRun = activeMap.has('extended_platforms_runner.py');
+          tagExt.innerText = isRun ? `RUNNING (PID ${activeMap.get('extended_platforms_runner.py').pid})` : 'STANDBY';
+          tagExt.style.color = isRun ? '#10b981' : '#cbd5e1';
+        }
+
+        const tagClose = document.getElementById('status-tag-closer');
+        if (tagClose) {
+          const isRun = activeMap.has('auto_quota_closer.py');
+          tagClose.innerText = isRun ? `RUNNING (PID ${activeMap.get('auto_quota_closer.py').pid})` : 'STANDBY';
+          tagClose.style.color = isRun ? '#10b981' : '#cbd5e1';
+        }
+
+        const tagMail = document.getElementById('status-tag-email');
+        if (tagMail) {
+          const isRun = activeMap.has('inbound_email_calendar_runner.py');
+          tagMail.innerText = isRun ? `RUNNING (PID ${activeMap.get('inbound_email_calendar_runner.py').pid})` : 'STANDBY';
+          tagMail.style.color = isRun ? '#10b981' : '#cbd5e1';
+        }
+      }
+    }
+
+    // Telemetry & Logs
+    function appendTelemetry(msg) {
+      if (!telemetryFeed) return;
+      const ts = new Date().toLocaleTimeString();
+      telemetryFeed.innerText += `\n[${ts}] ${msg}`;
+      telemetryFeed.scrollTop = telemetryFeed.scrollHeight;
+    }
+
+    if (window.jobPilotApi && window.jobPilotApi.onTaskLog) {
+      window.jobPilotApi.onTaskLog((msg) => {
+        appendTelemetry(msg);
+      });
+    }
+
+    if (window.jobPilotApi && window.jobPilotApi.onTrackerUpdated) {
+      window.jobPilotApi.onTrackerUpdated(() => {
+        loadLedgerData();
+      });
+    }
+
+    if (window.jobPilotApi && window.jobPilotApi.onExtensionStatusChanged) {
+      window.jobPilotApi.onExtensionStatusChanged(({ connected }) => {
+        const extDot = document.getElementById('sb-ext-dot');
+        const extText = document.getElementById('sb-ext-text');
+        const topExt = document.getElementById('ext-status-text');
+        if (connected) {
+          extDot.style.background = '#10b981';
+          extDot.style.boxShadow = '0 0 6px #10b981';
+          extText.innerText = 'Extension Online';
+          topExt.innerText = 'Extension Online';
+          topExt.style.color = '#10b981';
+        }
+      });
+    }
+
+    if (window.jobPilotApi && window.jobPilotApi.onExtensionActiveJob) {
+      window.jobPilotApi.onExtensionActiveJob((jobMeta) => {
+        lastActiveJob = jobMeta;
+        const banner = document.getElementById('chrome-active-banner');
+        if (banner) {
+          document.getElementById('active-banner-company').innerText = jobMeta.company || 'Unknown';
+          document.getElementById('active-banner-role').innerText = jobMeta.title || 'Tech Role';
+          document.getElementById('active-banner-portal').innerText = jobMeta.portal || 'Web';
+          document.getElementById('dock-active-target').innerText = `🌐 ${jobMeta.company || 'Job'}: ${jobMeta.title || ''}`;
+          banner.style.display = 'flex';
+        }
+      });
+    }
+
+    function dismissActiveBanner() {
+      const banner = document.getElementById('chrome-active-banner');
+      if (banner) banner.style.display = 'none';
+    }
+
+    async function applyToActiveChromeJob() {
+      if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
+        await window.jobPilotApi.sendExtensionCommand({ action: 'autofill' });
+        showToast('Delivered autofill command to Google Chrome tab');
+      }
+    }
+
+    async function pitchActiveChromeJob() {
+      if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
+        await window.jobPilotApi.sendExtensionCommand({ action: 'inject_pitch' });
+        showToast('Delivered pitch injection to Google Chrome tab');
+      }
+    }
+
+    async function saveActiveChromeJobToLedger() {
+      if (lastActiveJob && window.jobPilotApi && window.jobPilotApi.addTrackerEntry) {
+        await window.jobPilotApi.addTrackerEntry({
+          company: lastActiveJob.company || 'Target Tech',
+          role: lastActiveJob.title || 'AI Engineer',
+          location: lastActiveJob.location || 'India',
+          portal: lastActiveJob.portal || 'Extension',
+          url: lastActiveJob.url || '',
+          status: 'Saved'
+        });
+        showToast(`Saved ${lastActiveJob.company} to ledger.`);
+        dismissActiveBanner();
+        loadLedgerData();
+      }
+    }
+
+    // Settings & Model Config
+    const PROVIDER_PRESETS = {
+      '9router': { url: 'http://127.0.0.1:20128/v1', model: 'Fable5', token: 'sk-25a6421c7e67b2b5-edzmhl-9843071e' },
+      'openrouter': { url: 'https://openrouter.ai/api/v1', model: 'deepseek/deepseek-chat', token: '' },
+      'groq': { url: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', token: '' },
+      'ollama': { url: 'http://localhost:11434/v1', model: 'llama3.2', token: 'ollama' }
+    };
+
+    function applyProviderPreset(presetName) {
+      const p = PROVIDER_PRESETS[presetName];
+      if (p) {
+        document.getElementById('cfg-router-url').value = p.url;
+        document.getElementById('cfg-model-name').value = p.model;
+        if (p.token) document.getElementById('cfg-router-token').value = p.token;
+      }
     }
 
     async function loadSettingsToUI() {
       if (window.jobPilotApi && window.jobPilotApi.getModelConfig) {
         const cfg = await window.jobPilotApi.getModelConfig();
         if (cfg) {
-          if (cfg.provider) document.getElementById('cfg-provider-preset').value = cfg.provider;
-          if (cfg.routerUrl) document.getElementById('cfg-router-url').value = cfg.routerUrl;
-          if (cfg.routerToken) document.getElementById('cfg-router-token').value = cfg.routerToken;
-          if (cfg.model) document.getElementById('cfg-model-name').value = cfg.model;
-
-          const latencyBadge = document.getElementById('cfg-latency-badge');
-          if (cfg.isAlive) {
-            latencyBadge.innerText = 'STATUS: ONLINE (200 OK)';
-            latencyBadge.style.color = '#10b981';
-          } else {
-            latencyBadge.innerText = 'STATUS: OFFLINE';
-            latencyBadge.style.color = '#ef4444';
-          }
+          document.getElementById('cfg-provider-preset').value = cfg.provider || '9router';
+          document.getElementById('cfg-router-url').value = cfg.routerUrl || 'http://127.0.0.1:20128/v1';
+          document.getElementById('cfg-router-token').value = cfg.routerToken || '';
+          document.getElementById('cfg-model-name').value = cfg.model || 'Fable5';
+          document.getElementById('dock-model-label').innerText = `${cfg.model || 'Fable5'} (${cfg.provider || '9Router'})`;
         }
-      }
-    }
-
-    async function switchModel(modelName) {
-      document.getElementById('cfg-model-name').value = modelName;
-      document.getElementById('sb-model-pill').innerText = modelName;
-      if (window.jobPilotApi && window.jobPilotApi.setModelConfig) {
-        await window.jobPilotApi.setModelConfig({ model: modelName });
-        showToast('Switched model to ' + modelName);
       }
     }
 
@@ -1675,18 +1402,12 @@
         const res = await window.jobPilotApi.setModelConfig({ provider, routerUrl: url, token, model });
         if (res.ok && res.isAlive) {
           appendTelemetry('[SETTINGS] Gateway connected. Model set to ' + model);
-          document.getElementById('router-port-text').innerText = 'GATEWAY: ONLINE';
+          document.getElementById('router-port-text').innerText = `${provider}: ${model}`;
           document.getElementById('router-port-text').style.color = '#10b981';
-          document.getElementById('router-pulse').style.background = '#10b981';
-          document.getElementById('router-pulse').style.boxShadow = '0 0 8px #10b981';
+          document.getElementById('dock-model-label').innerText = `${model} (${provider})`;
           showToast('Configuration saved (200 OK)');
         } else {
-          appendTelemetry('[SETTINGS WARNING] Gateway unreachable on ' + url);
-          document.getElementById('router-port-text').innerText = 'OFFLINE';
-          document.getElementById('router-port-text').style.color = '#ef4444';
-          document.getElementById('router-pulse').style.background = '#ef4444';
-          document.getElementById('router-pulse').style.boxShadow = '0 0 8px #ef4444';
-          showToast('Saved, but gateway is offline');
+          showToast('Configuration saved, but gateway is offline');
         }
       }
     }
@@ -1705,14 +1426,9 @@
         btn.disabled = false;
         btn.innerText = '🧪 Test Connection';
 
-        const latencyBadge = document.getElementById('cfg-latency-badge');
         if (res.ok) {
-          latencyBadge.innerText = `ONLINE: ${res.latencyMs}ms (${res.modelCount} models)`;
-          latencyBadge.style.color = '#10b981';
-          showToast(`Gateway verified: ${res.latencyMs}ms latency`);
+          showToast(`Gateway online: ${res.latencyMs}ms latency (${res.modelCount} models)`);
         } else {
-          latencyBadge.innerText = `FAILED: ${res.error || 'Connection Refused'}`;
-          latencyBadge.style.color = '#ef4444';
           showToast(`Connection failed: ${res.error}`);
         }
       }
@@ -1722,18 +1438,13 @@
       const btn = document.getElementById('btn-restart-gw');
       btn.disabled = true;
       btn.innerText = 'Starting 9Router...';
-      showToast('Launching 9Router daemon on port 20128...');
+      showToast('Launching 9Router daemon...');
 
       if (window.jobPilotApi && window.jobPilotApi.restartRouter) {
         const res = await window.jobPilotApi.restartRouter();
         btn.disabled = false;
         btn.innerText = '⚡ Start / Restart 9Router';
-
         if (res.ok) {
-          document.getElementById('router-port-text').innerText = 'GATEWAY: ONLINE';
-          document.getElementById('router-port-text').style.color = '#10b981';
-          document.getElementById('router-pulse').style.background = '#10b981';
-          document.getElementById('router-pulse').style.boxShadow = '0 0 8px #10b981';
           showToast('9Router started successfully (200 OK)');
         } else {
           showToast('Failed to start 9Router daemon.');
@@ -1744,7 +1455,7 @@
     function openExtensionFolder() {
       if (window.jobPilotApi && window.jobPilotApi.openExtensionFolder) {
         window.jobPilotApi.openExtensionFolder();
-        showToast('Opened extension folder in Explorer');
+        showToast('Opened extension directory');
       }
     }
 
@@ -1752,13 +1463,52 @@
       try {
         const res = await fetch('http://127.0.0.1:5056/api/status');
         const data = await res.json();
-        if (data.ok) {
-          showToast('Bridge port 5056 is active and healthy!');
-        }
+        if (data.ok) showToast('Bridge port 5056 active and healthy!');
       } catch (e) {
         showToast('Bridge error: ' + e.message);
       }
     }
+
+    function showToast(msg) {
+      const c = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast-msg';
+      el.innerText = msg;
+      c.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        document.getElementById('agent-prompt-input').focus();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+        e.preventDefault();
+        setLayoutMode('split');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '1') {
+        e.preventDefault();
+        switchWorkspaceTab('browser');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '2') {
+        e.preventDefault();
+        switchWorkspaceTab('ledger');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '3') {
+        e.preventDefault();
+        switchWorkspaceTab('fleet');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '4') {
+        e.preventDefault();
+        switchWorkspaceTab('resume');
+      }
+    });
 
     // Init
     loadLedgerData();
