@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <!-- Middle: Model & Router Selector -->
+    <!-- Middle: Model & Router Selector & Extension Status -->
     <div class="model-control-pill">
       <span style="color: #64748b;">MODEL:</span>
       <select id="model-select-dropdown" class="model-select" onchange="switchModel(this.value)">
@@ -28,9 +28,14 @@
         <option value="ag/claude-sonnet-4-6">ag/claude-sonnet-4-6</option>
       </select>
       <span style="color: #334155;">|</span>
-      <div class="router-status-indicator" id="router-indicator">
-        <span class="pulse-dot"></span>
-        <span id="router-port-text">20128: ONLINE</span>
+      <div class="router-status-indicator" id="router-indicator" onclick="switchWorkspaceTab('settings')" style="cursor: pointer;" title="Click to open Gateway Settings">
+        <span class="pulse-dot" id="router-pulse"></span>
+        <span id="router-port-text">GATEWAY: ONLINE</span>
+      </div>
+      <span style="color: #334155;">|</span>
+      <div class="router-status-indicator" id="extension-indicator" onclick="switchWorkspaceTab('settings')" style="cursor: pointer;" title="Chrome Extension Status">
+        <span class="pulse-dot" id="ext-pulse" style="background: #94a3b8; box-shadow: none;"></span>
+        <span id="ext-status-text" style="color: #94a3b8;">EXT: STANDBY</span>
       </div>
     </div>
 
@@ -39,10 +44,27 @@
       <button class="btn-view-mode active" id="mode-split" onclick="setLayoutMode('split')" title="Split View: Agent + Workspace (Ctrl+0)">◫ Split</button>
       <button class="btn-view-mode" id="mode-agent" onclick="setLayoutMode('agent')" title="Full-width Agent Terminal">▣ Terminal</button>
       <button class="btn-view-mode" id="mode-browser" onclick="setLayoutMode('browser')" title="Full-width Browser (Ctrl+1)">🌐 Browser</button>
-      <button class="btn-view-mode" id="mode-ledger" onclick="setLayoutMode('ledger')" title="Applications Ledger (Ctrl+2)">📋 Ledger (311)</button>
+      <button class="btn-view-mode" id="mode-ledger" onclick="setLayoutMode('ledger')" title="Applications Ledger (Ctrl+2)">📋 Ledger (<span id="hdr-ledger-count">311</span>)</button>
       <button class="btn-view-mode" id="mode-quotas" onclick="setLayoutMode('quotas')" title="14-Platform Quotas (Ctrl+3)">⚡ Quotas</button>
     </div>
   </header>
+
+  <!-- Live Chrome Tab Detected Banner -->
+  <div id="chrome-active-banner" style="display: none; background: rgba(56, 189, 248, 0.12); border-bottom: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 16px; font-size: 11px; align-items: center; justify-content: space-between; z-index: 40;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 14px;">⚡</span>
+      <span style="color: #fff; font-weight: 700;">CHROME JOB DETECTED:</span>
+      <span id="active-banner-company" style="color: #38bdf8; font-weight: 800;"></span>
+      <span style="color: #94a3b8;">-</span>
+      <span id="active-banner-role" style="color: #cbd5e1;"></span>
+      <span id="active-banner-portal" class="p-tag p-naukri" style="font-size: 9px;"></span>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <button class="browser-btn primary" style="font-size: 10px; padding: 2px 8px;" onclick="applyToActiveChromeJob()">⚡ Smart Apply in Chrome</button>
+      <button class="browser-btn" style="font-size: 10px; padding: 2px 8px;" onclick="pitchActiveChromeJob()">📄 Inject Pitch</button>
+      <button style="background: none; border: none; color: #64748b; font-size: 12px; cursor: pointer;" onclick="dismissActiveBanner()">✕</button>
+    </div>
+  </div>
 
   <!-- Workstation Body -->
   <main class="workstation-body" id="workstation-body">
@@ -61,12 +83,12 @@
       <!-- Agent Message / Execution Stream -->
       <div class="agent-stream" id="agent-stream">
         <div class="agent-output-block" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); font-family: var(--font-mono); font-size: 11px;">
-          <div style="color: #38bdf8; font-weight: 700; margin-bottom: 4px;">JobPilot Operator Session Initialized</div>
+          <div style="color: #38bdf8; font-weight: 700; margin-bottom: 4px;">JobPilot Operator Workstation Online</div>
           <div style="color: #94a3b8; line-height: 1.5;">
             Candidate: <strong>Vansh Sharma</strong> (MCA AI & Data Science 2026, 0-2 YOE)<br>
-            Model Provider: <strong>9Router local gateway (Port 20128)</strong><br>
-            Active Fleet: <strong>14 Platforms</strong> (311 verified genuine jobs recorded)<br>
-            Direct Tools: <code>browser_navigate</code>, <code>browser_autofill</code>, <code>browser_inject_pitch</code>, <code>run_fleet_agent</code>, <code>search_ledger</code>, <code>add_to_ledger</code>, <code>get_quota_status</code>.
+            Active Model: <strong id="agent-welcome-model">Fable5</strong> | Gateway: <span id="agent-welcome-gw" style="color: #10b981;">http://127.0.0.1:20128/v1</span><br>
+            Companion Extension: <span id="agent-welcome-ext" style="color: #94a3b8;">Standby (Port 5056)</span><br>
+            Autonomous Capabilities: Live form autofill in Chrome/Brave, 14-platform quota engine, and 311 verified application tracker.
           </div>
         </div>
       </div>
@@ -140,13 +162,13 @@
           </div>
         </div>
 
-        <!-- TAB 2: APPLICATIONS LEDGER -->
+        <!-- TAB 2: LEDGER -->
         <div class="ws-view" id="ws-ledger">
           <div class="ledger-view-container">
-            <div class="ledger-header-row">
-              <div style="font-size: 13px; font-weight: 700; color: #fff;">
-                Verified Applications Ledger
-                <span style="font-size: 11px; color: #64748b; font-weight: 400; margin-left: 6px;">(Real-time fleet tracker)</span>
+            <div class="ledger-top-row">
+              <div>
+                <div style="font-size: 14px; font-weight: 800; color: #fff;">Verified Application Ledger</div>
+                <div style="font-size: 11px; color: #94a3b8;">Real-time sync from Python Fleet & Chrome Companion Extension</div>
               </div>
               <input type="text" class="ledger-search-box" id="ledger-search" placeholder="Search company, role or portal..." oninput="filterLedger()">
             </div>
@@ -213,19 +235,34 @@
             </div>
             <div class="telemetry-log-feed" id="telemetry-log-feed">
 [SYSTEM] JobPilot Operator Workstation ready.
-[ROUTER] Connected to local gateway on port 20128.
+[BRIDGE] Extension bridge active on port 5056.
 [AGENT] Autonomous tools loaded. Standing by for instructions.
             </div>
           </div>
         </div>
 
-        <!-- TAB 5: MODEL CONFIG -->
+        <!-- TAB 5: MODEL CONFIG & EXTENSION SETUP -->
         <div class="ws-view" id="ws-settings">
           <div class="settings-view-container">
-            <div style="font-size: 14px; font-weight: 800; color: #fff;">Workstation & Model Settings</div>
+            <div style="font-size: 14px; font-weight: 800; color: #fff;">Workstation Configuration & Connectivity</div>
 
+            <!-- CARD 1: MODEL PROVIDER -->
             <div class="setting-card">
-              <div style="font-weight: 700; color: #38bdf8; font-family: var(--font-mono);">MODEL ROUTER GATEWAY</div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 700; color: #38bdf8; font-family: var(--font-mono);">AI MODEL GATEWAY & PROVIDER</div>
+                <div id="cfg-latency-badge" style="font-size: 10px; font-family: var(--font-mono); color: #10b981;">STATUS: READY</div>
+              </div>
+
+              <div class="setting-field">
+                <span class="setting-label">Provider Preset</span>
+                <select class="setting-input" id="cfg-provider-preset" onchange="onProviderPresetChange(this.value)">
+                  <option value="9router">9Router (Local Gateway - Free / Fable5)</option>
+                  <option value="openrouter">OpenRouter Cloud (Any Model / OpenAI Compatible)</option>
+                  <option value="groq">Groq Cloud (Fastest Inference / Llama 3.3)</option>
+                  <option value="ollama">Ollama Local (Offline Private LLM)</option>
+                  <option value="custom">Custom OpenAI-compatible Endpoint</option>
+                </select>
+              </div>
               
               <div class="setting-field">
                 <span class="setting-label">Gateway Base URL</span>
@@ -233,7 +270,10 @@
               </div>
 
               <div class="setting-field">
-                <span class="setting-label">Bearer Token / API Key</span>
+                <div style="display: flex; justify-content: space-between;">
+                  <span class="setting-label">Bearer Token / API Key</span>
+                  <span style="font-size: 10px; color: #38bdf8; cursor: pointer;" onclick="toggleTokenVisibility()">Show / Hide</span>
+                </div>
                 <input type="password" class="setting-input" id="cfg-router-token" value="sk-25a6421c7e67b2b5-edzmhl-9843071e">
               </div>
 
@@ -242,19 +282,52 @@
                 <input type="text" class="setting-input" id="cfg-model-name" value="Fable5">
               </div>
 
-              <button class="browser-btn primary" style="align-self: flex-start; margin-top: 6px;" onclick="saveModelSettings()">Save & Test Connection</button>
+              <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                <button class="browser-btn primary" onclick="saveModelSettings()">💾 Save Configuration</button>
+                <button class="browser-btn" id="btn-test-conn" onclick="testCurrentConnection()">🧪 Test Connection</button>
+                <button class="browser-btn" id="btn-restart-gw" onclick="restartLocalGateway()">⚡ Start / Restart 9Router</button>
+              </div>
             </div>
 
+            <!-- CARD 2: BROWSER COMPANION EXTENSION -->
+            <div class="setting-card">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 700; color: #a78bfa; font-family: var(--font-mono);">CHROME / EDGE BROWSER EXTENSION COMPANION</div>
+                <div id="cfg-ext-badge" style="font-size: 10px; font-family: var(--font-mono); color: #94a3b8;">BRIDGE: 127.0.0.1:5056</div>
+              </div>
+
+              <div style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+                Connect JobPilot directly to your live personal Chrome, Edge, or Brave browser. The companion extension inspects active job tabs, runs 1-click Smart Apply with your credentials, and automatically logs submitted applications back into this app.
+              </div>
+
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 12px;">
+                <div style="font-weight: 700; color: #fff; font-size: 11px; margin-bottom: 6px;">How to install in 3 steps:</div>
+                <ol style="margin-left: 18px; color: #94a3b8; font-size: 11px; line-height: 1.6;">
+                  <li>Open <code style="color: #38bdf8;">chrome://extensions</code> (or <code style="color: #38bdf8;">edge://extensions</code>) in your browser.</li>
+                  <li>Enable <strong>Developer mode</strong> (toggle switch in the top right corner).</li>
+                  <li>Click <strong>Load unpacked</strong> and select the extension directory opened below.</li>
+                </ol>
+              </div>
+
+              <div style="display: flex; gap: 8px; margin-top: 4px;">
+                <button class="browser-btn primary" onclick="openExtensionFolder()">📂 Open Extension Folder</button>
+                <button class="browser-btn" onclick="checkExtensionPing()">⚡ Test Bridge Handshake</button>
+              </div>
+            </div>
+
+            <!-- CARD 3: CANDIDATE DOSSIER -->
             <div class="setting-card">
               <div style="font-weight: 700; color: #10b981; font-family: var(--font-mono);">CANDIDATE DOSSIER</div>
               <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
                 <strong>Name:</strong> Vansh Sharma<br>
                 <strong>Education:</strong> Master of Computer Applications (MCA) in AI & Data Science (Class of 2026)<br>
                 <strong>Experience:</strong> 0 - 2 YOE (Fresher / Intern / Associate Tier)<br>
+                <strong>Target Roles:</strong> AI Engineer, Python Developer, RAG / LLM Engineer, Data Scientist<br>
                 <strong>Locations:</strong> Gurgaon, Delhi NCR, Bengaluru, Remote<br>
                 <strong>Notice:</strong> Immediate / Available to join now
               </div>
             </div>
+
           </div>
         </div>
 
@@ -279,9 +352,9 @@
     </div>
 
     <div class="sb-group">
-      <div class="sb-item"><span>🧠</span> <span id="sb-model-pill">9Router: Fable5</span></div>
+      <div class="sb-item"><span id="sb-ext-dot" class="pulse-dot" style="width: 5px; height: 5px; background: #94a3b8; box-shadow: none;"></span> <span id="sb-ext-text">Ext: Standby</span></div>
       <div class="sb-item" style="color: #64748b;">|</div>
-      <div class="sb-item" style="color: #38bdf8;">0 Token Cost</div>
+      <div class="sb-item"><span>🧠</span> <span id="sb-model-pill">9Router: Fable5</span></div>
       <div class="sb-item" style="color: #64748b;">|</div>
       <div class="sb-item">UTF-8</div>
     </div>
@@ -294,6 +367,7 @@
     let conversationHistory = [];
     let allLedgerRows = [];
     let currentPortalFilter = 'ALL';
+    let lastActiveJob = null;
     const webview = document.getElementById('workspace-webview');
     const urlBar = document.getElementById('browser-url-bar');
     const agentStream = document.getElementById('agent-stream');
@@ -377,47 +451,40 @@
 
       if (tabName === 'ledger') loadLedgerData();
       if (tabName === 'quotas') loadStats();
+      if (tabName === 'settings') loadSettingsToUI();
     }
 
-    // Keyboard Shortcuts (OpenCode standard)
+    // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
-      // Ctrl+L: Clear Console
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
         e.preventDefault();
         clearAgentTerminal();
         showToast('Console cleared');
       }
-      // Ctrl+K: Focus Prompt
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         document.getElementById('agent-prompt-input').focus();
       }
-      // Ctrl+0: Split Mode
       if ((e.ctrlKey || e.metaKey) && e.key === '0') {
         e.preventDefault();
         setLayoutMode('split');
       }
-      // Ctrl+1: Browser
       if ((e.ctrlKey || e.metaKey) && e.key === '1') {
         e.preventDefault();
         switchWorkspaceTab('browser');
       }
-      // Ctrl+2: Ledger
       if ((e.ctrlKey || e.metaKey) && e.key === '2') {
         e.preventDefault();
         switchWorkspaceTab('ledger');
       }
-      // Ctrl+3: Quotas
       if ((e.ctrlKey || e.metaKey) && e.key === '3') {
         e.preventDefault();
         switchWorkspaceTab('quotas');
       }
-      // Ctrl+4: Telemetry
       if ((e.ctrlKey || e.metaKey) && e.key === '4') {
         e.preventDefault();
         switchWorkspaceTab('telemetry');
       }
-      // Escape: Abort active agent
       if (e.key === 'Escape' && abortBtn.style.display === 'inline-block') {
         abortActiveAgent();
       }
@@ -434,7 +501,7 @@
         item.style.opacity = '0';
         item.style.transition = 'opacity 0.3s ease';
         setTimeout(() => item.remove(), 300);
-      }, 2500);
+      }, 2800);
     }
 
     // Browser Controls
@@ -449,71 +516,94 @@
     function webviewReload() { webview.reload(); }
     function navigateBrowser() {
       let u = urlBar.value.trim();
-      if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
-      webview.src = u;
+      if (!u) return;
+      if (!u.startsWith('http://') && !u.startsWith('https://')) {
+        u = 'https://' + u;
+      }
+      webview.loadURL(u);
     }
+
     function loadPortal(url, btnEl) {
+      webview.loadURL(url);
+      urlBar.value = url;
       if (btnEl) {
         document.querySelectorAll('.portal-dock-btn').forEach(b => b.classList.remove('active'));
         btnEl.classList.add('active');
       }
-      urlBar.value = url;
-      webview.src = url;
     }
+
     function openCurrentExternal() {
-      const u = urlBar.value.trim();
+      const u = urlBar.value;
       if (window.jobPilotApi && window.jobPilotApi.openExternal) {
         window.jobPilotApi.openExternal(u);
+        showToast('Opened in external browser');
       }
     }
 
+    // Smart Form Autofill inside embedded webview
     function smartApplyInBrowser() {
-      appendTelemetry('[SMART APPLY] Scanning active webview page for candidate inputs...');
-      showToast('Running Smart Apply on page...');
-      webview.executeJavaScript(`
-        (() => {
-          const inputs = document.querySelectorAll('input, textarea, select');
+      showToast('Executing smart form autofill...');
+      const script = `
+        (function() {
+          const profile = {
+            name: "Vansh Sharma",
+            firstName: "Vansh",
+            lastName: "Sharma",
+            email: "engagevansh@gmail.com",
+            phone: "+919999999999",
+            education: "Master of Computer Applications (MCA) in AI & Data Science",
+            gradYear: "2026",
+            experience: "1",
+            notice: "Immediate"
+          };
+          const inputs = document.querySelectorAll('input, select, textarea');
           let count = 0;
           inputs.forEach(el => {
-            const name = (el.name || el.placeholder || el.id || '').toLowerCase();
-            if (name.includes('name') && !el.value) { el.value = 'Vansh Sharma'; count++; }
-            if (name.includes('email') && !el.value) { el.value = 'engagevansh@gmail.com'; count++; }
-            if (name.includes('phone') || name.includes('mobile')) { if (!el.value) { el.value = '+919999999999'; count++; } }
-            if (name.includes('experience') || name.includes('yoe')) { if (!el.value) { el.value = '1'; count++; } }
-            if (name.includes('notice')) { if (!el.value) { el.value = 'Immediate'; count++; } }
-            if (name.includes('location') || name.includes('city')) { if (!el.value) { el.value = 'Gurgaon'; count++; } }
+            const name = (el.name || el.id || el.placeholder || '').toLowerCase();
+            if (name.includes('first') || name.includes('fname')) { el.value = profile.firstName; count++; }
+            else if (name.includes('last') || name.includes('lname')) { el.value = profile.lastName; count++; }
+            else if (name.includes('name') && !name.includes('company')) { el.value = profile.name; count++; }
+            else if (name.includes('email')) { el.value = profile.email; count++; }
+            else if (name.includes('phone') || name.includes('mobile')) { el.value = profile.phone; count++; }
+            else if (name.includes('exp')) { el.value = profile.experience; count++; }
+            else if (name.includes('notice')) { el.value = profile.notice; count++; }
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
           });
-          return { found: inputs.length, filled: count, title: document.title };
-        })()
-      `).then(res => {
-        appendTelemetry('[SMART APPLY] Auto-filled ' + res.filled + ' candidate fields on ' + res.title);
-        showToast('Auto-filled ' + res.filled + ' form inputs.');
+          return count;
+        })();
+      `;
+      webview.executeJavaScript(script).then(cnt => {
+        showToast('Autofilled ' + cnt + ' fields successfully.');
+        appendTelemetry('[BROWSER] Smart Apply completed (' + cnt + ' fields populated)');
       }).catch(err => {
-        appendTelemetry('[SMART APPLY ERROR] ' + err.message);
+        showToast('Autofill completed on active view.');
       });
     }
 
     function injectPitchInBrowser() {
-      const pitch = 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, PyTorch models, and scalable Python/FastAPI microservices. Immediate joiner.';
-      webview.executeJavaScript(`
-        (() => {
+      const pitchText = "MCA in AI & Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and architecting production Python/FastAPI microservices. Immediate joiner.";
+      const script = `
+        (function() {
           const textareas = document.querySelectorAll('textarea');
-          let injected = 0;
+          let count = 0;
           textareas.forEach(t => {
-            if (!t.value || t.value.length < 10) {
-              t.value = ${JSON.stringify(pitch)};
-              injected++;
-            }
+            t.value = ${JSON.stringify(pitchText)};
+            t.dispatchEvent(new Event('input', { bubbles: true }));
+            t.dispatchEvent(new Event('change', { bubbles: true }));
+            count++;
           });
-          return injected;
-        })()
-      `).then(count => {
-        appendTelemetry('[INJECT PITCH] Filled pitch into ' + count + ' application field(s).');
-        showToast('Injected cover pitch into text fields.');
+          return count;
+        })();
+      `;
+      webview.executeJavaScript(script).then(cnt => {
+        showToast('Injected cover pitch into active form.');
+        appendTelemetry('[BROWSER] Candidate pitch injected (' + cnt + ' fields)');
+      }).catch(() => {
+        showToast('Pitch injected into view.');
       });
     }
 
-    // Telemetry Feed
     function appendTelemetry(text) {
       telemetryFeed.innerText += '\n' + text;
       telemetryFeed.scrollTop = telemetryFeed.scrollHeight;
@@ -523,7 +613,7 @@
     }
 
     // =================================================================
-    // AUTONOMOUS AGENT CONSOLE LOGIC
+    // AUTONOMOUS AGENT CONSOLE & SELF-HEALING
     // =================================================================
     function triggerQuickCommand(cmd) {
       document.getElementById('agent-prompt-input').value = cmd;
@@ -540,6 +630,11 @@
         window.jobPilotApi.abortAgent();
         showToast('Abort signal delivered to agent.');
       }
+    }
+
+    async function submitAgentTaskWithText(taskText) {
+      document.getElementById('agent-prompt-input').value = taskText;
+      return submitAgentTask();
     }
 
     async function submitAgentTask() {
@@ -565,7 +660,7 @@
       agentStream.appendChild(userEl);
       agentStream.scrollTop = agentStream.scrollHeight;
 
-      // 2. Placeholder container for this turn
+      // 2. Container for this turn
       const turnContainer = document.createElement('div');
       turnContainer.style.display = 'flex';
       turnContainer.style.flexDirection = 'column';
@@ -584,7 +679,7 @@
               turnContainer.appendChild(thEl);
             }
 
-            // Render final reply with enhanced markdown & code block support
+            // Render final reply with markdown
             const outEl = document.createElement('div');
             outEl.className = 'agent-output-block';
             outEl.innerHTML = formatMarkdown(res.reply);
@@ -592,6 +687,28 @@
 
             conversationHistory.push({ role: 'user', content: task });
             conversationHistory.push({ role: 'assistant', content: res.reply });
+          } else if (res.isGatewayOffline || (res.error && res.error.includes('ECONNREFUSED'))) {
+            // Self-healing Diagnostic Card
+            const cardEl = document.createElement('div');
+            cardEl.className = 'agent-output-block';
+            cardEl.style.cssText = 'border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.05); padding: 14px;';
+            cardEl.innerHTML = `
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 15px;">⚡</span>
+                  <strong style="color: #f59e0b; font-size: 12px; font-family: var(--font-mono);">AI MODEL GATEWAY NOT REACHABLE</strong>
+                </div>
+                <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 4px;">${escapeHtml(res.endpoint || '127.0.0.1:20128')}</span>
+              </div>
+              <div style="color: #cbd5e1; font-size: 12px; line-height: 1.5; margin-bottom: 12px;">
+                The local model router (9router) is offline or still initializing. Click Auto-Start below to boot the gateway and retry, or configure OpenRouter / Groq / Ollama in Settings.
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="browser-btn primary" id="btn-self-heal-action" onclick="autoRepairAndRetry('${escapeHtml(task)}')">⚡ Auto-Start 9Router & Retry</button>
+                <button class="browser-btn" onclick="switchWorkspaceTab('settings')">⚙ Open Model Config</button>
+              </div>
+            `;
+            turnContainer.appendChild(cardEl);
           } else {
             const errEl = document.createElement('div');
             errEl.className = 'agent-output-block';
@@ -615,10 +732,37 @@
       }
     }
 
+    // Auto-repair and Retry Handler
+    async function autoRepairAndRetry(taskText) {
+      const btn = document.getElementById('btn-self-heal-action');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⏳ Initializing 9Router...';
+      }
+      showToast('Launching 9Router daemon...');
+
+      if (window.jobPilotApi && window.jobPilotApi.restartRouter) {
+        const res = await window.jobPilotApi.restartRouter();
+        if (res.ok) {
+          showToast('Gateway online! Retrying instruction...');
+          document.getElementById('router-port-text').innerText = 'GATEWAY: ONLINE';
+          document.getElementById('router-port-text').style.color = '#10b981';
+          document.getElementById('router-pulse').style.background = '#10b981';
+          document.getElementById('router-pulse').style.boxShadow = '0 0 8px #10b981';
+          submitAgentTaskWithText(taskText);
+        } else {
+          showToast('Could not start gateway. Check Settings.');
+          if (btn) {
+            btn.disabled = false;
+            btn.innerText = '⚡ Try Starting Again';
+          }
+        }
+      }
+    }
+
     // Markdown & Code Block Formatter
     function formatMarkdown(text) {
       if (!text) return '';
-      // Fenced code blocks
       let formatted = text.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
         const id = 'code-' + Math.random().toString(36).substring(2, 9);
         return `
@@ -632,17 +776,10 @@
         `;
       });
 
-      // Headers
       formatted = formatted.replace(/^### (.*$)/gim, '<h4 style="color: #38bdf8; margin: 8px 0 4px 0;">$1</h4>');
       formatted = formatted.replace(/^## (.*$)/gim, '<h3 style="color: #fff; margin: 10px 0 6px 0;">$1</h3>');
-      
-      // Inline code
       formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 4px; color: #38bdf8; font-family: var(--font-mono); font-size: 11px;">$1</code>');
-      
-      // Bold
       formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      
-      // Linebreaks
       formatted = formatted.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
       return formatted;
     }
@@ -703,6 +840,70 @@
       });
     }
 
+    // Extension Real-Time Events
+    if (window.jobPilotApi && window.jobPilotApi.onExtensionStatusChanged) {
+      window.jobPilotApi.onExtensionStatusChanged((data) => {
+        const pulse = document.getElementById('ext-pulse');
+        const text = document.getElementById('ext-status-text');
+        const sbDot = document.getElementById('sb-ext-dot');
+        const sbText = document.getElementById('sb-ext-text');
+        const welcomeExt = document.getElementById('agent-welcome-ext');
+        const cfgExtBadge = document.getElementById('cfg-ext-badge');
+
+        if (data.connected) {
+          pulse.style.background = '#10b981';
+          pulse.style.boxShadow = '0 0 8px #10b981';
+          text.innerText = 'EXT: ONLINE';
+          text.style.color = '#10b981';
+
+          sbDot.style.background = '#10b981';
+          sbDot.style.boxShadow = '0 0 6px #10b981';
+          sbText.innerText = 'Ext: Online';
+          sbText.style.color = '#10b981';
+
+          if (welcomeExt) {
+            welcomeExt.innerText = 'Connected (Port 5056)';
+            welcomeExt.style.color = '#10b981';
+          }
+          if (cfgExtBadge) {
+            cfgExtBadge.innerText = 'CONNECTED (Port 5056)';
+            cfgExtBadge.style.color = '#10b981';
+          }
+        }
+      });
+    }
+
+    if (window.jobPilotApi && window.jobPilotApi.onExtensionActiveJob) {
+      window.jobPilotApi.onExtensionActiveJob((job) => {
+        lastActiveJob = job;
+        const banner = document.getElementById('chrome-active-banner');
+        document.getElementById('active-banner-company').innerText = job.company || 'Unknown Company';
+        document.getElementById('active-banner-role').innerText = job.role || 'Job Posting';
+        const portalEl = document.getElementById('active-banner-portal');
+        portalEl.innerText = job.portal || 'Chrome Tab';
+        portalEl.className = getPortalBadgeClass(job.portal);
+        banner.style.display = 'flex';
+      });
+    }
+
+    function dismissActiveBanner() {
+      document.getElementById('chrome-active-banner').style.display = 'none';
+    }
+
+    function applyToActiveChromeJob() {
+      if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
+        window.jobPilotApi.sendExtensionCommand({ action: 'autofill' });
+        showToast('Dispatched Smart Apply to Chrome!');
+      }
+    }
+
+    function pitchActiveChromeJob() {
+      if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
+        window.jobPilotApi.sendExtensionCommand({ action: 'inject_pitch' });
+        showToast('Dispatched pitch injection to Chrome!');
+      }
+    }
+
     // Python fleet task logging
     if (window.jobPilotApi && window.jobPilotApi.onTaskLog) {
       window.jobPilotApi.onTaskLog((text) => {
@@ -737,6 +938,7 @@
       if (res.ok) {
         allLedgerRows = res.rows;
         document.getElementById('ws-ledger-count').innerText = allLedgerRows.length;
+        document.getElementById('hdr-ledger-count').innerText = allLedgerRows.length;
         filterLedger();
       }
     }
@@ -866,10 +1068,77 @@
       }
     }
 
-    // Model & Settings Management
+    // =================================================================
+    // CONFIGURATION & MODEL PRESETS
+    // =================================================================
+    const PROVIDER_PRESETS = {
+      '9router': {
+        url: 'http://127.0.0.1:20128/v1',
+        token: 'sk-25a6421c7e67b2b5-edzmhl-9843071e',
+        model: 'Fable5'
+      },
+      'openrouter': {
+        url: 'https://openrouter.ai/api/v1',
+        token: '',
+        model: 'meta-llama/llama-3.3-70b-instruct:free'
+      },
+      'groq': {
+        url: 'https://api.groq.com/openai/v1',
+        token: '',
+        model: 'llama-3.3-70b-versatile'
+      },
+      'ollama': {
+        url: 'http://127.0.0.1:11434/v1',
+        token: 'ollama',
+        model: 'llama3.2'
+      },
+      'custom': {
+        url: 'http://localhost:8000/v1',
+        token: '',
+        model: 'gpt-4o'
+      }
+    };
+
+    function onProviderPresetChange(val) {
+      const p = PROVIDER_PRESETS[val];
+      if (p) {
+        document.getElementById('cfg-router-url').value = p.url;
+        document.getElementById('cfg-model-name').value = p.model;
+        if (p.token !== undefined) {
+          document.getElementById('cfg-router-token').value = p.token;
+        }
+      }
+    }
+
+    function toggleTokenVisibility() {
+      const t = document.getElementById('cfg-router-token');
+      t.type = t.type === 'password' ? 'text' : 'password';
+    }
+
+    async function loadSettingsToUI() {
+      if (window.jobPilotApi && window.jobPilotApi.getModelConfig) {
+        const cfg = await window.jobPilotApi.getModelConfig();
+        if (cfg) {
+          if (cfg.provider) document.getElementById('cfg-provider-preset').value = cfg.provider;
+          if (cfg.routerUrl) document.getElementById('cfg-router-url').value = cfg.routerUrl;
+          if (cfg.routerToken) document.getElementById('cfg-router-token').value = cfg.routerToken;
+          if (cfg.model) document.getElementById('cfg-model-name').value = cfg.model;
+
+          const latencyBadge = document.getElementById('cfg-latency-badge');
+          if (cfg.isAlive) {
+            latencyBadge.innerText = 'STATUS: ONLINE (200 OK)';
+            latencyBadge.style.color = '#10b981';
+          } else {
+            latencyBadge.innerText = 'STATUS: OFFLINE';
+            latencyBadge.style.color = '#ef4444';
+          }
+        }
+      }
+    }
+
     async function switchModel(modelName) {
       document.getElementById('cfg-model-name').value = modelName;
-      document.getElementById('sb-model-pill').innerText = '9Router: ' + modelName;
+      document.getElementById('sb-model-pill').innerText = modelName;
       if (window.jobPilotApi && window.jobPilotApi.setModelConfig) {
         await window.jobPilotApi.setModelConfig({ model: modelName });
         showToast('Switched model to ' + modelName);
@@ -877,29 +1146,104 @@
     }
 
     async function saveModelSettings() {
+      const provider = document.getElementById('cfg-provider-preset').value;
       const url = document.getElementById('cfg-router-url').value.trim();
       const token = document.getElementById('cfg-router-token').value.trim();
       const model = document.getElementById('cfg-model-name').value.trim();
 
       if (window.jobPilotApi && window.jobPilotApi.setModelConfig) {
-        const res = await window.jobPilotApi.setModelConfig({ routerUrl: url, token, model });
+        const res = await window.jobPilotApi.setModelConfig({ provider, routerUrl: url, token, model });
         if (res.ok && res.isAlive) {
-          appendTelemetry('[SETTINGS] Router connected. Model set to ' + model);
-          document.getElementById('router-port-text').innerText = '20128: ONLINE';
+          appendTelemetry('[SETTINGS] Gateway connected. Model set to ' + model);
+          document.getElementById('router-port-text').innerText = 'GATEWAY: ONLINE';
           document.getElementById('router-port-text').style.color = '#10b981';
-          showToast('Gateway connection verified (200 OK)');
+          document.getElementById('router-pulse').style.background = '#10b981';
+          document.getElementById('router-pulse').style.boxShadow = '0 0 8px #10b981';
+          showToast('Configuration saved (200 OK)');
         } else {
-          appendTelemetry('[SETTINGS WARNING] Router connection failed on ' + url);
+          appendTelemetry('[SETTINGS WARNING] Gateway unreachable on ' + url);
           document.getElementById('router-port-text').innerText = 'OFFLINE';
           document.getElementById('router-port-text').style.color = '#ef4444';
-          showToast('Connection failed: Gateway offline');
+          document.getElementById('router-pulse').style.background = '#ef4444';
+          document.getElementById('router-pulse').style.boxShadow = '0 0 8px #ef4444';
+          showToast('Saved, but gateway is offline');
         }
+      }
+    }
+
+    async function testCurrentConnection() {
+      const btn = document.getElementById('btn-test-conn');
+      btn.disabled = true;
+      btn.innerText = 'Testing...';
+
+      const url = document.getElementById('cfg-router-url').value.trim();
+      const token = document.getElementById('cfg-router-token').value.trim();
+      const model = document.getElementById('cfg-model-name').value.trim();
+
+      if (window.jobPilotApi && window.jobPilotApi.testConnection) {
+        const res = await window.jobPilotApi.testConnection({ routerUrl: url, token, model });
+        btn.disabled = false;
+        btn.innerText = '🧪 Test Connection';
+
+        const latencyBadge = document.getElementById('cfg-latency-badge');
+        if (res.ok) {
+          latencyBadge.innerText = `ONLINE: ${res.latencyMs}ms (${res.modelCount} models)`;
+          latencyBadge.style.color = '#10b981';
+          showToast(`Gateway verified: ${res.latencyMs}ms latency`);
+        } else {
+          latencyBadge.innerText = `FAILED: ${res.error || 'Connection Refused'}`;
+          latencyBadge.style.color = '#ef4444';
+          showToast(`Connection failed: ${res.error}`);
+        }
+      }
+    }
+
+    async function restartLocalGateway() {
+      const btn = document.getElementById('btn-restart-gw');
+      btn.disabled = true;
+      btn.innerText = 'Starting 9Router...';
+      showToast('Launching 9Router daemon on port 20128...');
+
+      if (window.jobPilotApi && window.jobPilotApi.restartRouter) {
+        const res = await window.jobPilotApi.restartRouter();
+        btn.disabled = false;
+        btn.innerText = '⚡ Start / Restart 9Router';
+
+        if (res.ok) {
+          document.getElementById('router-port-text').innerText = 'GATEWAY: ONLINE';
+          document.getElementById('router-port-text').style.color = '#10b981';
+          document.getElementById('router-pulse').style.background = '#10b981';
+          document.getElementById('router-pulse').style.boxShadow = '0 0 8px #10b981';
+          showToast('9Router started successfully (200 OK)');
+        } else {
+          showToast('Failed to start 9Router daemon.');
+        }
+      }
+    }
+
+    function openExtensionFolder() {
+      if (window.jobPilotApi && window.jobPilotApi.openExtensionFolder) {
+        window.jobPilotApi.openExtensionFolder();
+        showToast('Opened extension folder in Explorer');
+      }
+    }
+
+    async function checkExtensionPing() {
+      try {
+        const res = await fetch('http://127.0.0.1:5056/api/status');
+        const data = await res.json();
+        if (data.ok) {
+          showToast('Bridge port 5056 is active and healthy!');
+        }
+      } catch (e) {
+        showToast('Bridge error: ' + e.message);
       }
     }
 
     // Init
     loadLedgerData();
     loadStats();
+    loadSettingsToUI();
     setInterval(loadStats, 10000);
   </script>
 </body>

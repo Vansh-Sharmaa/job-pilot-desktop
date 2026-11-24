@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "JobPilot AI : Autonomous Career Agent Companion",
+  "version": "1.0.0",
+  "description": "Connects your live browser directly to JobPilot AI desktop workstation for 1-click auto-apply and ledger sync.",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:5056/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "JobPilot AI Companion",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.indeed.com/*",
+        "https://*.linkedin.com/*",
+        "https://*.naukri.com/*",
+        "https://*.foundit.in/*",
+        "https://*.cutshort.io/*",
+        "https://*.instahyre.com/*",
+        "https://*.unstop.com/*",
+        "https://*.cuvette.tech/*",
+        "https://*.workatastartup.com/*",
+        "https://*.wellfound.com/*",
+        "https://*.hirist.tech/*",
+        "https://*.internshala.com/*",
+        "https://*.shine.com/*",
+        "https://docs.google.com/forms/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_end"
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JobPilot AI Companion</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 320px;
+      background: #090d16;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      user-select: none;
+    }
+    .pop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 8px;
+    }
+    .pop-brand { font-size: 13px; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 6px; }
+    .status-badge {
+      font-size: 10px;
+      font-family: monospace;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .status-badge.offline {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .card {
+      background: #0f1524;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 11px;
+    }
+    .card-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #94a3b8;
+      font-family: monospace;
+    }
+    .btn {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 7px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn:hover { background: #334155; }
+    .btn.primary { background: #0284c7; border-color: #38bdf8; }
+    .btn.primary:hover { background: #0369a1; }
+    .footer-note { font-size: 10px; color: #64748b; text-align: center; font-family: monospace; }
+  </style>
+</head>
+<body>
+
+  <div class="pop-header">
+    <div class="pop-brand"><span>⚡</span> <span>JobPilot Companion</span></div>
+    <div class="status-badge" id="bridge-status">CONNECTING</div>
+  </div>
+
+  <div class="card">
+    <span class="card-title">CANDIDATE DOSSIER</span>
+    <div style="color: #fff; font-weight: 700;" id="cand-name">Vansh Sharma</div>
+    <div style="color: #94a3b8;" id="cand-edu">MCA AI & Data Science (2024 - 2026)</div>
+    <div style="color: #10b981; font-weight: 600;">0 - 2 YOE Fresher Tier | Immediate</div>
+  </div>
+
+  <div class="card">
+    <span class="card-title">ACTIVE TAB ACTION</span>
+    <button class="btn primary" id="btn-popup-autofill">⚡ 1-Click Smart Apply</button>
+    <button class="btn" id="btn-popup-pitch">📄 Inject AI Cover Pitch</button>
+    <button class="btn" id="btn-popup-sync">📋 Record to Desktop Ledger</button>
+  </div>
+
+  <div class="footer-note" id="popup-notice">Desktop Bridge: 127.0.0.1:5056</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

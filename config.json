@@ -1,0 +1,6 @@
+{
+  "provider": "9router",
+  "routerUrl": "http://127.0.0.1:20128/v1",
+  "routerToken": "sk-25a6421c7e67b2b5-edzmhl-9843071e",
+  "model": "Fable5"
+}

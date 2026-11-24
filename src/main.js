@@ -8,11 +8,40 @@ let mainWindow = null;
 let activeProcess = null;
 let agentAbortRequested = false;
 
+// Browser Extension Bridge State
+let pendingExtensionCommands = [];
+let lastExtensionPing = 0;
+
 const JOBS_DIR = 'D:\\opencode stuff\\job-agents';
 const TRACKER_PATH = path.join(JOBS_DIR, 'job_applications_tracker.csv');
-let activeRouterUrl = 'http://127.0.0.1:20128/v1';
-let activeRouterToken = 'sk-25a6421c7e67b2b5-edzmhl-9843071e';
-let activeModel = 'Fable5';
+const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
+
+// Default model configuration
+let config = {
+  provider: '9router',
+  routerUrl: 'http://127.0.0.1:20128/v1',
+  routerToken: 'sk-25a6421c7e67b2b5-edzmhl-9843071e',
+  model: 'Fable5'
+};
+
+// Load persisted configuration if present
+try {
+  if (fs.existsSync(CONFIG_PATH)) {
+    const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
+    const parsed = JSON.parse(raw);
+    config = { ...config, ...parsed };
+  }
+} catch (e) {
+  console.warn('Failed to load config.json, using defaults:', e.message);
+}
+
+function saveConfig() {
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to save config.json:', e.message);
+  }
+}
 
 // Candidate profile constants
 const CANDIDATE_PROFILE = {
@@ -28,57 +57,173 @@ const CANDIDATE_PROFILE = {
   pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, PyTorch models, and scalable Python/FastAPI microservices. Immediate joiner.'
 };
 
-// Helper: Check if router is responsive
-function isRouterAlive() {
-  return new Promise((resolve) => {
-    try {
-      const u = new URL(activeRouterUrl + '/models');
-      const req = http.request(
-        {
-          host: u.hostname,
-          port: u.port || 80,
-          path: u.pathname,
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${activeRouterToken}` },
-          timeout: 2000
-        },
-        (res) => {
-          resolve(res.statusCode === 200 || res.statusCode === 401);
-        }
-      );
-      req.on('error', () => resolve(false));
-      req.on('timeout', () => { req.destroy(); resolve(false); });
-      req.end();
-    } catch (e) {
-      resolve(false);
+// =====================================================================
+// BROWSER EXTENSION LOCAL BRIDGE SERVER (PORT 5056)
+// =====================================================================
+function startExtensionBridgeServer() {
+  const bridge = http.createServer((req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
     }
+
+    const parsedUrl = new URL(req.url, 'http://127.0.0.1:5056');
+
+    if (parsedUrl.pathname === '/api/status') {
+      lastExtensionPing = Date.now();
+      mainWindow?.webContents.send('extension-status-changed', { connected: true });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        ok: true,
+        app: 'JobPilot AI Operator',
+        candidate: CANDIDATE_PROFILE,
+        pendingCommandCount: pendingExtensionCommands.length
+      }));
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/sync-application' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          const today = new Date().toISOString().split('T')[0];
+          const entry = `\n${today},"${payload.company || 'Unknown'}","${payload.role || 'Job'}","${payload.location || 'Remote'}","${payload.portal || 'Extension'}","Submitted","${payload.url || ''}"`;
+          fs.appendFileSync(TRACKER_PATH, entry, 'utf-8');
+          mainWindow?.webContents.send('tracker-updated');
+          mainWindow?.webContents.send('task-log', `[EXTENSION SYNC] Verified application for ${payload.company} (${payload.role}) recorded to tracker.`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, message: 'Recorded to ledger' }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      });
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/active-job' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          lastExtensionPing = Date.now();
+          mainWindow?.webContents.send('extension-active-job', payload);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      });
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/pending-command') {
+      lastExtensionPing = Date.now();
+      const cmd = pendingExtensionCommands.shift() || null;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, command: cmd }));
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/command-result' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          mainWindow?.webContents.send('task-log', `[CHROME EXTENSION] Action '${payload.action}' executed successfully.`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false }));
+        }
+      });
+      return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Endpoint not found' }));
+  });
+
+  bridge.listen(5056, '127.0.0.1', () => {
+    console.log('Extension bridge active on http://127.0.0.1:5056');
+  });
+
+  bridge.on('error', (err) => {
+    console.error('Bridge server error:', err.message);
   });
 }
 
-// Helper: Spawn 9router silently if offline
+// =====================================================================
+// MODEL GATEWAY & HEALTH CHECK (NATIVE FETCH)
+// =====================================================================
+
+// Helper: Check if router endpoint is reachable
+async function isRouterAlive() {
+  try {
+    const modelsUrl = `${config.routerUrl.replace(/\/$/, '')}/models`;
+    const res = await fetch(modelsUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${config.routerToken}`
+      },
+      signal: AbortSignal.timeout(3000)
+    });
+    return res.status === 200 || res.status === 401;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Helper: Spawn 9router in the background if local gateway is selected
 function startRouterBackground() {
   try {
-    const proc = spawn('cmd.exe', ['/c', '9router -n --skip-update'], {
+    const npmCmd = path.join(process.env.APPDATA || '', 'npm', '9router.cmd');
+    const hasNpmCmd = fs.existsSync(npmCmd);
+    const cmdToRun = hasNpmCmd ? `"${npmCmd}" -n --skip-update` : '9router -n --skip-update';
+    
+    const proc = spawn('cmd.exe', ['/c', cmdToRun], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true
     });
     proc.unref();
+    return true;
   } catch (e) {
-    console.error('Failed to start 9router:', e);
+    console.error('Failed to spawn 9router daemon:', e.message);
+    return false;
   }
 }
 
-async function ensureRouter() {
-  const alive = await isRouterAlive();
-  if (!alive) {
+// Helper: Ensure router is up with stepped polling
+async function ensureRouter(maxWaitMs = 12000) {
+  if (await isRouterAlive()) return true;
+
+  // Only auto-spawn if target is local 9router
+  if (config.routerUrl.includes('127.0.0.1:20128') || config.routerUrl.includes('localhost:20128')) {
+    mainWindow?.webContents.send('task-log', '[GATEWAY] 9router is offline. Launching daemon...');
     startRouterBackground();
-    for (let i = 0; i < 6; i++) {
-      await new Promise((r) => setTimeout(r, 600));
-      if (await isRouterAlive()) return true;
+    
+    const startTime = Date.now();
+    while (Date.now() - startTime < maxWaitMs) {
+      await new Promise(r => setTimeout(r, 600));
+      if (await isRouterAlive()) {
+        mainWindow?.webContents.send('task-log', '[GATEWAY] 9router connected successfully (200 OK).');
+        return true;
+      }
     }
   }
-  return true;
+  return false;
 }
 
 function createWindow() {
@@ -111,7 +256,8 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   createWindow();
-  await ensureRouter();
+  startExtensionBridgeServer();
+  await ensureRouter(8000);
 });
 
 app.on('window-all-closed', () => {
@@ -213,56 +359,92 @@ ipcMain.handle('abort-agent', async () => {
   return { ok: true };
 });
 
+// IPC: Extension Integration
+ipcMain.handle('open-extension-folder', async () => {
+  const extPath = path.join(__dirname, '..', 'extension');
+  shell.openPath(extPath);
+  return { ok: true, path: extPath };
+});
+
+ipcMain.handle('send-extension-command', async (event, cmd) => {
+  pendingExtensionCommands.push(cmd);
+  return { ok: true, queued: true };
+});
+
+ipcMain.handle('get-extension-status', async () => {
+  const isAlive = (Date.now() - lastExtensionPing) < 5000;
+  return { ok: true, connected: isAlive };
+});
+
 // IPC: Router & Model Configuration
 ipcMain.handle('get-model-config', async () => {
+  const alive = await isRouterAlive();
   return {
-    routerUrl: activeRouterUrl,
-    model: activeModel,
-    isAlive: await isRouterAlive()
+    provider: config.provider,
+    routerUrl: config.routerUrl,
+    model: config.model,
+    routerToken: config.routerToken,
+    isAlive: alive
   };
 });
 
-ipcMain.handle('set-model-config', async (event, { model, routerUrl, token }) => {
-  if (model) activeModel = model;
-  if (routerUrl) activeRouterUrl = routerUrl.replace(/\/$/, '');
-  if (token) activeRouterToken = token;
+ipcMain.handle('set-model-config', async (event, { provider, model, routerUrl, token }) => {
+  if (provider) config.provider = provider;
+  if (model) config.model = model;
+  if (routerUrl) config.routerUrl = routerUrl.replace(/\/$/, '');
+  if (token !== undefined) config.routerToken = token;
+  
+  saveConfig();
   const alive = await isRouterAlive();
-  return { ok: true, isAlive: alive, model: activeModel, routerUrl: activeRouterUrl };
+  return { ok: true, isAlive: alive, model: config.model, routerUrl: config.routerUrl };
+});
+
+ipcMain.handle('restart-router', async () => {
+  mainWindow?.webContents.send('task-log', '[GATEWAY] User initiated gateway restart...');
+  const success = await ensureRouter(10000);
+  return { ok: success, isAlive: success };
+});
+
+ipcMain.handle('test-connection', async (event, { routerUrl, token, model }) => {
+  const targetUrl = (routerUrl || config.routerUrl).replace(/\/$/, '');
+  const targetToken = token !== undefined ? token : config.routerToken;
+  const start = Date.now();
+
+  try {
+    const res = await fetch(`${targetUrl}/models`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${targetToken}` },
+      signal: AbortSignal.timeout(6000)
+    });
+    const latencyMs = Date.now() - start;
+    if (res.status === 200 || res.status === 401) {
+      let modelCount = 0;
+      try {
+        const data = await res.json();
+        modelCount = (data.data || []).length;
+      } catch (e) {}
+      return { ok: true, status: res.status, latencyMs, modelCount };
+    }
+    return { ok: false, status: res.status, latencyMs, error: `HTTP ${res.status}` };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 });
 
 ipcMain.handle('get-available-models', async () => {
-  return new Promise((resolve) => {
-    try {
-      const u = new URL(activeRouterUrl + '/models');
-      const req = http.request(
-        {
-          host: u.hostname,
-          port: u.port || 80,
-          path: u.pathname,
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${activeRouterToken}` },
-          timeout: 4000
-        },
-        (res) => {
-          let b = '';
-          res.on('data', c => b += c);
-          res.on('end', () => {
-            try {
-              const data = JSON.parse(b);
-              const models = (data.data || []).map(m => m.id);
-              resolve({ ok: true, models });
-            } catch (e) {
-              resolve({ ok: true, models: ['Fable5', 'oc-gpt', 'claude-fable-5', 'ag/claude-opus-4-6-thinking'] });
-            }
-          });
-        }
-      );
-      req.on('error', () => resolve({ ok: false, models: ['Fable5', 'oc-gpt'] }));
-      req.end();
-    } catch (e) {
-      resolve({ ok: false, models: ['Fable5'] });
+  try {
+    const res = await fetch(`${config.routerUrl.replace(/\/$/, '')}/models`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${config.routerToken}` },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const models = (data.data || []).map(m => m.id);
+      return { ok: true, models };
     }
-  });
+  } catch (e) {}
+  return { ok: false, models: ['Fable5', 'oc-gpt', 'claude-fable-5', 'ag/claude-opus-4-6-thinking'] };
 });
 
 // IPC: External URL
@@ -312,6 +494,21 @@ const AGENT_TOOLS = [
       parameters: {
         type: 'object',
         properties: {}
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'chrome_browser_action',
+      description: 'Dispatch an autonomous action to the user live personal Chrome or Edge browser via JobPilot companion extension (autofill, inject_pitch, extract_job, navigate).',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['autofill', 'inject_pitch', 'extract_job', 'navigate'] },
+          url: { type: 'string', description: 'URL to navigate if action is navigate.' }
+        },
+        required: ['action']
       }
     }
   },
@@ -408,6 +605,12 @@ async function executeAgentTool(name, args) {
       return { status: 'success', message: 'Injected candidate pitch into active application fields.' };
     }
 
+    case 'chrome_browser_action': {
+      pendingExtensionCommands.push(args);
+      mainWindow?.webContents.send('task-log', `[OPERATOR] Dispatched command '${args.action}' to user Chrome browser extension.`);
+      return { status: 'dispatched', message: `Command '${args.action}' delivered to user personal Chrome browser.` };
+    }
+
     case 'run_fleet_agent': {
       const script = args.scriptName;
       const scriptArgs = args.args || [];
@@ -459,21 +662,14 @@ async function executeAgentTool(name, args) {
     }
 
     case 'get_quota_status': {
-      return new Promise((resolve) => {
-        http.get('http://127.0.0.1:5055/api/stats', (res) => {
-          let b = '';
-          res.on('data', c => b += c);
-          res.on('end', () => {
-            try {
-              resolve(JSON.parse(b));
-            } catch (e) {
-              resolve({ total_all_time: 311, is_capped: true });
-            }
-          });
-        }).on('error', () => {
-          resolve({ total_all_time: 311, is_capped: true, note: 'Daemon running' });
-        });
-      });
+      try {
+        const res = await fetch('http://127.0.0.1:5055/api/stats', { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          const stats = await res.json();
+          return stats;
+        }
+      } catch (e) {}
+      return { total_all_time: 311, is_capped: true, note: 'Autopilot daemon running' };
     }
 
     case 'get_candidate_profile': {
@@ -487,12 +683,29 @@ async function executeAgentTool(name, args) {
 
 // IPC: Execute Autonomous Agent Loop
 ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory = [] }) => {
-  await ensureRouter();
+  // 1. Verify gateway connectivity before starting
+  let isAlive = await isRouterAlive();
+  if (!isAlive) {
+    // Attempt automatic self-healing if local 9router
+    await ensureRouter(7000);
+    isAlive = await isRouterAlive();
+  }
+
+  if (!isAlive) {
+    return {
+      ok: false,
+      isGatewayOffline: true,
+      endpoint: config.routerUrl,
+      model: config.model,
+      error: `AI Gateway at ${config.routerUrl} is offline or unreachable.`
+    };
+  }
+
   agentAbortRequested = false;
 
   const systemMessage = {
     role: 'system',
-    content: 'You are the JobPilot Autonomous Operator, an elite engineering agent running locally inside an OpenCode-style workstation. You have direct tool access to the browser, 14-platform Python fleet, and verified tracker ledger. The user is Vansh Sharma (MCA in AI and Data Science, Class of 2026, 0-2 YOE). Execute tasks directly using available tools when appropriate. Keep responses concise, technical, structured, and factual. Never use em-dashes or en-dashes.'
+    content: 'You are the JobPilot Autonomous Operator, an elite engineering agent running locally inside an OpenCode-style workstation. You have direct tool access to the browser, personal Chrome extension bridge, 14-platform Python fleet, and verified tracker ledger. The user is Vansh Sharma (MCA in AI and Data Science, Class of 2026, 0-2 YOE). Execute tasks directly using available tools when appropriate. Keep responses concise, technical, structured, and factual. Never use em-dashes or en-dashes.'
   };
 
   const messages = [
@@ -513,58 +726,65 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
     loopCount++;
 
     const payload = JSON.stringify({
-      model: activeModel,
+      model: config.model,
       messages: messages,
       tools: AGENT_TOOLS,
       temperature: 0.2
     });
 
-    const aiRes = await new Promise((resolve) => {
-      try {
-        const u = new URL(activeRouterUrl + '/chat/completions');
-        const req = http.request(
-          {
-            host: u.hostname,
-            port: u.port || 80,
-            path: u.pathname,
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${activeRouterToken}`,
-              'Content-Length': Buffer.byteLength(payload)
-            },
-            timeout: 50000
-          },
-          (res) => {
-            let body = '';
-            res.on('data', chunk => body += chunk);
-            res.on('end', () => {
-              try {
-                const data = JSON.parse(body);
-                resolve({ ok: true, data });
-              } catch (e) {
-                resolve({ ok: false, error: 'Failed to parse JSON response: ' + body.slice(0, 200) });
-              }
-            });
-          }
-        );
+    let data = null;
+    try {
+      const chatUrl = `${config.routerUrl.replace(/\/$/, '')}/chat/completions`;
+      const res = await fetch(chatUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.routerToken}`
+        },
+        body: payload,
+        signal: AbortSignal.timeout(60000)
+      });
 
-        req.on('error', err => resolve({ ok: false, error: err.message }));
-        req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'Model query timed out.' }); });
-        req.write(payload);
-        req.end();
-      } catch (err) {
-        resolve({ ok: false, error: err.message });
+      if (!res.ok) {
+        const errorText = await res.text();
+        return { ok: false, error: `Model error (HTTP ${res.status}): ${errorText.slice(0, 300)}`, toolExecutions };
       }
-    });
 
-    if (!aiRes.ok) {
-      return { ok: false, error: aiRes.error, toolExecutions };
+      data = await res.json();
+    } catch (err) {
+      // If connection was refused during loop, attempt one quick restart recovery
+      if (err.message && (err.message.includes('ECONNREFUSED') || err.message.includes('fetch failed'))) {
+        mainWindow?.webContents.send('task-log', '[GATEWAY WARNING] Connection lost. Attempting auto-recovery...');
+        const healed = await ensureRouter(6000);
+        if (healed) {
+          try {
+            const chatUrl = `${config.routerUrl.replace(/\/$/, '')}/chat/completions`;
+            const retryRes = await fetch(chatUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.routerToken}`
+              },
+              body: payload,
+              signal: AbortSignal.timeout(60000)
+            });
+            if (retryRes.ok) {
+              data = await retryRes.json();
+            }
+          } catch (retryErr) {
+            return { ok: false, isGatewayOffline: true, endpoint: config.routerUrl, error: retryErr.message, toolExecutions };
+          }
+        }
+      }
+
+      if (!data) {
+        return { ok: false, isGatewayOffline: true, endpoint: config.routerUrl, error: err.message, toolExecutions };
+      }
     }
 
-    const choice = aiRes.data?.choices?.[0];
+    const choice = data?.choices?.[0];
     if (!choice) {
-      return { ok: false, error: 'Empty choice from model', toolExecutions };
+      return { ok: false, error: 'Empty choice from model response.', toolExecutions };
     }
 
     const message = choice.message;

@@ -1,15 +1,22 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('jobPilotApi', {
-  // Agent & Model APIs
+  // Agent and Model APIs
   runAgentLoop: (userPrompt, conversationHistory) => 
     ipcRenderer.invoke('run-agent-loop', { userPrompt, conversationHistory }),
   abortAgent: () => ipcRenderer.invoke('abort-agent'),
   getModelConfig: () => ipcRenderer.invoke('get-model-config'),
   setModelConfig: (cfg) => ipcRenderer.invoke('set-model-config', cfg),
   getAvailableModels: () => ipcRenderer.invoke('get-available-models'),
+  restartRouter: () => ipcRenderer.invoke('restart-router'),
+  testConnection: (cfg) => ipcRenderer.invoke('test-connection', cfg),
   
-  // Python fleet task runners
+  // Extension Companion APIs
+  openExtensionFolder: () => ipcRenderer.invoke('open-extension-folder'),
+  sendExtensionCommand: (cmd) => ipcRenderer.invoke('send-extension-command', cmd),
+  getExtensionStatus: () => ipcRenderer.invoke('get-extension-status'),
+  
+  // Python Fleet Task Runners
   runTask: (scriptName, args) => ipcRenderer.invoke('run-task', { scriptName, args }),
   stopTask: () => ipcRenderer.invoke('stop-task'),
   getTrackerData: () => ipcRenderer.invoke('get-tracker-data'),
@@ -40,5 +47,15 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
     const handler = () => callback();
     ipcRenderer.on('tracker-updated', handler);
     return () => ipcRenderer.removeListener('tracker-updated', handler);
+  },
+  onExtensionStatusChanged: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('extension-status-changed', handler);
+    return () => ipcRenderer.removeListener('extension-status-changed', handler);
+  },
+  onExtensionActiveJob: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('extension-active-job', handler);
+    return () => ipcRenderer.removeListener('extension-active-job', handler);
   }
 });
