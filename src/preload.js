@@ -16,10 +16,16 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   sendExtensionCommand: (cmd) => ipcRenderer.invoke('send-extension-command', cmd),
   getExtensionStatus: () => ipcRenderer.invoke('get-extension-status'),
   
-  // Python Fleet Task Runners
+  // Orca Fleet Subagent Engine
   runTask: (scriptName, args) => ipcRenderer.invoke('run-task', { scriptName, args }),
   stopTask: () => ipcRenderer.invoke('stop-task'),
+  launchFleetWorker: (scriptName, args) => ipcRenderer.invoke('launch-fleet-worker', { scriptName, args }),
+  killFleetWorker: (scriptName) => ipcRenderer.invoke('kill-fleet-worker', { scriptName }),
+  getFleetProcesses: () => ipcRenderer.invoke('get-fleet-processes'),
+  
+  // Ledger and Exports
   getTrackerData: () => ipcRenderer.invoke('get-tracker-data'),
+  exportLedger: (format) => ipcRenderer.invoke('export-ledger', { format }),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   
   // Real-time Event Listeners

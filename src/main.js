@@ -5,8 +5,10 @@ const { spawn } = require('child_process');
 const http = require('http');
 
 let mainWindow = null;
-let activeProcess = null;
 let agentAbortRequested = false;
+
+// Concurrent background fleet worker processes
+const activeProcesses = new Map(); // scriptName -> { proc, startTime, pid }
 
 // Browser Extension Bridge State
 let pendingExtensionCommands = [];
@@ -168,7 +170,6 @@ function startExtensionBridgeServer() {
 // MODEL GATEWAY & HEALTH CHECK (NATIVE FETCH)
 // =====================================================================
 
-// Helper: Check if router endpoint is reachable
 async function isRouterAlive() {
   try {
     const modelsUrl = `${config.routerUrl.replace(/\/$/, '')}/models`;
@@ -185,7 +186,6 @@ async function isRouterAlive() {
   }
 }
 
-// Helper: Spawn 9router in the background if local gateway is selected
 function startRouterBackground() {
   try {
     const npmCmd = path.join(process.env.APPDATA || '', 'npm', '9router.cmd');
@@ -205,11 +205,9 @@ function startRouterBackground() {
   }
 }
 
-// Helper: Ensure router is up with stepped polling
 async function ensureRouter(maxWaitMs = 12000) {
   if (await isRouterAlive()) return true;
 
-  // Only auto-spawn if target is local 9router
   if (config.routerUrl.includes('127.0.0.1:20128') || config.routerUrl.includes('localhost:20128')) {
     mainWindow?.webContents.send('task-log', '[GATEWAY] 9router is offline. Launching daemon...');
     startRouterBackground();
@@ -228,11 +226,11 @@ async function ensureRouter(maxWaitMs = 12000) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1640,
-    height: 980,
-    minWidth: 1050,
-    minHeight: 680,
-    backgroundColor: '#080a0f',
+    width: 1680,
+    height: 1000,
+    minWidth: 1100,
+    minHeight: 700,
+    backgroundColor: '#06070a',
     title: 'JobPilot Operator : OpenCode Workstation',
     frame: true,
     webPreferences: {
@@ -248,9 +246,10 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    if (activeProcess) {
-      try { activeProcess.kill(); } catch (e) {}
+    for (const [name, item] of activeProcesses.entries()) {
+      try { item.proc.kill(); } catch (e) {}
     }
+    activeProcesses.clear();
   });
 }
 
@@ -300,12 +299,112 @@ ipcMain.handle('get-tracker-data', async () => {
   }
 });
 
-// IPC: Run Python Task
-ipcMain.handle('run-task', async (event, { scriptName, args = [] }) => {
-  if (activeProcess) {
-    return { ok: false, error: 'Another automation process is currently executing.' };
+// IPC: Export Ledger (CSV or JSON)
+ipcMain.handle('export-ledger', async (event, { format = 'csv' }) => {
+  try {
+    const rows = parseTrackerCsv();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const exportFileName = `jobpilot_ledger_${timestamp}.${format}`;
+    const exportPath = path.join(JOBS_DIR, exportFileName);
+
+    if (format === 'json') {
+      fs.writeFileSync(exportPath, JSON.stringify(rows, null, 2), 'utf-8');
+    } else {
+      let csvContent = 'Date,Company,Role,Location,Portal,Status,JobURL\n';
+      rows.forEach(r => {
+        csvContent += `"${r.date}","${r.company}","${r.role}","${r.location}","${r.portal}","${r.status}","${r.url}"\n`;
+      });
+      fs.writeFileSync(exportPath, csvContent, 'utf-8');
+    }
+
+    shell.showItemInFolder(exportPath);
+    return { ok: true, path: exportPath, count: rows.length };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+// =====================================================================
+// ORCA-STYLE CONCURRENT FLEET SUBAGENT RUNNER
+// =====================================================================
+
+ipcMain.handle('get-fleet-processes', async () => {
+  const list = [];
+  for (const [name, item] of activeProcesses.entries()) {
+    list.push({
+      name,
+      pid: item.proc.pid,
+      startTime: item.startTime,
+      running: true
+    });
+  }
+  return { ok: true, processes: list };
+});
+
+ipcMain.handle('launch-fleet-worker', async (event, { scriptName, args = [] }) => {
+  if (activeProcesses.has(scriptName)) {
+    return { ok: false, error: `Worker ${scriptName} is already running.` };
   }
 
+  const fullScript = path.join(JOBS_DIR, scriptName);
+  if (!fs.existsSync(fullScript)) {
+    return { ok: false, error: `File not found: ${fullScript}` };
+  }
+
+  const proc = spawn('python', ['-u', fullScript, ...args], {
+    cwd: JOBS_DIR,
+    env: { ...process.env, PYTHONUNBUFFERED: '1' }
+  });
+
+  activeProcesses.set(scriptName, {
+    proc,
+    startTime: Date.now(),
+    pid: proc.pid
+  });
+
+  mainWindow?.webContents.send('task-status', { running: true, task: scriptName, pid: proc.pid });
+  mainWindow?.webContents.send('task-log', `[FLEET ORCHESTRATOR] Worker started: ${scriptName} (PID ${proc.pid})`);
+
+  proc.stdout.on('data', (data) => {
+    mainWindow?.webContents.send('task-log', `[${scriptName}] ` + data.toString());
+  });
+
+  proc.stderr.on('data', (data) => {
+    mainWindow?.webContents.send('task-log', `[${scriptName} ERROR] ` + data.toString());
+  });
+
+  proc.on('close', (code) => {
+    activeProcesses.delete(scriptName);
+    mainWindow?.webContents.send('task-status', { running: false, task: scriptName, code });
+    mainWindow?.webContents.send('task-log', `[FLEET ORCHESTRATOR] Worker completed: ${scriptName} (Exit code ${code})`);
+  });
+
+  proc.on('error', (err) => {
+    activeProcesses.delete(scriptName);
+    mainWindow?.webContents.send('task-status', { running: false, task: scriptName, error: err.message });
+  });
+
+  return { ok: true, pid: proc.pid, scriptName };
+});
+
+ipcMain.handle('kill-fleet-worker', async (event, { scriptName }) => {
+  const item = activeProcesses.get(scriptName);
+  if (item && item.proc) {
+    try {
+      item.proc.kill();
+      activeProcesses.delete(scriptName);
+      mainWindow?.webContents.send('task-status', { running: false, task: scriptName, cancelled: true });
+      mainWindow?.webContents.send('task-log', `[FLEET ORCHESTRATOR] Worker terminated: ${scriptName}`);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+  return { ok: false, error: 'Process was not running' };
+});
+
+// Single-task runner for legacy triggers
+ipcMain.handle('run-task', async (event, { scriptName, args = [] }) => {
   return new Promise((resolve) => {
     const fullScript = path.join(JOBS_DIR, scriptName);
     const proc = spawn('python', ['-u', fullScript, ...args], {
@@ -313,43 +412,32 @@ ipcMain.handle('run-task', async (event, { scriptName, args = [] }) => {
       env: { ...process.env, PYTHONUNBUFFERED: '1' }
     });
 
-    activeProcess = proc;
+    activeProcesses.set(scriptName, { proc, startTime: Date.now(), pid: proc.pid });
     mainWindow?.webContents.send('task-status', { running: true, task: scriptName });
 
-    proc.stdout.on('data', (data) => {
-      mainWindow?.webContents.send('task-log', data.toString());
-    });
+    proc.stdout.on('data', d => mainWindow?.webContents.send('task-log', d.toString()));
+    proc.stderr.on('data', d => mainWindow?.webContents.send('task-log', d.toString()));
 
-    proc.stderr.on('data', (data) => {
-      mainWindow?.webContents.send('task-log', data.toString());
-    });
-
-    proc.on('close', (code) => {
-      activeProcess = null;
+    proc.on('close', code => {
+      activeProcesses.delete(scriptName);
       mainWindow?.webContents.send('task-status', { running: false, task: scriptName, code });
       resolve({ ok: code === 0, code });
     });
 
-    proc.on('error', (err) => {
-      activeProcess = null;
+    proc.on('error', err => {
+      activeProcesses.delete(scriptName);
       mainWindow?.webContents.send('task-status', { running: false, error: err.message });
       resolve({ ok: false, error: err.message });
     });
   });
 });
 
-// IPC: Stop Running Python Task
 ipcMain.handle('stop-task', async () => {
-  if (activeProcess) {
-    try {
-      activeProcess.kill();
-      activeProcess = null;
-      mainWindow?.webContents.send('task-status', { running: false, cancelled: true });
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
+  for (const [name, item] of activeProcesses.entries()) {
+    try { item.proc.kill(); } catch (e) {}
   }
+  activeProcesses.clear();
+  mainWindow?.webContents.send('task-status', { running: false, cancelled: true });
   return { ok: true };
 });
 
@@ -683,10 +771,8 @@ async function executeAgentTool(name, args) {
 
 // IPC: Execute Autonomous Agent Loop
 ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory = [] }) => {
-  // 1. Verify gateway connectivity before starting
   let isAlive = await isRouterAlive();
   if (!isAlive) {
-    // Attempt automatic self-healing if local 9router
     await ensureRouter(7000);
     isAlive = await isRouterAlive();
   }
@@ -752,7 +838,6 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
 
       data = await res.json();
     } catch (err) {
-      // If connection was refused during loop, attempt one quick restart recovery
       if (err.message && (err.message.includes('ECONNREFUSED') || err.message.includes('fetch failed'))) {
         mainWindow?.webContents.send('task-log', '[GATEWAY WARNING] Connection lost. Attempting auto-recovery...');
         const healed = await ensureRouter(6000);
@@ -790,7 +875,6 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
     const message = choice.message;
     const reasoning = message?.reasoning_content || '';
 
-    // Check if the model called tools
     if (message?.tool_calls && message.tool_calls.length > 0) {
       messages.push(message);
 
@@ -805,7 +889,6 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
           toolArgs = JSON.parse(tCall.function.arguments || '{}');
         } catch (e) {}
 
-        // Notify UI of tool execution in progress
         mainWindow?.webContents.send('agent-tool-event', {
           type: 'start',
           id: tCall.id,
@@ -823,7 +906,6 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
           result: toolResult
         });
 
-        // Notify UI of tool completion
         mainWindow?.webContents.send('agent-tool-event', {
           type: 'end',
           id: tCall.id,
