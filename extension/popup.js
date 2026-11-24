@@ -116,6 +116,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Action: STOP AUTONOMOUS AGENT
+  const btnPopupStop = document.getElementById('btn-popup-stop');
+  if (btnPopupStop) {
+    btnPopupStop.addEventListener('click', async () => {
+      chrome.runtime.sendMessage({ type: 'ABORT_AGENT' });
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.id) {
+        chrome.tabs.sendMessage(tab.id, { action: 'abort' }, () => {});
+      }
+      if (btnTabAgent) {
+        btnTabAgent.disabled = false;
+        btnTabAgent.innerHTML = '<span>⚡</span> <span>Start Autonomous Apply Agent</span>';
+      }
+      noticeEl.innerText = 'Agent stopped immediately.';
+    });
+  }
+
   // Action: Smart Apply (Autofill)
   const btnAutofill = document.getElementById('btn-popup-autofill');
   if (btnAutofill) {

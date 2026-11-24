@@ -377,6 +377,10 @@
                 <i data-lucide="zap" class="lucide-icon-sm"></i>
                 <span id="ubb-apply-btn-label">Auto-Apply</span>
               </button>
+              <button class="ubb-btn-stop" id="ubb-btn-stop-agent" onclick="stopActiveAgentExecution()" title="Stop running agent immediately" style="display: none; background: #ef4444; color: #fff; border: 1px solid #f87171; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; align-items: center; gap: 4px;">
+                <span>■</span>
+                <span>Stop</span>
+              </button>
             </div>
           </div>
 
@@ -2006,6 +2010,9 @@
       const btn = document.querySelector('.ubb-btn-apply');
       if (btn) btn.disabled = true;
 
+      const stopBtn = document.getElementById('ubb-btn-stop-agent');
+      if (stopBtn) stopBtn.style.display = 'inline-flex';
+
       const portal = RADAR_PORTALS.find(p => p.id === activeRadarPortalId) || { name: 'Active Portal' };
 
       if (executionEngine === 'chrome') {
@@ -2243,11 +2250,21 @@
       }
     }
 
-    function abortActiveAgent() {
+    function stopActiveAgentExecution() {
       if (window.jobPilotApi && window.jobPilotApi.abortAgent) {
         window.jobPilotApi.abortAgent();
-        showToast('Abort signal delivered to agent.');
       }
+      showToast('Stop command dispatched. Agent halted immediately.');
+      logRadarTelemetry('ABORT', 'Candidate triggered immediate stop signal.');
+      const stopBtn = document.getElementById('ubb-btn-stop-agent');
+      if (stopBtn) stopBtn.style.display = 'none';
+      const applyBtn = document.querySelector('.ubb-btn-apply');
+      if (applyBtn) applyBtn.disabled = false;
+      setPortalApplyingState(activeRadarPortalId, false);
+    }
+
+    function abortActiveAgent() {
+      stopActiveAgentExecution();
     }
 
     async function submitAgentTask() {

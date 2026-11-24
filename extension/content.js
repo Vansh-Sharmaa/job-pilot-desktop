@@ -7,6 +7,7 @@
   let activeCandidate = null;
   let activeJobMeta = null;
   let isAgentRunning = false;
+  let agentAbortRequested = false;
   let cachedBridgeToken = '';
 
   // Retrieve candidate profile from background/bridge
@@ -135,23 +136,38 @@
     return activeJobMeta;
   }
 
+  // Reliable agent stop and cancellation handler
+  function stopAgent(reason = 'Autonomous agent stopped by user.') {
+    isAgentRunning = false;
+    agentAbortRequested = true;
+    const hud = document.getElementById('jobpilot-agent-hud');
+    if (hud) {
+      hud.style.display = 'none';
+      hud.classList.remove('review-gate');
+    }
+    document.querySelectorAll('.jobpilot-target-highlight').forEach(el => el.classList.remove('jobpilot-target-highlight'));
+    sendTelemetry('ABORT', reason);
+    try {
+      chrome.runtime.sendMessage({ type: 'ABORT_AGENT' });
+    } catch (e) {}
+  }
+
   // Visual In-Tab Agent HUD Overlay
   function ensureAgentHud() {
+    if (agentAbortRequested || !isAgentRunning) return null;
     let hud = document.getElementById('jobpilot-agent-hud');
     if (!hud) {
       hud = document.createElement('div');
       hud.id = 'jobpilot-agent-hud';
       hud.innerHTML = `
-        <div class="jp-hud-pulse"></div>
-        <div class="jp-hud-title">⚡ JobPilot Tab Agent</div>
+        <div class="jp-hud-pulse" id="jp-hud-pulse-dot"></div>
+        <div class="jp-hud-title" id="jp-hud-title-txt">⚡ JobPilot Tab Agent</div>
         <div class="jp-hud-step" id="jp-hud-step-text">Initializing Autonomous Agent...</div>
         <div class="jp-hud-close" id="jp-hud-cancel-btn" title="Stop Agent">✕</div>
       `;
       document.body.appendChild(hud);
       document.getElementById('jp-hud-cancel-btn').addEventListener('click', () => {
-        isAgentRunning = false;
-        hud.style.display = 'none';
-        sendTelemetry('ABORT', 'Autonomous agent stopped by user.');
+        stopAgent('Autonomous agent stopped by user via HUD stop button.');
       });
     }
     hud.style.display = 'flex';
@@ -159,7 +175,9 @@
   }
 
   function updateAgentHud(stepText, isDone = false) {
+    if (agentAbortRequested || !isAgentRunning) return;
     const hud = ensureAgentHud();
+    if (!hud) return;
     const txt = document.getElementById('jp-hud-step-text');
     if (txt) {
       txt.innerText = stepText;
@@ -174,8 +192,77 @@
   function hideAgentHud(delayMs = 3000) {
     setTimeout(() => {
       const hud = document.getElementById('jobpilot-agent-hud');
-      if (hud) hud.style.display = 'none';
+      if (hud) {
+        hud.style.display = 'none';
+        hud.classList.remove('review-gate');
+      }
     }, delayMs);
+  }
+
+  // Human-in-the-Loop Review Gate (Presents filled fields for user verification before submission)
+  function presentHumanReviewGate(totalFilled, submitBtn, meta) {
+    if (agentAbortRequested) return;
+
+    let hud = document.getElementById('jobpilot-agent-hud');
+    if (!hud) {
+      hud = document.createElement('div');
+      hud.id = 'jobpilot-agent-hud';
+      document.body.appendChild(hud);
+    }
+
+    hud.className = 'review-gate';
+    hud.style.display = 'flex';
+
+    hud.innerHTML = `
+      <div class="jp-hud-pulse review-pulse"></div>
+      <div class="jp-hud-title">📋 Review Fields (${totalFilled} filled)</div>
+      <div class="jp-hud-step" id="jp-hud-step-text">Verify details. Ready to submit?</div>
+      <div class="jp-hud-review-actions">
+        ${submitBtn ? '<button class="jp-hud-btn confirm" id="jp-hud-confirm-submit">🚀 Submit Now</button>' : ''}
+        <button class="jp-hud-btn edit" id="jp-hud-manual-edit">✏️ Edit Manually</button>
+        <button class="jp-hud-btn cancel" id="jp-hud-abort-review" title="Cancel Application">✕</button>
+      </div>
+    `;
+
+    // Highlight submit button if available
+    if (submitBtn) {
+      submitBtn.classList.add('jobpilot-target-highlight');
+      document.getElementById('jp-hud-confirm-submit')?.addEventListener('click', async () => {
+        if (!isAgentRunning && !agentAbortRequested) return;
+        updateAgentHud('Submitting verified application...', false);
+        sendTelemetry('SUBMIT', `User approved application submission on ${meta.portal} for ${meta.company}.`);
+        submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await sleep(400);
+        submitBtn.click();
+        submitBtn.classList.remove('jobpilot-target-highlight');
+        await sleep(1200);
+
+        syncJobToDesktop();
+        updateAgentHud(`✓ Application Submitted! (${meta.company})`, true);
+        sendTelemetry('SUCCESS', `Application verified and logged for ${meta.title} at ${meta.company}!`);
+        hideAgentHud(4000);
+        isAgentRunning = false;
+      });
+    }
+
+    document.getElementById('jp-hud-manual-edit')?.addEventListener('click', () => {
+      sendTelemetry('REVIEW', 'Candidate chose to review and edit fields manually.');
+      updateAgentHud('✓ Fields preserved. Edit directly and submit whenever ready.', true);
+      if (submitBtn) submitBtn.classList.remove('jobpilot-target-highlight');
+      hideAgentHud(3000);
+      isAgentRunning = false;
+    });
+
+    document.getElementById('jp-hud-abort-review')?.addEventListener('click', () => {
+      if (submitBtn) submitBtn.classList.remove('jobpilot-target-highlight');
+      stopAgent('User cancelled application at review gate.');
+    });
+
+    // Scroll to the first filled review element so user sees it right away
+    const firstFilled = document.querySelector('.jobpilot-filled-review');
+    if (firstFilled) {
+      firstFilled.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -187,10 +274,11 @@
   }
 
   // AUTONOMOUS TAB AGENT RUNNER
-  // Orchestrates: Scan -> Apply Trigger Click -> Form Autofill -> Multi-Step Progression -> Submission -> Ledger Sync
+  // Orchestrates: Scan -> Apply Trigger Click -> Form Autofill -> Multi-Step Progression -> Human Review -> Submission -> Ledger Sync
   async function runAutonomousApplyAgent() {
     if (isAgentRunning) return;
     isAgentRunning = true;
+    agentAbortRequested = false;
 
     const cand = activeCandidate || {
       name: 'Vansh Sharma',
@@ -225,6 +313,7 @@
     sendTelemetry('SCAN', `Scanning ${meta.portal} on active tab for ${meta.company}...`);
 
     await sleep(600);
+    if (!isAgentRunning || agentAbortRequested) return;
 
     // Step 1: Detect if form fields are already open or if an Apply button needs clicking
     const visibleInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea'))
@@ -270,18 +359,22 @@
         updateAgentHud(`Clicking "${targetBtn.innerText.trim().slice(0, 24)}"...`);
         sendTelemetry('CLICK', `Clicked application trigger button: ${targetBtn.innerText.trim()}`);
         await sleep(500);
+        if (!isAgentRunning || agentAbortRequested) return;
         targetBtn.click();
         targetBtn.classList.remove('jobpilot-target-highlight');
         await sleep(1200); // Allow application modal to load
       }
     }
 
+    if (!isAgentRunning || agentAbortRequested) return;
+
     // Multi-Step loop (handles up to 4 sequential application form steps)
     let stepCount = 0;
     const maxSteps = 4;
     let totalFilled = 0;
+    let detectedSubmitBtn = null;
 
-    while (stepCount < maxSteps && isAgentRunning) {
+    while (stepCount < maxSteps && isAgentRunning && !agentAbortRequested) {
       stepCount++;
       updateAgentHud(`Step ${stepCount}: Scanning & answering form fields...`);
       sendTelemetry('FILL_STEP', `Autonomous agent filling fields & answering AI questions on Step ${stepCount}...`);
@@ -289,8 +382,9 @@
       const filledOnThisStep = await executeSmartFormFillingWithAI(cand, meta);
       totalFilled += filledOnThisStep;
       await sleep(600);
+      if (!isAgentRunning || agentAbortRequested) return;
 
-      // Check for Next / Continue / Proceed buttons
+      // Check for Next / Continue / Proceed buttons vs Final Submit buttons
       const nextButtons = Array.from(document.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]'))
         .filter(b => b.offsetParent !== null && !b.disabled);
 
@@ -307,45 +401,31 @@
         }
       }
 
-      if (nextBtn && !submitBtn) {
+      if (submitBtn) {
+        detectedSubmitBtn = submitBtn;
+        break; // Stop auto-advancing; present human review gate before submitting!
+      } else if (nextBtn) {
         nextBtn.classList.add('jobpilot-target-highlight');
         nextBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
         updateAgentHud(`Navigating to Next Step (${nextBtn.innerText.trim()})...`);
         sendTelemetry('NEXT_STEP', `Advancing multi-step application: ${nextBtn.innerText.trim()}`);
         await sleep(600);
+        if (!isAgentRunning || agentAbortRequested) return;
         nextBtn.click();
         nextBtn.classList.remove('jobpilot-target-highlight');
         await sleep(1200);
-      } else if (submitBtn) {
-        // Final Submission Step
-        submitBtn.classList.add('jobpilot-target-highlight');
-        submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        updateAgentHud(`Submitting Application (${submitBtn.innerText.trim()})...`);
-        sendTelemetry('SUBMIT', `Submitting application on ${meta.portal} for ${meta.company}...`);
-        await sleep(800);
-        submitBtn.click();
-        submitBtn.classList.remove('jobpilot-target-highlight');
-        await sleep(1500);
-
-        // Record application to Desktop Ledger
-        syncJobToDesktop();
-        updateAgentHud(`✅ Application Submitted! (${meta.company})`, true);
-        sendTelemetry('SUCCESS', `Application verified and logged for ${meta.title} at ${meta.company}!`);
-        hideAgentHud(4000);
-        isAgentRunning = false;
-        return;
+        if (!isAgentRunning || agentAbortRequested) return;
       } else {
         // No further steps found
         break;
       }
     }
 
-    // Finished filling form
-    updateAgentHud(`✓ Auto-filled ${totalFilled} fields. Ready for review!`, true);
-    sendTelemetry('COMPLETE', `Form autofill complete (${totalFilled} inputs populated).`);
-    syncJobToDesktop();
-    hideAgentHud(4000);
-    isAgentRunning = false;
+    if (!isAgentRunning || agentAbortRequested) return;
+
+    // PRESENT HUMAN REVIEW GATE: Never auto-submit blindly without candidate confirmation
+    presentHumanReviewGate(totalFilled, detectedSubmitBtn, meta);
+    sendTelemetry('REVIEW_GATE', `Form filled with ${totalFilled} answers. Awaiting candidate human review.`);
   }
 
   // Extract human-readable question or label for any form field
@@ -414,6 +494,7 @@
     let filledCount = 0;
 
     for (const el of inputs) {
+      if (!isAgentRunning || agentAbortRequested) return filledCount;
       if (el.offsetParent === null) continue; // Skip hidden elements
       const tag = el.tagName.toLowerCase();
       const type = (el.type || '').toLowerCase();
@@ -426,24 +507,28 @@
         const labelEl = el.closest('label') || (el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null);
         const labelText = ((labelEl ? labelEl.innerText : '') + ' ' + identifier).toLowerCase();
 
-        if ((labelText.includes('authorized') || labelText.includes('legally authorized') || labelText.includes('eligible to work')) && !labelText.includes('sponsorship')) {
+        if (labelText.includes('gender') || labelText.includes('sex') || identifier.includes('gender')) {
+          if ((labelText.includes('male') && !labelText.includes('female')) || el.value.toLowerCase() === 'male') {
+            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+          }
+        } else if ((labelText.includes('authorized') || labelText.includes('legally authorized') || labelText.includes('eligible to work')) && !labelText.includes('sponsorship')) {
           if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
-            el.checked = true; triggerEvents(el); filledCount++;
+            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
         } else if (labelText.includes('sponsorship') || labelText.includes('require visa')) {
           if (labelText.includes('no') || el.value.toLowerCase() === 'no') {
-            el.checked = true; triggerEvents(el); filledCount++;
+            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
         } else if (labelText.includes('relocate') || labelText.includes('comfortable working') || labelText.includes('willing to travel')) {
           if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
-            el.checked = true; triggerEvents(el); filledCount++;
+            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
         } else if (labelText.includes('immediate') || labelText.includes('join immediately')) {
           if (labelText.includes('yes') || el.value.toLowerCase() === 'yes' || type === 'checkbox') {
-            el.checked = true; triggerEvents(el); filledCount++;
+            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
         } else if (type === 'checkbox' && (labelText.includes('agree') || labelText.includes('certify') || labelText.includes('consent') || labelText.includes('acknowledge') || labelText.includes('terms'))) {
-          el.checked = true; triggerEvents(el); filledCount++;
+          el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
         }
         continue;
       }
@@ -452,32 +537,44 @@
       if (tag === 'select') {
         const options = Array.from(el.options);
         let matched = false;
-        if (identifier.includes('notice')) {
+        if (identifier.includes('gender') || identifier.includes('sex')) {
+          const opt = options.find(o => {
+            const txt = o.text.toLowerCase().trim();
+            return (txt === 'male' || txt.includes('male')) && !txt.includes('female');
+          });
+          if (opt) { el.value = opt.value; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++; matched = true; }
+        } else if (identifier.includes('notice')) {
           const opt = options.find(o => o.text.toLowerCase().includes('immediate') || o.text.toLowerCase().includes('0 days') || o.value === '0');
-          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; matched = true; }
+          if (opt) { el.value = opt.value; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++; matched = true; }
         } else if (identifier.includes('experience') || identifier.includes('yoe')) {
           const opt = options.find(o => o.text.toLowerCase().includes('0-1') || o.text.toLowerCase().includes('1-2') || o.text.toLowerCase().includes('entry') || o.text.toLowerCase().includes('fresher') || o.value === '1');
-          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; matched = true; }
+          if (opt) { el.value = opt.value; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++; matched = true; }
         } else if (identifier.includes('education') || identifier.includes('degree') || identifier.includes('qualification')) {
           const opt = options.find(o => o.text.toLowerCase().includes('master') || o.text.toLowerCase().includes('post graduate') || o.text.toLowerCase().includes('mca') || o.text.toLowerCase().includes('bachelor'));
-          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; matched = true; }
-        } else if (identifier.includes('country')) {
-          const opt = options.find(o => o.text.toLowerCase() === 'india' || o.value.toLowerCase() === 'in');
-          if (opt) { el.value = opt.value; triggerEvents(el); filledCount++; matched = true; }
+          if (opt) { el.value = opt.value; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++; matched = true; }
+        } else if (identifier.includes('country') || identifier.includes('nationality') || identifier.includes('citizenship')) {
+          const opt = options.find(o => o.text.toLowerCase().includes('india') || o.value.toLowerCase() === 'in');
+          if (opt) { el.value = opt.value; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++; matched = true; }
         }
 
         // Ask AI to pick the best dropdown option if unmatched
         if (!matched && options.length > 1) {
+          if (!isAgentRunning || agentAbortRequested) return filledCount;
           const qText = extractFieldQuestion(el);
           const optionTexts = options.map(o => o.text.trim()).filter(t => t && !t.toLowerCase().includes('select'));
           if (qText.length > 4 && optionTexts.length > 0) {
             el.classList.add('jobpilot-target-highlight');
             updateAgentHud(`AI selecting option: "${qText.slice(0, 26)}..."`);
             const aiChoice = await askDesktopAI(qText, 'select', optionTexts, meta);
+            if (!isAgentRunning || agentAbortRequested) {
+              el.classList.remove('jobpilot-target-highlight');
+              return filledCount;
+            }
             const bestOpt = options.find(o => o.text.trim().toLowerCase() === aiChoice.toLowerCase() || o.text.trim().toLowerCase().includes(aiChoice.toLowerCase()));
             if (bestOpt) {
               el.value = bestOpt.value;
               triggerEvents(el);
+              el.classList.add('jobpilot-filled-review');
               filledCount++;
             }
             el.classList.remove('jobpilot-target-highlight');
@@ -490,7 +587,11 @@
       if (el.value && el.value.trim().length > 0) continue; // Preserve existing user entries
 
       let valToSet = '';
-      if ((identifier.includes('full name') || identifier.includes('candidate name') || identifier.includes('your name')) && !identifier.includes('first') && !identifier.includes('last')) {
+      if (identifier.includes('gender') || identifier.includes('sex')) {
+        valToSet = 'Male';
+      } else if (identifier.includes('citizenship') || identifier.includes('nationality')) {
+        valToSet = 'Indian';
+      } else if ((identifier.includes('full name') || identifier.includes('candidate name') || identifier.includes('your name')) && !identifier.includes('first') && !identifier.includes('last')) {
         valToSet = cand.name;
       } else if (identifier.includes('first name') || identifier.includes('firstname') || identifier.includes('fname')) {
         valToSet = cand.firstName || 'Vansh';
@@ -527,14 +628,19 @@
       } else if (identifier.includes('total experience') || identifier.includes('total yoe') || (identifier.includes('experience') && !identifier.includes('python') && !identifier.includes('pytorch'))) {
         valToSet = type === 'number' ? '1' : '1 year';
       } else {
-        // Custom company screening question: ask local AI using Vansh's resume!
+        // Custom company screening question: ask local AI using Vansh's resume
         const questionText = extractFieldQuestion(el);
         if (questionText && questionText.length >= 4 && !questionText.toLowerCase().includes('search')) {
+          if (!isAgentRunning || agentAbortRequested) return filledCount;
           el.classList.add('jobpilot-target-highlight');
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           updateAgentHud(`AI answering: "${questionText.slice(0, 28)}..."`);
           sendTelemetry('AI_QA', `Generating human answer for: ${questionText.slice(0, 60)}`);
           const aiAns = await askDesktopAI(questionText, type === 'number' ? 'number' : 'text', [], meta);
+          if (!isAgentRunning || agentAbortRequested) {
+            el.classList.remove('jobpilot-target-highlight');
+            return filledCount;
+          }
           if (aiAns) {
             valToSet = aiAns;
           }
@@ -545,8 +651,10 @@
       if (valToSet) {
         el.value = valToSet;
         triggerEvents(el);
+        el.classList.add('jobpilot-filled-review');
         filledCount++;
         await sleep(80);
+        if (!isAgentRunning || agentAbortRequested) return filledCount;
       }
     }
 
@@ -760,7 +868,11 @@
 
   // Listen for commands dispatched from desktop agent via background worker
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'start_autonomous_apply' || request.action === 'apply') {
+    if (request.action === 'abort' || request.action === 'stop') {
+      stopAgent('Remote abort command from desktop');
+      sendResponse({ status: 'aborted' });
+      return true;
+    } else if (request.action === 'start_autonomous_apply' || request.action === 'apply') {
       runAutonomousApplyAgent().then(() => {
         sendResponse({ status: 'completed' });
       });

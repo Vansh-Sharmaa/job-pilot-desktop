@@ -79,6 +79,19 @@ async function executeCommandInActiveTab(cmd) {
     return;
   }
 
+  if (cmd.action === 'abort' || cmd.action === 'stop') {
+    chrome.tabs.query({}, (tabs) => {
+      if (tabs) {
+        for (const t of tabs) {
+          try {
+            chrome.tabs.sendMessage(t.id, { action: 'abort' });
+          } catch (e) {}
+        }
+      }
+    });
+    return;
+  }
+
   // 1. Query active tab across any window without restricting to currently focused window
   let tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tabs || tabs.length === 0) {
@@ -192,6 +205,30 @@ async function reportCommandResult(action, response) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'GET_STATUS') {
     sendResponse({ isConnected, candidate: candidateProfile });
+    return true;
+  }
+
+  if (request.type === 'ABORT_AGENT') {
+    getBridgeToken().then(token => {
+      fetch(`${BRIDGE_URL}/api/abort-agent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-JobPilot-Token': token
+        }
+      }).catch(() => {});
+    });
+    // Broadcast abort to any other active tabs
+    chrome.tabs.query({}, (tabs) => {
+      if (tabs) {
+        for (const t of tabs) {
+          try {
+            chrome.tabs.sendMessage(t.id, { action: 'abort' });
+          } catch (e) {}
+        }
+      }
+    });
+    sendResponse({ ok: true });
     return true;
   }
 

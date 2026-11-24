@@ -104,6 +104,7 @@ function saveConfig() {
 function terminateProcessTree(proc) {
   if (!proc || !proc.pid) return;
   const pid = proc.pid;
+  if (pid === process.pid) return; // Prevent killing main Electron workstation process
   if (process.platform === 'win32') {
     try {
       exec(`taskkill /pid ${pid} /T /F`, (err) => {
@@ -311,6 +312,25 @@ async function answerQuestionWithAI(question, company = '', role = '', fieldType
   }
 
   // Pre-configured common screening answers in natural human phrasing
+  if (qClean.includes('gender') || qClean.includes('sex')) {
+    if (hasOptions) {
+      const maleOpt = options.find(o => {
+        const lower = o.toLowerCase().trim();
+        return (lower === 'male' || lower.includes('male')) && !lower.includes('female');
+      });
+      if (maleOpt) return { ok: true, answer: maleOpt };
+    }
+    return { ok: true, answer: 'Male' };
+  }
+
+  if (qClean.includes('nationality') || qClean.includes('citizenship') || qClean.includes('country of citizenship')) {
+    if (hasOptions) {
+      const indOpt = options.find(o => o.toLowerCase().includes('india') || o.toLowerCase().includes('indian'));
+      if (indOpt) return { ok: true, answer: indOpt };
+    }
+    return { ok: true, answer: 'Indian' };
+  }
+
   if (!hasOptions) {
     if (qClean.includes('notice period') || qClean.includes('joining time') || qClean.includes('how soon')) {
       return { ok: true, answer: 'I can join immediately with zero notice period' };
@@ -348,6 +368,8 @@ async function answerQuestionWithAI(question, company = '', role = '', fieldType
 
     const resumeContext = [
       'Candidate Name: Vansh Sharma',
+      'Gender: Male',
+      'Citizenship: Indian',
       'Location: Gurgaon Haryana India (open to relocate)',
       'Education: Master of Computer Applications (MCA) in AI and Data Science at Amity University (2024 to 2026, CGPA 8.5)',
       'Experience level: Fresher / 0 to 2 years hands on project and internship experience',
@@ -647,6 +669,15 @@ function startExtensionBridgeServer() {
           res.end(JSON.stringify({ ok: false, error: e.message }));
         }
       });
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/abort-agent' || parsedUrl.pathname === '/api/clear-commands') {
+      pendingExtensionCommands = [];
+      agentAbortRequested = true;
+      debugLog('Bridge aborted active agent and cleared pending commands.');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, cleared: true }));
       return;
     }
 
@@ -1593,6 +1624,9 @@ ipcMain.handle('kill-all-fleet-workers', async () => {
 // IPC: Abort Active Agent Loop
 ipcMain.handle('abort-agent', async () => {
   agentAbortRequested = true;
+  pendingExtensionCommands = [];
+  pendingExtensionCommands.push({ action: 'abort' });
+  debugLog('IPC abort-agent handled: cleared queue and dispatched abort signal');
   return { ok: true };
 });
 
