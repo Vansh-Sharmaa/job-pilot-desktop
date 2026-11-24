@@ -1,81 +1,273 @@
-/* JobPilot AI Companion - Floating Widget Styles */
+/* JobPilot AI Companion - Precision Utility Floating Widget */
 #jobpilot-floating-pill {
   position: fixed;
   bottom: 24px;
   right: 24px;
   z-index: 2147483647;
-  background: rgba(13, 18, 28, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  border-radius: 12px;
-  padding: 10px 14px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  background: #090a0f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(59, 130, 246, 0.15);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #fff;
-  width: 250px;
+  color: #f8fafc;
+  width: 300px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   user-select: none;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(12px);
+}
+
+#jobpilot-floating-pill.minimized {
+  width: auto;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: #090a0f;
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+#jobpilot-floating-pill.minimized .jp-body,
+#jobpilot-floating-pill.minimized .jp-pill-actions,
+#jobpilot-floating-pill.minimized .jp-pill-status {
+  display: none !important;
 }
 
 .jp-pill-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+}
+
+.jp-logo-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .jp-logo {
   font-size: 12px;
-  font-weight: 800;
-  color: #38bdf8;
-  letter-spacing: -0.02em;
-}
-
-.jp-btn-close {
-  cursor: pointer;
-  color: #64748b;
-  font-size: 16px;
-  line-height: 1;
-}
-.jp-btn-close:hover {
+  font-weight: 700;
   color: #fff;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.jp-pill-actions {
+.jp-online-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.jp-online-dot.offline {
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.jp-portal-tag {
+  font-size: 9.5px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.jp-ctrl-group {
   display: flex;
+  align-items: center;
   gap: 6px;
 }
 
-.jp-action-btn {
-  flex: 1;
+.jp-btn-icon {
+  cursor: pointer;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+.jp-btn-icon:hover {
+  color: #fff;
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #cbd5e1;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 6px 8px;
+}
+
+/* Job Detection Card inside Widget */
+.jp-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #11141e;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 6px;
+  padding: 7px 10px;
+}
+
+.jp-job-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jp-job-meta {
+  font-size: 10.5px;
+  color: #94a3b8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Actions Row */
+.jp-pill-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.jp-action-btn {
+  background: #171b26;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
+
 .jp-action-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: #202636;
+  border-color: rgba(255, 255, 255, 0.18);
   color: #fff;
 }
+
 .jp-action-btn.primary {
-  background: #0284c7;
+  background: #3b82f6;
   color: #fff;
-  border-color: #38bdf8;
+  border-color: #60a5fa;
+  grid-column: span 2;
+  padding: 8px 10px;
+  font-weight: 700;
+  font-size: 11.5px;
+  animation: pulseAgentCyan 2.5s infinite;
 }
+
 .jp-action-btn.primary:hover {
-  background: #0369a1;
+  background: #2563eb;
 }
 
 .jp-pill-status {
   font-size: 10px;
   font-family: ui-monospace, Menlo, Consolas, monospace;
-  color: #94a3b8;
+  color: #64748b;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* HIGH-VISIBILITY AGENT HUD OVERLAY (TOP-CENTER OF TAB) */
+#jobpilot-agent-hud {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  background: #090a0f;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  border-radius: 8px;
+  padding: 8px 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85), 0 0 16px rgba(59, 130, 246, 0.35);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+  animation: pulseAgentCyan 2s infinite;
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+}
+
+.jp-hud-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: hudBlink 1s infinite;
+}
+
+@keyframes hudBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.jp-hud-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.jp-hud-step {
+  font-size: 11.5px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 2px 8px;
+  border-radius: 4px;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jp-hud-close {
+  cursor: pointer;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.jp-hud-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* LIVE ELEMENT HIGHLIGHTER WHEN AGENT IS INTERACTING */
+.jobpilot-target-highlight {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.7) !important;
+  transition: all 0.2s ease !important;
+}
+
+@keyframes pulseAgentCyan {
+  0%, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
 }
