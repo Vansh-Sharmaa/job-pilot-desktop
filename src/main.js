@@ -1648,7 +1648,7 @@ ipcMain.handle('trigger-tab-agent', async () => {
   return { ok: true };
 });
 
-ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_autonomous_apply' } = {}) => {
+ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_autonomous_apply', quota = 20 } = {}) => {
   try {
     const extPath = path.join(__dirname, '..', 'extension');
     const browserCandidates = [
@@ -1669,7 +1669,7 @@ ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_
 
     const targetUrl = url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
     if (action) {
-      pendingExtensionCommands.push({ action, url: targetUrl });
+      pendingExtensionCommands.push({ action, url: targetUrl, quota });
     }
 
     const args = [

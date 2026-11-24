@@ -4,11 +4,11 @@
   bottom: 24px;
   right: 24px;
   z-index: 2147483647;
-  background: #090a0f;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0b0d12;
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 10px;
   padding: 12px 14px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #f8fafc;
   width: 300px;
@@ -24,8 +24,8 @@
   width: auto;
   padding: 6px 12px;
   border-radius: 9999px;
-  background: #090a0f;
-  border-color: rgba(59, 130, 246, 0.4);
+  background: #0b0d12;
+  border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
   cursor: pointer;
 }
@@ -109,14 +109,14 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  background: #11141e;
+  background: #10141c;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 7px 10px;
 }
 
 .jp-job-title {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
@@ -125,7 +125,7 @@
 }
 
 .jp-job-meta {
-  font-size: 10.5px;
+  font-size: 11px;
   color: #94a3b8;
   display: flex;
   justify-content: space-between;
@@ -136,17 +136,17 @@
 .jp-pill-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 5px;
+  gap: 6px;
 }
 
 .jp-action-btn {
-  background: #171b26;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e2e8f0;
-  font-size: 10.5px;
+  background: #141926;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: #dbe4f0;
+  font-size: 11px;
   font-weight: 600;
-  padding: 6px 8px;
-  border-radius: 5px;
+  padding: 7px 8px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: center;
@@ -154,33 +154,33 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+  height: 30px;
 }
 
 .jp-action-btn:hover {
-  background: #202636;
-  border-color: rgba(255, 255, 255, 0.18);
+  background: #1b2130;
+  border-color: rgba(255, 255, 255, 0.14);
   color: #fff;
 }
 
 .jp-action-btn.primary {
-  background: #3b82f6;
+  background: #2563eb;
   color: #fff;
-  border-color: #60a5fa;
+  border-color: #3b82f6;
   grid-column: span 2;
   padding: 8px 10px;
   font-weight: 700;
   font-size: 11.5px;
-  animation: pulseAgentCyan 2.5s infinite;
 }
 
 .jp-action-btn.primary:hover {
-  background: #2563eb;
+  background: #1d4ed8;
 }
 
 .jp-pill-status {
   font-size: 10px;
   font-family: ui-monospace, Menlo, Consolas, monospace;
-  color: #64748b;
+  color: #5b6472;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -194,18 +194,18 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 2147483647;
-  background: #090a0f;
-  border: 1px solid rgba(59, 130, 246, 0.5);
-  border-radius: 8px;
+  background: #0b0d12;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
   padding: 8px 16px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85), 0 0 16px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #f8fafc;
   display: flex;
   align-items: center;
   gap: 12px;
   user-select: none;
-  animation: pulseAgentCyan 2s infinite;
+  animation: none;
   backdrop-filter: blur(14px);
   pointer-events: auto;
   max-width: 90vw;

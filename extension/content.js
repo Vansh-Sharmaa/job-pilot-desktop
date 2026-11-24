@@ -274,6 +274,397 @@
     elem.dispatchEvent(new Event('blur', { bubbles: true }));
   }
 
+  // Anti-Ban & Bot Challenge Safeguards
+  function isBotDefensePresent() {
+    if (document.querySelector('iframe[src*="challenges.cloudflare.com"], .cf-turnstile, #cf-turnstile, #turnstile-wrapper')) {
+      return 'Cloudflare Turnstile';
+    }
+    if (document.querySelector('iframe[src*="recaptcha"], .g-recaptcha, #recaptcha')) {
+      return 'Google reCAPTCHA';
+    }
+    if (document.querySelector('iframe[src*="hcaptcha"], .h-captcha')) {
+      return 'hCaptcha';
+    }
+    const snippet = (document.body ? document.body.innerText.slice(0, 600) : '').toLowerCase();
+    if (snippet.includes('verify you are human') || snippet.includes('checking your browser') || snippet.includes('just a moment...')) {
+      return 'Browser Verification Challenge';
+    }
+    return null;
+  }
+
+  function isCardAlreadyApplied(card) {
+    if (!card) return false;
+    const text = (card.innerText || '').toLowerCase();
+    const appliedKeywords = [
+      'applied',
+      'already applied',
+      'application submitted',
+      'view application',
+      'applied on',
+      'status: applied'
+    ];
+    for (const kw of appliedKeywords) {
+      const regex = new RegExp('\\b' + kw + '\\b', 'i');
+      if (regex.test(text)) return true;
+    }
+    if (card.querySelector('.applied-badge, [class*="applied"], [data-applied="true"]')) {
+      return true;
+    }
+    return false;
+  }
+
+  function findJobCardsOnPage() {
+    const host = window.location.hostname.toLowerCase();
+    let selectors = [];
+
+    if (host.includes('hirist')) {
+      selectors = [
+        '.job-card',
+        '.jobCard',
+        '[class*="job-card"]',
+        '[class*="jobCard"]',
+        '[class*="listingCard"]',
+        '[data-job-id]',
+        'a[href*="/j/"]',
+        'a[href*="/job/"]'
+      ];
+    } else if (host.includes('indeed')) {
+      selectors = [
+        '[data-jk]',
+        '.job_seen_beacon',
+        '.resultContent',
+        'div.jobsearch-SerpJobCard',
+        'a[id^="job_"]'
+      ];
+    } else if (host.includes('internshala')) {
+      selectors = [
+        '.individual_internship',
+        '[data-internship_id]',
+        'a[href*="/job/detail/"]'
+      ];
+    } else if (host.includes('cuvette')) {
+      selectors = [
+        '[class*="jobCard"]',
+        '[class*="JobCard"]',
+        'a[href*="/job/"]'
+      ];
+    } else if (host.includes('unstop')) {
+      selectors = [
+        '[class*="opportunity-card"]',
+        'a[href*="/jobs/"]',
+        'a[href*="/competitions/"]'
+      ];
+    } else if (host.includes('naukri')) {
+      selectors = [
+        '.srp-jobtuple-wrapper',
+        '.cust-job-tuple',
+        'article.jobTuple'
+      ];
+    } else {
+      selectors = [
+        '[data-job-id]',
+        '[data-jk]',
+        '[class*="job-card"]',
+        '[class*="jobCard"]',
+        '[class*="JobCard"]',
+        '[class*="listingCard"]',
+        'a[href*="/job/"]',
+        'a[href*="/jobs/"]',
+        'a[href*="/j/"]'
+      ];
+    }
+
+    const cards = [];
+    const seen = new Set();
+    for (const sel of selectors) {
+      const els = document.querySelectorAll(sel);
+      for (const el of els) {
+        const card = el.closest('[data-jk], [data-job-id], article, [class*="card"], [class*="Card"], .individual_internship, .job_seen_beacon') || el;
+        if (!seen.has(card) && card.offsetParent !== null && card.offsetHeight > 25) {
+          seen.add(card);
+          cards.push(card);
+        }
+      }
+      if (cards.length >= 3) break;
+    }
+    return cards;
+  }
+
+  function findApplyButtonInCurrentContext() {
+    const candidates = Array.from(document.querySelectorAll('button, a, [role="button"], input[type="submit"], input[type="button"]'))
+      .filter(b => b.offsetParent !== null && !b.disabled);
+
+    for (const b of candidates) {
+      const txt = (b.innerText || b.value || '').trim().toLowerCase();
+      if (!txt || txt.length > 40) continue;
+      if (txt.includes('sign in') || txt.includes('login') || txt.includes('register') || txt.includes('save') || txt.includes('share') || txt.includes('report') || txt === 'applied') {
+        continue;
+      }
+      if (
+        txt === 'easy apply' ||
+        txt.includes('easy apply') ||
+        txt === 'quick apply' ||
+        txt === 'apply now' ||
+        txt === 'apply with 1-click' ||
+        txt === 'apply online' ||
+        txt.includes('apply for this job') ||
+        txt === 'apply'
+      ) {
+        return b;
+      }
+    }
+    return null;
+  }
+
+  function findNextStepButton() {
+    const candidates = Array.from(document.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]'))
+      .filter(b => b.offsetParent !== null && !b.disabled);
+    for (const b of candidates) {
+      const txt = (b.innerText || b.value || '').trim().toLowerCase();
+      if (txt === 'next' || txt.includes('save and continue') || txt.includes('save & continue') || txt.includes('continue') || txt.includes('proceed') || txt.includes('step') || txt.includes('next step')) {
+        return b;
+      }
+    }
+    return null;
+  }
+
+  function findSubmitButton() {
+    const candidates = Array.from(document.querySelectorAll('button, [role="button"], input[type="submit"], input[type="button"]'))
+      .filter(b => b.offsetParent !== null && !b.disabled);
+    for (const b of candidates) {
+      const txt = (b.innerText || b.value || '').trim().toLowerCase();
+      if (txt.includes('submit application') || txt === 'submit' || txt.includes('send application') || txt.includes('complete application') || txt.includes('confirm application') || txt.includes('finish')) {
+        return b;
+      }
+    }
+    return null;
+  }
+
+  function extractActiveJobDetails(card, portalName) {
+    let title = '';
+    let company = '';
+    let location = 'India / Remote';
+
+    if (card) {
+      const tEl = card.querySelector('h1, h2, h3, a, [class*="title"], [class*="role"], [class*="designation"]');
+      if (tEl && tEl.innerText.trim()) title = tEl.innerText.trim();
+      const cEl = card.querySelector('[class*="company"], [class*="employer"], [class*="org"], [data-company]');
+      if (cEl && cEl.innerText.trim()) company = cEl.innerText.trim();
+      const lEl = card.querySelector('[class*="location"], [class*="city"]');
+      if (lEl && lEl.innerText.trim()) location = lEl.innerText.trim();
+    }
+
+    if (!title) {
+      const h = document.querySelector('h1, h2.jobsearch-JobInfoHeader-title, .job-title');
+      if (h && h.innerText.trim()) title = h.innerText.trim();
+    }
+    if (!company) {
+      const c = document.querySelector('.company-name, [data-company-name="true"], .topcard__org-name-link, .employer-name');
+      if (c && c.innerText.trim()) company = c.innerText.trim();
+    }
+
+    return {
+      title: title || 'AI Engineer',
+      company: company || 'Hiring Partner',
+      location: location || 'India / Remote',
+      portal: portalName || 'Hiring Portal',
+      url: window.location.href
+    };
+  }
+
+  function syncApplicationRecord(jobMeta) {
+    chrome.runtime.sendMessage({
+      type: 'SYNC_APPLICATION',
+      payload: {
+        company: jobMeta.company || 'Direct Job',
+        role: jobMeta.title || 'AI Engineer',
+        location: jobMeta.location || 'India / Remote',
+        portal: jobMeta.portal || 'Hiring Portal',
+        url: jobMeta.url || window.location.href
+      }
+    });
+  }
+
+  // BATCH FEED AUTO-APPLY AGENT (Iterates through listings until daily quota is filled)
+  // Protected with strict Anti-Ban safeguards: Jittered intervals, duplicate suppression, and immediate halt on bot challenges
+  async function runBatchFeedApplyAgent(cand, meta, maxQuota = 20) {
+    if (isAgentRunning) return;
+    isAgentRunning = true;
+    agentAbortRequested = false;
+
+    ensureAgentHud();
+    updateAgentHud(`Scanning ${meta.portal || 'portal'} feed (Daily Safe Quota: ${maxQuota})...`);
+    sendTelemetry('BATCH_START', `Initiating autonomous batch apply agent on ${meta.portal || 'portal'} (Target Quota: ${maxQuota})...`);
+
+    await sleep(800);
+    if (!isAgentRunning || agentAbortRequested) return;
+
+    const defenseInitial = isBotDefensePresent();
+    if (defenseInitial) {
+      sendTelemetry('ANTI_BAN_HALT', `[ANTI-BAN] Bot verification challenge detected (${defenseInitial}). Halting immediately to safeguard account.`);
+      stopAgent(`Bot challenge detected (${defenseInitial}). Paused for account protection.`);
+      return;
+    }
+
+    const cards = findJobCardsOnPage();
+    if (!cards || cards.length === 0) {
+      updateAgentHud('No listing cards detected on current view. Scanning for single application...');
+      sendTelemetry('INFO', 'No listing cards found. Falling back to single-page apply.');
+      isAgentRunning = false;
+      return runAutonomousApplyAgent();
+    }
+
+    updateAgentHud(`Found ${cards.length} job openings. Starting safe application pipeline...`);
+    sendTelemetry('BATCH_CARDS', `Identified ${cards.length} candidate job cards on feed. Processing sequentially.`);
+
+    let appliedCount = 0;
+
+    for (let i = 0; i < cards.length && appliedCount < maxQuota; i++) {
+      if (!isAgentRunning || agentAbortRequested) break;
+
+      const defense = isBotDefensePresent();
+      if (defense) {
+        sendTelemetry('ANTI_BAN_HALT', `[ANTI-BAN] Bot verification challenge detected (${defense}). Halting immediately to preserve account safety.`);
+        stopAgent(`Bot verification challenge detected (${defense}). Paused for account safety.`);
+        break;
+      }
+
+      const card = cards[i];
+      if (isCardAlreadyApplied(card)) {
+        sendTelemetry('SKIP', `Job opening #${i + 1} already applied. Skipping.`);
+        continue;
+      }
+
+      // Smooth human scroll into view with natural jitter
+      card.classList.add('jobpilot-target-highlight');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      updateAgentHud(`Reviewing job ${i + 1}/${cards.length} (${appliedCount}/${maxQuota} applied)...`);
+
+      // Human reading pause (1.5s - 2.5s)
+      await sleep(1500 + Math.random() * 1000);
+      if (!isAgentRunning || agentAbortRequested) {
+        card.classList.remove('jobpilot-target-highlight');
+        break;
+      }
+
+      // Click card to open job details pane or drawer
+      card.click();
+      const innerLink = card.querySelector('a');
+      if (innerLink && innerLink !== card) {
+        try { innerLink.click(); } catch (e) {}
+      }
+      card.classList.remove('jobpilot-target-highlight');
+
+      // Allow details view to render (2.0s - 2.8s)
+      await sleep(2000 + Math.random() * 800);
+      if (!isAgentRunning || agentAbortRequested) break;
+
+      const jobMeta = extractActiveJobDetails(card, meta.portal);
+
+      const applyBtn = findApplyButtonInCurrentContext();
+      if (!applyBtn) {
+        sendTelemetry('INFO', `Opening "${jobMeta.title}" does not support 1-click apply on this feed. Skipping.`);
+        continue;
+      }
+
+      const btnTxt = (applyBtn.innerText || applyBtn.value || '').toLowerCase();
+      if (btnTxt.includes('applied')) {
+        sendTelemetry('SKIP', `Job at ${jobMeta.company} already marked applied. Skipping.`);
+        continue;
+      }
+
+      // Click Apply trigger button
+      applyBtn.classList.add('jobpilot-target-highlight');
+      applyBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      updateAgentHud(`Clicking Apply for ${jobMeta.company}...`);
+      sendTelemetry('CLICK', `Triggered Apply on ${jobMeta.company} for "${jobMeta.title}"...`);
+      await sleep(800 + Math.random() * 400);
+      if (!isAgentRunning || agentAbortRequested) {
+        applyBtn.classList.remove('jobpilot-target-highlight');
+        break;
+      }
+
+      applyBtn.click();
+      applyBtn.classList.remove('jobpilot-target-highlight');
+
+      // Wait for modal or form to mount (1.5s - 2.2s)
+      await sleep(1600 + Math.random() * 600);
+      if (!isAgentRunning || agentAbortRequested) break;
+
+      // Check if multi-step form fields appeared
+      const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea'))
+        .filter(el => el.offsetParent !== null);
+
+      if (inputs.length > 0) {
+        let step = 0;
+        while (step < 4 && isAgentRunning && !agentAbortRequested) {
+          step++;
+          updateAgentHud(`Filling application step ${step} for ${jobMeta.company}...`);
+          await executeSmartFormFillingWithAI(cand, jobMeta);
+          await sleep(600 + Math.random() * 400);
+          if (!isAgentRunning || agentAbortRequested) break;
+
+          const submitBtn = findSubmitButton();
+          if (submitBtn) {
+            submitBtn.classList.add('jobpilot-target-highlight');
+            submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateAgentHud(`Submitting application to ${jobMeta.company}...`);
+            await sleep(800);
+            submitBtn.click();
+            submitBtn.classList.remove('jobpilot-target-highlight');
+            await sleep(1400);
+            break;
+          }
+
+          const nextBtn = findNextStepButton();
+          if (nextBtn) {
+            nextBtn.classList.add('jobpilot-target-highlight');
+            nextBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            updateAgentHud(`Advancing to form step ${step + 1}...`);
+            await sleep(600);
+            nextBtn.click();
+            nextBtn.classList.remove('jobpilot-target-highlight');
+            await sleep(1500);
+          } else {
+            break;
+          }
+        }
+      }
+
+      // Record successful application and sync to desktop Applications Ledger
+      syncApplicationRecord(jobMeta);
+      appliedCount++;
+      updateAgentHud(`✓ Applied ${appliedCount}/${maxQuota} on ${meta.portal}! (${jobMeta.company})`, true);
+      sendTelemetry('SUCCESS', `Applied to ${jobMeta.company} for "${jobMeta.title}" (${appliedCount}/${maxQuota})!`);
+
+      if (appliedCount >= maxQuota) {
+        updateAgentHud(`🎯 Daily safe quota reached (${appliedCount}/${maxQuota}). Agent stopped cleanly.`, true);
+        sendTelemetry('QUOTA_REACHED', `Completed daily safe quota of ${maxQuota} applications on ${meta.portal}. Account preserved.`);
+        break;
+      }
+
+      // STRICT ANTI-BAN COOLDOWN (8 to 13 seconds randomized delay between applications)
+      const cooldownMs = Math.floor(8000 + Math.random() * 5000);
+      const cooldownSec = Math.round(cooldownMs / 1000);
+      sendTelemetry('ANTI_BAN_WAIT', `[ANTI-BAN] Human delay cooldown: waiting ${cooldownSec}s before opening next job card...`);
+
+      for (let s = cooldownSec; s > 0; s--) {
+        if (!isAgentRunning || agentAbortRequested) break;
+        updateAgentHud(`Anti-Ban cooldown: ${s}s remaining (${appliedCount}/${maxQuota} applied)...`);
+        await sleep(1000);
+      }
+    }
+
+    if (appliedCount > 0) {
+      updateAgentHud(`✓ Batch session complete: ${appliedCount} applications submitted cleanly!`, true);
+      hideAgentHud(5000);
+    } else {
+      updateAgentHud('Batch session completed.', true);
+      hideAgentHud(3000);
+    }
+    isAgentRunning = false;
+  }
+
   // AUTONOMOUS TAB AGENT RUNNER
   // Orchestrates: Scan -> Apply Trigger Click -> Form Autofill -> Multi-Step Progression -> Human Review -> Submission -> Ledger Sync
   async function runAutonomousApplyAgent() {
@@ -364,6 +755,14 @@
         targetBtn.click();
         targetBtn.classList.remove('jobpilot-target-highlight');
         await sleep(1200); // Allow application modal to load
+      } else {
+        const feedCards = findJobCardsOnPage();
+        if (feedCards && feedCards.length > 0) {
+          updateAgentHud(`Feed detected with ${feedCards.length} openings. Transitioning to Batch Agent...`);
+          sendTelemetry('TRANSITION', `Detected ${feedCards.length} job cards on feed. Switching to batch agent pipeline.`);
+          isAgentRunning = false;
+          return runBatchFeedApplyAgent(cand, meta, meta.quota || 20);
+        }
       }
     }
 
@@ -777,8 +1176,11 @@
         <button class="jp-action-btn" id="jp-btn-sync" style="grid-column: span 2;">
           <span>📋</span> <span>Record to Desktop Ledger</span>
         </button>
-        <button class="jp-action-btn" id="jp-btn-find-source" style="grid-column: span 2; background: #0f172a; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">
+        <button class="jp-action-btn" id="jp-btn-find-source" style="grid-column: span 2;">
           <span>🔍</span> <span>Find Official ATS Link & HR Emails</span>
+        </button>
+        <button class="jp-action-btn" id="jp-btn-contact" style="grid-column: span 2;">
+          <span>📇</span> <span>Get Contact Info</span>
         </button>
       </div>
 
@@ -857,17 +1259,33 @@
       showPillNotice('✓ Application synced to Ledger!');
     });
 
-    document.getElementById('jp-btn-find-source')?.addEventListener('click', () => {
-      const meta = extractJobMetadata() || {};
-      const emails = extractEmailsFromPage();
-      const comp = meta.company || 'Company';
-      const role = meta.title || 'Role';
-      const atsQuery = `site:boards.greenhouse.io OR site:jobs.lever.co OR site:ashbyhq.com OR site:myworkdayjobs.com "${comp}" "${role}"`;
-      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(atsQuery)}`;
-      
-      const emailList = emails.length > 0 ? emails.slice(0, 3).join(', ') : `careers@${comp.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
-      showPillNotice(`Direct HR: ${emailList}`);
-      window.open(searchUrl, '_blank');
+    document.getElementById('jp-btn-find-source')?.addEventListener('click', (e) => {
+      if (e) e.stopPropagation();
+      const data = executeGetContacts();
+      chrome.runtime.sendMessage({ type: 'GET_CONTACTS', payload: data }, (res) => {
+        const d = (res && res.status === 'success') ? (res.data || data) : data;
+        const lines = [];
+        if (d && d.company) lines.push(`${d.company} — ${d.role || ''}`);
+        if (d && d.emails && d.emails.length) lines.push(`Contacts: ${d.emails.slice(0, 3).join(', ')}`);
+        if (d && d.companyEmails && d.companyEmails.length) lines.push(`HR Domain: ${d.companyEmails.slice(0, 3).join(', ')}`);
+        if (d && d.atsSearchUrl) {
+          try { window.open(d.atsSearchUrl, '_blank'); } catch (err) {}
+        }
+        showPillNotice(lines.length ? `✓ Contact Intel: ${lines.join(' | ')}` : 'No contact info found on this page.');
+      });
+    });
+
+    document.getElementById('jp-btn-contact')?.addEventListener('click', (e) => {
+      if (e) e.stopPropagation();
+      const data = executeGetContacts();
+      chrome.runtime.sendMessage({ type: 'GET_CONTACTS', payload: data }, (res) => {
+        const d = (res && res.status === 'success') ? (res.data || data) : data;
+        const lines = [];
+        if (d && d.company) lines.push(`${d.company} - ${d.role || ''}`);
+        if (d && d.emails && d.emails.length) lines.push(`Contacts: ${d.emails.slice(0, 3).join(', ')}`);
+        if (d && d.phone) lines.push(`Phone: ${d.phone}`);
+        showPillNotice(lines.length ? `✓ Contact Intel: ${lines.join(' | ')}` : 'No contact info found on this page.');
+      });
     });
   }
 
@@ -882,6 +1300,50 @@
     return Array.from(new Set(matches.map(m => m.toLowerCase()))).filter(e => {
       return !e.endsWith('.png') && !e.endsWith('.jpg') && !e.includes('example.com') && !e.includes('sentry') && !e.includes('cloudflare');
     });
+  }
+
+  function executeGetContacts() {
+    const meta = extractJobMetadata() || {};
+    const emails = extractEmailsFromPage();
+    let phone = '';
+    try {
+      const tel = document.querySelector('a[href^="tel:"]');
+      if (tel) phone = (tel.getAttribute('href') || '').replace(/^tel:/i, '').trim();
+    } catch (e) {}
+
+    const company = meta.company || '';
+    const role = meta.title || '';
+    const slug = String(company).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const companyEmails = [];
+    if (slug) {
+      ['careers', 'jobs', 'talent', 'hr', 'hiring', 'recruiting', 'info', 'contact'].forEach(p => {
+        const e = `${p}@${slug}.com`;
+        if (!emails.includes(e)) companyEmails.push(e);
+      });
+    }
+
+    const atsQuery = `site:boards.greenhouse.io OR site:jobs.lever.co OR site:ashbyhq.com OR site:myworkdayjobs.com "${company}" "${role}"`;
+    const atsSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(atsQuery)}`;
+
+    const sources = [];
+    if (emails && emails.length) sources.push({ type: 'page-emails', emails });
+    if (companyEmails && companyEmails.length) sources.push({ type: 'company-domain', emails: companyEmails });
+    sources.push({ type: 'web', searchUrl: atsSearchUrl });
+
+    const data = {
+      status: (emails && emails.length > 0 || (companyEmails && companyEmails.length > 0)) ? 'found' : 'not-found',
+      company: company,
+      role: role,
+      emails: emails || [],
+      companyEmails: companyEmails,
+      phone: phone || '',
+      sources: sources,
+      atsQuery: atsQuery,
+      atsSearchUrl: atsSearchUrl,
+      pageUrl: window.location.href,
+      extractedAt: new Date().toISOString()
+    };
+    return data;
   }
 
   function showPillNotice(msg) {
@@ -901,6 +1363,14 @@
     if (request.action === 'abort' || request.action === 'stop') {
       stopAgent('Remote abort command from desktop');
       sendResponse({ status: 'aborted' });
+      return true;
+    } else if (request.action === 'start_batch_apply' || request.action === 'batch_apply') {
+      const cand = request.candidate || activeCandidate;
+      const meta = request.meta || extractJobMetadata();
+      const quota = (request.meta && request.meta.quota) || request.quota || 20;
+      runBatchFeedApplyAgent(cand, meta, quota).then(() => {
+        sendResponse({ status: 'completed' });
+      });
       return true;
     } else if (request.action === 'start_autonomous_apply' || request.action === 'apply') {
       runAutonomousApplyAgent().then(() => {
@@ -928,6 +1398,9 @@
         url: window.location.href,
         title: document.title
       });
+    } else if (request.action === 'get_contacts') {
+      const data = executeGetContacts();
+      sendResponse({ status: 'success', data: data });
     }
     return true;
   });

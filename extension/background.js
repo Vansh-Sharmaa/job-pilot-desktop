@@ -4,6 +4,7 @@ const BRIDGE_URL = 'http://127.0.0.1:5056';
 let isConnected = false;
 let candidateProfile = null;
 let cachedBridgeToken = '';
+let lastContacts = { status: 'none' };
 
 async function getBridgeToken() {
   if (cachedBridgeToken) return cachedBridgeToken;
@@ -92,58 +93,81 @@ async function executeCommandInActiveTab(cmd) {
     return;
   }
 
-  // 1. Query active tab across any window without restricting to currently focused window
+  const targetUrl = cmd.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
+
+  // 1. Query all open tabs to check if an existing tab is already on targetUrl or same host
+  let allTabs = [];
+  try {
+    allTabs = await chrome.tabs.query({});
+  } catch (e) {}
+
+  let targetTab = null;
+  if (allTabs && allTabs.length > 0) {
+    try {
+      const targetObj = new URL(targetUrl);
+      targetTab = allTabs.find(t => {
+        if (!t.url || isInternalBrowserUrl(t.url)) return false;
+        try {
+          const u = new URL(t.url);
+          return u.hostname === targetObj.hostname;
+        } catch (err) {
+          return false;
+        }
+      });
+    } catch (e) {}
+  }
+
+  // 2. If matching domain tab exists, bring to front and route command
+  if (targetTab && targetTab.id) {
+    await chrome.tabs.update(targetTab.id, { active: true });
+    if (targetTab.windowId) {
+      try { await chrome.windows.update(targetTab.windowId, { focused: true }); } catch (e) {}
+    }
+
+    if (targetTab.url !== targetUrl && cmd.action !== 'navigate') {
+      await chrome.tabs.update(targetTab.id, { url: targetUrl });
+      const tabListener = (tabId, changeInfo) => {
+        if (tabId === targetTab.id && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(tabListener);
+          setTimeout(() => dispatchCommandToTab(targetTab, cmd), 1200);
+        }
+      };
+      chrome.tabs.onUpdated.addListener(tabListener);
+      return;
+    } else {
+      setTimeout(() => dispatchCommandToTab(targetTab, cmd), 600);
+      return;
+    }
+  }
+
+  // 3. If active tab is internal browser page or empty, navigate it; otherwise open new tab
   let tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tabs || tabs.length === 0) {
     tabs = await chrome.tabs.query({ active: true });
   }
-  if (!tabs || tabs.length === 0) {
-    tabs = await chrome.tabs.query({});
-  }
-
   let activeTab = tabs && tabs[0];
-  const targetUrl = cmd.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
 
-  // 2. If active tab is internal browser page or missing, open a job portal tab
-  if (!activeTab || isInternalBrowserUrl(activeTab.url)) {
-    if (activeTab && activeTab.id) {
-      activeTab = await chrome.tabs.update(activeTab.id, { url: targetUrl, active: true });
-    } else {
-      activeTab = await chrome.tabs.create({ url: targetUrl, active: true });
-    }
-
-    // Bring browser window to front so the user sees the page open
-    try {
-      if (activeTab.windowId) {
-        chrome.windows.update(activeTab.windowId, { focused: true });
-      }
-    } catch (e) {}
-
-    // Wait for the page to finish loading before dispatching autonomous agent
-    const tabListener = (tabId, changeInfo) => {
-      if (tabId === activeTab.id && changeInfo.status === 'complete') {
-        chrome.tabs.onUpdated.removeListener(tabListener);
-        setTimeout(() => dispatchCommandToTab(activeTab, cmd), 1200);
-      }
-    };
-    chrome.tabs.onUpdated.addListener(tabListener);
-    return;
+  if (activeTab && activeTab.id && isInternalBrowserUrl(activeTab.url)) {
+    activeTab = await chrome.tabs.update(activeTab.id, { url: targetUrl, active: true });
+  } else {
+    activeTab = await chrome.tabs.create({ url: targetUrl, active: true });
   }
 
-  // 3. Bring the browser window into focus
+  // Bring browser window to front so the user sees the page open
   try {
-    if (activeTab.windowId) {
+    if (activeTab && activeTab.windowId) {
       chrome.windows.update(activeTab.windowId, { focused: true });
     }
   } catch (e) {}
 
-  if (cmd.action === 'navigate' && cmd.url) {
-    chrome.tabs.update(activeTab.id, { url: cmd.url });
-    return;
-  }
-
-  // 4. Dispatch command to active tab
-  await dispatchCommandToTab(activeTab, cmd);
+  // Wait for the page to finish loading before dispatching autonomous agent
+  const tabListener = (tabId, changeInfo) => {
+    if (tabId === activeTab.id && changeInfo.status === 'complete') {
+      chrome.tabs.onUpdated.removeListener(tabListener);
+      setTimeout(() => dispatchCommandToTab(activeTab, cmd), 1400);
+    }
+  };
+  chrome.tabs.onUpdated.addListener(tabListener);
 }
 
 async function dispatchCommandToTab(tab, cmd) {
@@ -241,6 +265,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.type === 'GET_BRIDGE_TOKEN') {
     getBridgeToken().then(token => sendResponse({ token }));
+    return true;
+  }
+
+  if (request.type === 'GET_CONTACTS') {
+    lastContacts = request.payload || { status: 'none' };
+    sendResponse({ status: 'success', data: lastContacts });
     return true;
   }
 
