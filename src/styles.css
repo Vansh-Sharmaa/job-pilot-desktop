@@ -1250,3 +1250,319 @@ tr:hover td {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* =====================================================================
+   PORTAL RADAR TOPOLOGY (MIND-MAP GRAPH LIKE 9ROUTER / OPENCODE)
+   ===================================================================== */
+#ws-radar {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background-color: #08080c;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.radar-viewport {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.radar-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.radar-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.radar-svg path {
+  fill: none;
+  transition: stroke 0.3s ease, stroke-width 0.3s ease, opacity 0.3s ease;
+}
+
+.radar-link-inactive {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1.5px;
+}
+
+.radar-link-active {
+  stroke: #f59e0b;
+  stroke-width: 2.5px;
+  stroke-dasharray: 6 6;
+  animation: radarDashFlow 1.2s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
+}
+
+@keyframes radarDashFlow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+/* Center Core Node */
+.radar-center-node {
+  position: absolute;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  background: #141419;
+  border: 1.5px solid #d97706;
+  border-radius: 12px;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 0 24px rgba(217, 119, 6, 0.25), 0 8px 32px rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.radar-center-node:hover {
+  transform: translate(-50%, -50%) scale(1.03);
+  box-shadow: 0 0 32px rgba(245, 158, 11, 0.4), 0 12px 40px rgba(0, 0, 0, 0.9);
+}
+
+.radar-center-badge {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #ea580c, #f59e0b);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.5);
+}
+
+.radar-center-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.radar-center-sub {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+/* Satellite Portal Nodes */
+.radar-node {
+  position: absolute;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  background: #101015;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  user-select: none;
+}
+
+.radar-node:hover {
+  transform: translate(-50%, -50%) scale(1.05);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: #16161d;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+}
+
+.radar-node.active-target {
+  background: #171511;
+  border: 1.5px solid #f59e0b;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.35), 0 6px 20px rgba(0, 0, 0, 0.8);
+}
+
+.radar-node-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 10.5px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.radar-node-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.radar-node.active-target .radar-node-title {
+  color: #fff;
+}
+
+.radar-node-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #9ca3af;
+  font-family: var(--font-mono);
+}
+
+.radar-node.active-target .radar-node-badge {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+/* Floating Zoom & Pan Controls */
+.radar-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 20;
+  background: #121217;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+}
+
+.radar-control-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d1d5db;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.radar-control-btn:last-child {
+  border-bottom: none;
+}
+
+.radar-control-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+/* Floating Active Portal HUD Card */
+.radar-hud-card {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+  background: rgba(18, 18, 23, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px 16px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
+}
+
+.radar-hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.radar-hud-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.radar-hud-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.radar-hud-stat-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.radar-hud-stat-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  font-family: var(--font-mono);
+}
+
+.radar-hud-stat-lbl {
+  font-size: 9.5px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+/* Browser top-bar quick indicator */
+.radar-live-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 6px;
+  font-size: 11px;
+  color: #fbbf24;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.radar-live-pill:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.radar-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+  animation: radarPillPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes radarPillPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}

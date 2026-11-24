@@ -246,6 +246,7 @@
         <div class="workspace-tabs-bar">
           <div class="ws-tabs-group">
             <button class="ws-tab-btn active" id="wstab-browser" onclick="switchWorkspaceTab('browser')">🌐 Browser</button>
+            <button class="ws-tab-btn" id="wstab-radar" onclick="switchWorkspaceTab('radar')">🛰 Radar Topology</button>
             <button class="ws-tab-btn" id="wstab-ledger" onclick="switchWorkspaceTab('ledger')">📋 Ledger (<span id="ws-ledger-count">311</span>)</button>
             <button class="ws-tab-btn" id="wstab-fleet" onclick="switchWorkspaceTab('fleet')">🚀 Fleet Matrix</button>
             <button class="ws-tab-btn" id="wstab-resume" onclick="switchWorkspaceTab('resume')">📄 Resume & ATS</button>
@@ -263,6 +264,12 @@
             <button class="browser-btn" onclick="webviewReload()" title="Reload">&#8635;</button>
 
             <input type="text" class="browser-input" id="browser-url-bar" value="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" onkeydown="if(event.key === 'Enter') navigateBrowser()">
+
+            <!-- Live Topology Pill Indicator -->
+            <div class="radar-live-pill" onclick="switchWorkspaceTab('radar')" title="Live Portal Topology: Click to inspect node graph">
+              <span class="radar-pulse-dot"></span>
+              <span id="radar-live-pill-text">Indeed India: Active</span>
+            </div>
 
             <button class="browser-btn primary" onclick="smartApplyInBrowser()" title="Autofill forms on page">⚡ Smart Apply</button>
             <button class="browser-btn" onclick="tailorForWebviewJob()" title="Tailor 1-page ATS resume for this posting">⚡ Tailor PDF</button>
@@ -300,6 +307,71 @@
 
           <div class="webview-container">
             <webview id="workspace-webview" src="https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B" useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36" partition="persist:jobpilot" allowpopups></webview>
+          </div>
+        </div>
+
+        <!-- TAB: RADAR TOPOLOGY VIEW (LIKE 9ROUTER / OPENCODE GRAPH) -->
+        <div class="ws-view" id="ws-radar">
+          <div class="radar-viewport" id="radar-viewport">
+            <div class="radar-world" id="radar-world">
+              <svg class="radar-svg" id="radar-svg">
+                <defs>
+                  <filter id="glow-amber" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+                <g id="radar-links-group"></g>
+              </svg>
+
+              <!-- Central Core Node -->
+              <div class="radar-center-node" id="radar-center-node" onclick="focusRadarCenter()">
+                <div class="radar-center-badge">⚡</div>
+                <div>
+                  <div class="radar-center-title">JobPilot Core</div>
+                  <div class="radar-center-sub">Autonomous Orchestrator</div>
+                </div>
+              </div>
+
+              <!-- Satellite Nodes Container -->
+              <div id="radar-nodes-container"></div>
+            </div>
+
+            <!-- Floating Zoom & Controls -->
+            <div class="radar-controls">
+              <button class="radar-control-btn" onclick="zoomRadar(0.15)" title="Zoom In">+</button>
+              <button class="radar-control-btn" onclick="zoomRadar(-0.15)" title="Zoom Out">−</button>
+              <button class="radar-control-btn" onclick="resetRadarView()" title="Reset View">⟲</button>
+            </div>
+
+            <!-- Floating Active Portal HUD Card -->
+            <div class="radar-hud-card">
+              <div class="radar-hud-header">
+                <div class="radar-hud-title">
+                  <span class="radar-pulse-dot"></span>
+                  <span id="radar-hud-name">Indeed India</span>
+                </div>
+                <span class="p-tag active" id="radar-hud-status">APPLYING NOW</span>
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim);" id="radar-hud-url">https://in.indeed.com/jobs</div>
+              <div class="radar-hud-stats">
+                <div class="radar-hud-stat-box">
+                  <div class="radar-hud-stat-val" id="radar-hud-applied">24</div>
+                  <div class="radar-hud-stat-lbl">Ledger Submissions</div>
+                </div>
+                <div class="radar-hud-stat-box">
+                  <div class="radar-hud-stat-val" id="radar-hud-rate">18 / 25</div>
+                  <div class="radar-hud-stat-lbl">Daily Safe Quota</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 6px; margin-top: 4px;">
+                <button class="browser-btn primary" style="flex: 1; font-size: 11px; padding: 4px;" onclick="openActivePortalFromRadar()">Open in Browser</button>
+                <button class="browser-btn" style="font-size: 11px; padding: 4px;" onclick="quickSmartApplyActivePortal()">⚡ Smart Apply</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -697,6 +769,7 @@
       const targetView = document.getElementById('ws-' + tabName);
       if (targetView) targetView.classList.add('active-ws');
 
+      if (tabName === 'radar') renderRadarTopology();
       if (tabName === 'ledger') loadLedgerData();
       if (tabName === 'fleet') refreshFleetStatus();
       if (tabName === 'quotas') loadStats();
@@ -730,6 +803,8 @@
         u = 'https://' + u;
       }
       webview.src = u;
+      const det = detectPortalFromUrl(u);
+      if (det) setActiveRadarPortal(det);
     }
 
     function loadPortal(url, btnEl) {
@@ -739,6 +814,8 @@
         document.querySelectorAll('.portal-dock-btn').forEach(b => b.classList.remove('active'));
         btnEl.classList.add('active');
       }
+      const det = detectPortalFromUrl(url);
+      if (det) setActiveRadarPortal(det);
     }
 
     function openCurrentExternal() {
@@ -1318,6 +1395,245 @@
       return escaped;
     }
 
+    // =====================================================================
+    // PORTAL RADAR TOPOLOGY (MIND-MAP GRAPH LIKE 9ROUTER / OPENCODE)
+    // =====================================================================
+    const RADAR_PORTALS = [
+      { id: 'indeed', name: 'Indeed India', iconText: 'IN', iconBg: '#2557a7', url: 'https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B', quota: 25 },
+      { id: 'linkedin', name: 'LinkedIn', iconText: 'in', iconBg: '#0a66c2', url: 'https://www.linkedin.com/jobs/search/?keywords=AI%20Engineer&f_E=1%2C2&location=India', quota: 20 },
+      { id: 'naukri', name: 'Naukri', iconText: 'N', iconBg: '#1d4ed8', url: 'https://www.naukri.com/ai-engineer-jobs', quota: 35 },
+      { id: 'internshala', name: 'Internshala', iconText: 'IS', iconBg: '#008bdc', url: 'https://internshala.com/jobs/ai-jobs/', quota: 30 },
+      { id: 'cuvette', name: 'Cuvette', iconText: 'CV', iconBg: '#10b981', url: 'https://cuvette.tech/app/jobs', quota: 20 },
+      { id: 'unstop', name: 'Unstop', iconText: 'UN', iconBg: '#f59e0b', url: 'https://unstop.com/jobs', quota: 25 },
+      { id: 'hirist', name: 'Hirist', iconText: 'HR', iconBg: '#6366f1', url: 'https://www.hirist.tech/search/ai-engineer', quota: 20 },
+      { id: 'cutshort', name: 'Cutshort', iconText: 'CS', iconBg: '#8b5cf6', url: 'https://cutshort.io/jobs/ai-engineer-jobs', quota: 20 },
+      { id: 'instahyre', name: 'Instahyre', iconText: 'IH', iconBg: '#14b8a6', url: 'https://www.instahyre.com/candidate/opportunities/', quota: 25 },
+      { id: 'wellfound', name: 'Wellfound', iconText: 'WF', iconBg: '#e11d48', url: 'https://wellfound.com/jobs', quota: 20 },
+      { id: 'foundit', name: 'foundit', iconText: 'FD', iconBg: '#7c3aed', url: 'https://www.foundit.in/srp/results?query=AI+Engineer', quota: 30 },
+      { id: 'ycstartup', name: 'YC Startup', iconText: 'YC', iconBg: '#ff6600', url: 'https://www.workatastartup.com/companies', quota: 15 }
+    ];
+
+    let activeRadarPortalId = 'indeed';
+    let radarZoom = 1.0;
+
+    function detectPortalFromUrl(urlStr) {
+      if (!urlStr) return 'indeed';
+      const u = urlStr.toLowerCase();
+      if (u.includes('indeed')) return 'indeed';
+      if (u.includes('linkedin')) return 'linkedin';
+      if (u.includes('naukri')) return 'naukri';
+      if (u.includes('internshala')) return 'internshala';
+      if (u.includes('cuvette')) return 'cuvette';
+      if (u.includes('unstop')) return 'unstop';
+      if (u.includes('hirist')) return 'hirist';
+      if (u.includes('cutshort')) return 'cutshort';
+      if (u.includes('instahyre')) return 'instahyre';
+      if (u.includes('wellfound')) return 'wellfound';
+      if (u.includes('foundit')) return 'foundit';
+      if (u.includes('workatastartup') || u.includes('ycombinator')) return 'ycstartup';
+      return activeRadarPortalId;
+    }
+
+    function renderRadarTopology() {
+      const viewport = document.getElementById('radar-viewport');
+      const container = document.getElementById('radar-nodes-container');
+      const linksGroup = document.getElementById('radar-links-group');
+      const centerNode = document.getElementById('radar-center-node');
+      if (!viewport || !container || !linksGroup || !centerNode) return;
+
+      const rect = viewport.getBoundingClientRect();
+      const width = rect.width > 200 ? rect.width : 900;
+      const height = rect.height > 200 ? rect.height : 600;
+
+      const cx = width / 2;
+      const cy = height / 2;
+
+      centerNode.style.left = cx + 'px';
+      centerNode.style.top = cy + 'px';
+
+      const rx = Math.max(220, Math.min(width * 0.36, 420));
+      const ry = Math.max(150, Math.min(height * 0.36, 260));
+
+      container.innerHTML = '';
+      linksGroup.innerHTML = '';
+
+      const total = RADAR_PORTALS.length;
+      RADAR_PORTALS.forEach((portal, idx) => {
+        const angle = (idx / total) * 2 * Math.PI - Math.PI / 2;
+        const nx = cx + rx * Math.cos(angle);
+        const ny = cy + ry * Math.sin(angle);
+
+        const count = allLedgerRows.filter(r => {
+          const p = (r.portal || '').toLowerCase();
+          return p.includes(portal.id) || p.includes(portal.name.toLowerCase());
+        }).length;
+
+        const isActive = portal.id === activeRadarPortalId;
+
+        // Curved Cubic Bezier Connector
+        const dx = nx - cx;
+        const dy = ny - cy;
+        const c1x = cx + dx * 0.25;
+        const c1y = cy + dy * 0.05;
+        const c2x = cx + dx * 0.75;
+        const c2y = ny;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${cx} ${cy} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${nx} ${ny}`);
+        path.setAttribute('class', isActive ? 'radar-link-active' : 'radar-link-inactive');
+        path.dataset.portalId = portal.id;
+        linksGroup.appendChild(path);
+
+        // Satellite Node Element
+        const nodeEl = document.createElement('div');
+        nodeEl.className = 'radar-node' + (isActive ? ' active-target' : '');
+        nodeEl.dataset.portalId = portal.id;
+        nodeEl.style.left = nx + 'px';
+        nodeEl.style.top = ny + 'px';
+        nodeEl.title = `Click to connect and apply on ${portal.name}`;
+
+        nodeEl.innerHTML = `
+          <div class="radar-node-icon" style="background: ${portal.iconBg};">${portal.iconText}</div>
+          <div class="radar-node-title">${portal.name}</div>
+          <div class="radar-node-badge">${isActive ? 'APPLYING NOW' : count + ' applied'}</div>
+        `;
+
+        nodeEl.onclick = () => {
+          setActiveRadarPortal(portal.id, false);
+          showToast(`Radar connected to ${portal.name}. Webview loaded.`);
+        };
+
+        nodeEl.ondblclick = () => {
+          setActiveRadarPortal(portal.id, false);
+          switchWorkspaceTab('browser');
+        };
+
+        container.appendChild(nodeEl);
+      });
+
+      setActiveRadarPortal(activeRadarPortalId, true);
+    }
+
+    function setActiveRadarPortal(id, skipNavigate = true) {
+      const portal = RADAR_PORTALS.find(p => p.id === id);
+      if (!portal) return;
+      activeRadarPortalId = id;
+
+      const livePillText = document.getElementById('radar-live-pill-text');
+      if (livePillText) livePillText.innerText = `${portal.name}: Active`;
+
+      const hudName = document.getElementById('radar-hud-name');
+      const hudUrl = document.getElementById('radar-hud-url');
+      const hudStatus = document.getElementById('radar-hud-status');
+      const hudApplied = document.getElementById('radar-hud-applied');
+      const hudRate = document.getElementById('radar-hud-rate');
+
+      const count = allLedgerRows.filter(r => {
+        const p = (r.portal || '').toLowerCase();
+        return p.includes(portal.id) || p.includes(portal.name.toLowerCase());
+      }).length;
+
+      if (hudName) hudName.innerText = portal.name;
+      if (hudUrl) hudUrl.innerText = portal.url;
+      if (hudStatus) {
+        hudStatus.innerText = 'APPLYING NOW';
+        hudStatus.className = 'p-tag active';
+      }
+      if (hudApplied) hudApplied.innerText = count;
+      if (hudRate) hudRate.innerText = `${count} / ${portal.quota}`;
+
+      document.querySelectorAll('.radar-node').forEach(n => {
+        if (n.dataset.portalId === id) {
+          n.classList.add('active-target');
+          const badge = n.querySelector('.radar-node-badge');
+          if (badge) badge.innerText = 'APPLYING NOW';
+        } else {
+          n.classList.remove('active-target');
+          const pData = RADAR_PORTALS.find(x => x.id === n.dataset.portalId);
+          const c = allLedgerRows.filter(r => {
+            const p = (r.portal || '').toLowerCase();
+            return pData && (p.includes(pData.id) || p.includes(pData.name.toLowerCase()));
+          }).length;
+          const badge = n.querySelector('.radar-node-badge');
+          if (badge) badge.innerText = `${c} applied`;
+        }
+      });
+
+      const svgGroup = document.getElementById('radar-links-group');
+      if (svgGroup) {
+        svgGroup.querySelectorAll('path').forEach(p => {
+          if (p.dataset.portalId === id) {
+            p.className.baseVal = 'radar-link-active';
+          } else {
+            p.className.baseVal = 'radar-link-inactive';
+          }
+        });
+      }
+
+      document.querySelectorAll('.portal-dock-btn').forEach(b => {
+        if (b.innerText.toLowerCase().includes(portal.id) || b.innerText.toLowerCase().includes(portal.name.toLowerCase())) {
+          b.classList.add('active');
+        } else {
+          b.classList.remove('active');
+        }
+      });
+
+      if (!skipNavigate) {
+        urlBar.value = portal.url;
+        webview.src = portal.url;
+      }
+    }
+
+    function updateRadarCounts() {
+      const activeWs = document.getElementById('ws-radar');
+      if (activeWs && activeWs.classList.contains('active-ws')) {
+        renderRadarTopology();
+      } else {
+        const portal = RADAR_PORTALS.find(p => p.id === activeRadarPortalId);
+        if (portal) {
+          const count = allLedgerRows.filter(r => {
+            const p = (r.portal || '').toLowerCase();
+            return p.includes(portal.id) || p.includes(portal.name.toLowerCase());
+          }).length;
+          const hudApplied = document.getElementById('radar-hud-applied');
+          if (hudApplied) hudApplied.innerText = count;
+        }
+      }
+    }
+
+    function openActivePortalFromRadar() {
+      const portal = RADAR_PORTALS.find(p => p.id === activeRadarPortalId);
+      if (portal) {
+        urlBar.value = portal.url;
+        webview.src = portal.url;
+        switchWorkspaceTab('browser');
+      }
+    }
+
+    function quickSmartApplyActivePortal() {
+      openActivePortalFromRadar();
+      setTimeout(() => {
+        smartApplyInBrowser();
+      }, 1200);
+    }
+
+    function zoomRadar(delta) {
+      radarZoom = Math.max(0.6, Math.min(2.0, radarZoom + delta));
+      const world = document.getElementById('radar-world');
+      if (world) world.style.transform = `scale(${radarZoom})`;
+    }
+
+    function resetRadarView() {
+      radarZoom = 1.0;
+      const world = document.getElementById('radar-world');
+      if (world) world.style.transform = 'scale(1)';
+    }
+
+    function focusRadarCenter() {
+      resetRadarView();
+      showToast('JobPilot Autopilot Core monitoring all 12 portal nodes.');
+    }
+
     // Ledger Logic
     async function loadLedgerData() {
       if (window.jobPilotApi && window.jobPilotApi.getApplicationsTracker) {
@@ -1344,6 +1660,7 @@
         }
 
         filterLedger();
+        updateRadarCounts();
       }
     }
 
@@ -1597,6 +1914,13 @@
           document.getElementById('dock-active-target').innerText = `🌐 ${jobMeta.company || 'Job'}: ${jobMeta.title || ''}`;
           banner.style.display = 'flex';
         }
+        if (jobMeta && jobMeta.url) {
+          const det = detectPortalFromUrl(jobMeta.url);
+          if (det) setActiveRadarPortal(det);
+        } else if (jobMeta && jobMeta.portal) {
+          const det = detectPortalFromUrl(jobMeta.portal);
+          if (det) setActiveRadarPortal(det);
+        }
       });
     }
 
@@ -1781,6 +2105,10 @@
         e.preventDefault();
         switchWorkspaceTab('resume');
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === '5') {
+        e.preventDefault();
+        switchWorkspaceTab('radar');
+      }
     });
 
     // Init
@@ -1792,15 +2120,28 @@
       webview.addEventListener('did-navigate', (e) => {
         if (urlBar) urlBar.value = e.url;
         checkCurrentWebviewSafety();
+        const det = detectPortalFromUrl(e.url);
+        if (det) setActiveRadarPortal(det);
       });
       webview.addEventListener('did-navigate-in-page', (e) => {
         if (urlBar) urlBar.value = e.url;
         checkCurrentWebviewSafety();
+        const det = detectPortalFromUrl(e.url);
+        if (det) setActiveRadarPortal(det);
       });
       webview.addEventListener('dom-ready', () => {
         checkCurrentWebviewSafety();
+        const det = detectPortalFromUrl(webview.getURL());
+        if (det) setActiveRadarPortal(det);
       });
     }
+
+    window.addEventListener('resize', () => {
+      const radarWs = document.getElementById('ws-radar');
+      if (radarWs && radarWs.classList.contains('active-ws')) {
+        renderRadarTopology();
+      }
+    });
 
     setInterval(loadStats, 10000);
     setInterval(refreshFleetStatus, 5000);
