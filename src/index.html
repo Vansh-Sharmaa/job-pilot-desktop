@@ -373,6 +373,10 @@
                 <i data-lucide="sparkles" class="lucide-icon-sm"></i>
                 <span>Scan ATS</span>
               </button>
+              <button class="ubb-btn-review" onclick="findOfficialJobSourceAndEmails()" title="Find official direct ATS application link (Greenhouse/Lever) and HR emails for free" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">
+                <i data-lucide="search" class="lucide-icon-sm"></i>
+                <span>Direct Source</span>
+              </button>
               <button class="ubb-btn-apply" onclick="autoApplyWithCurrentATS()" title="Automatic 1-Click Form Apply with verified candidate profile">
                 <i data-lucide="zap" class="lucide-icon-sm"></i>
                 <span id="ubb-apply-btn-label">Auto-Apply</span>
@@ -1929,6 +1933,52 @@
         banner.style.display = 'none';
       } catch (e) {
         banner.style.display = 'none';
+      }
+    }
+
+    async function findOfficialJobSourceAndEmails() {
+      if (!webview) return;
+      showToast('Extracting HR contacts and resolving official ATS posting...');
+      try {
+        const script = `
+          (function() {
+            const h1 = document.querySelector('h1, [data-testid="job-title"], .jobsearch-JobInfoHeader-title, .jobs-unified-top-card__job-title');
+            const title = h1 ? h1.innerText.trim() : document.title;
+            const compEl = document.querySelector('[data-company-name="true"], .company-name, .topcard__org-name-link, .employer-name, .jobsearch-CompanyInfoContainer');
+            const company = compEl ? compEl.innerText.trim() : '';
+
+            // Extract emails
+            const text = document.body ? document.body.innerText : '';
+            const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/g;
+            const matches = text.match(emailRegex) || [];
+            document.querySelectorAll('a[href^="mailto:"]').forEach(a => {
+              const m = a.href.replace(/^mailto:/i, '').split('?')[0].trim();
+              if (m) matches.push(m);
+            });
+            const filteredEmails = Array.from(new Set(matches.map(m => m.toLowerCase()))).filter(e => {
+              return !e.endsWith('.png') && !e.endsWith('.jpg') && !e.includes('example.com') && !e.includes('sentry') && !e.includes('cloudflare');
+            });
+
+            return { title, company, emails: filteredEmails };
+          })();
+        `;
+        const res = await webview.executeJavaScript(script);
+        const comp = res?.company || 'Company';
+        const role = res?.title || 'AI Role';
+        const emails = res?.emails || [];
+
+        // Direct Google search for official Greenhouse, Lever, Ashby, or Workday posting
+        const atsQuery = `site:boards.greenhouse.io OR site:jobs.lever.co OR site:ashbyhq.com OR site:myworkdayjobs.com "${comp}" "${role}"`;
+        const atsSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(atsQuery)}`;
+
+        const emailInfo = emails.length > 0 ? `Found: ${emails.slice(0, 2).join(', ')}` : `Suggested HR: careers@${comp.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
+        showToast(`${emailInfo} | Loading official ATS query...`);
+        logRadarTelemetry('SOURCE_FINDER', `Resolved direct ATS query for ${comp}: ${atsQuery}`);
+
+        // Open direct official search in webview
+        webview.src = atsSearchUrl;
+      } catch (err) {
+        showToast('Direct source search: ' + err.message);
       }
     }
 

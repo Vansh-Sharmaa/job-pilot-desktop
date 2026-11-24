@@ -777,6 +777,9 @@
         <button class="jp-action-btn" id="jp-btn-sync" style="grid-column: span 2;">
           <span>📋</span> <span>Record to Desktop Ledger</span>
         </button>
+        <button class="jp-action-btn" id="jp-btn-find-source" style="grid-column: span 2; background: #0f172a; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">
+          <span>🔍</span> <span>Find Official ATS Link & HR Emails</span>
+        </button>
       </div>
 
       <div class="jp-pill-status" id="jp-pill-status">● Connected to Desktop Bridge (5056)</div>
@@ -852,6 +855,32 @@
     document.getElementById('jp-btn-sync').addEventListener('click', () => {
       syncJobToDesktop();
       showPillNotice('✓ Application synced to Ledger!');
+    });
+
+    document.getElementById('jp-btn-find-source')?.addEventListener('click', () => {
+      const meta = extractJobMetadata() || {};
+      const emails = extractEmailsFromPage();
+      const comp = meta.company || 'Company';
+      const role = meta.title || 'Role';
+      const atsQuery = `site:boards.greenhouse.io OR site:jobs.lever.co OR site:ashbyhq.com OR site:myworkdayjobs.com "${comp}" "${role}"`;
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(atsQuery)}`;
+      
+      const emailList = emails.length > 0 ? emails.slice(0, 3).join(', ') : `careers@${comp.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
+      showPillNotice(`Direct HR: ${emailList}`);
+      window.open(searchUrl, '_blank');
+    });
+  }
+
+  function extractEmailsFromPage() {
+    const text = document.body ? document.body.innerText : '';
+    const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+    const matches = text.match(emailRegex) || [];
+    document.querySelectorAll('a[href^="mailto:"]').forEach(a => {
+      const m = a.href.replace(/^mailto:/i, '').split('?')[0].trim();
+      if (m) matches.push(m);
+    });
+    return Array.from(new Set(matches.map(m => m.toLowerCase()))).filter(e => {
+      return !e.endsWith('.png') && !e.endsWith('.jpg') && !e.includes('example.com') && !e.includes('sentry') && !e.includes('cloudflare');
     });
   }
 
