@@ -6,4 +6,8 @@ build/
 config.json
 extension/bridge-token.json
 *.backup.csv
-
+start_app*.py
+*SPEC*.md
+check_*.py
+run_*.py
+app_debug.log
