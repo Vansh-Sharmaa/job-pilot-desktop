@@ -1,10 +1,10 @@
 @echo off
-title JobPilot AI : Autonomous Career Cockpit
+title JobPilot AI
 set ELECTRON_RUN_AS_NODE=
-cd /d "D:\opencode stuff\job-pilot-desktop"
+cd /d "%~dp0"
 
-:: Ensure 9router daemon is alive on port 20128 for Fable5
-powershell -NoProfile -Command "if (!(Get-NetTCPConnection -LocalPort 20128 -ErrorAction SilentlyContinue)) { Start-Process -FilePath 'cmd.exe' -ArgumentList '/c 9router -n --skip-update' -WindowStyle Hidden }"
+:: Terminate any stale zombie electron process
+taskkill /f /im electron.exe >nul 2>&1
 
-start "" "D:\opencode stuff\job-pilot-desktop\node_modules\electron\dist\electron.exe" "D:\opencode stuff\job-pilot-desktop"
-
+:: Launch Electron app directly and immediately
+start "" "%~dp0node_modules\electron\dist\electron.exe" .
