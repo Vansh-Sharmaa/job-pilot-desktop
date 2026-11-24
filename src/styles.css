@@ -251,6 +251,7 @@ body {
   z-index: 50;
   gap: 10px;
   flex-shrink: 0;
+  -webkit-app-region: no-drag;
 }
 
 .oc-subbar-left {
@@ -415,6 +416,14 @@ body {
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  max-width: 180px;
+}
+
+.ag-profile-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ag-profile-pill:hover {
@@ -1103,12 +1112,14 @@ body {
   position: relative;
   z-index: 30;
   flex-shrink: 0;
+  -webkit-app-region: no-drag;
+  overflow: hidden;
 }
 
 .ubb-nav-left {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
@@ -1151,6 +1162,14 @@ body {
   user-select: none;
   transition: background 0.15s ease, border-color 0.15s ease;
   flex-shrink: 0;
+  max-width: 130px;
+}
+
+#active-portal-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 75px;
 }
 
 .portal-selector-trigger:hover {
@@ -1179,15 +1198,17 @@ body {
 }
 
 .ubb-omnibar {
-  flex: 1;
+  flex: 1 1 180px;
+  min-width: 140px;
   display: flex;
   align-items: center;
   background: var(--bg-surface);
   border: 1px solid var(--border-hairline);
   border-radius: 8px;
   padding: 3px 8px 3px 10px;
-  gap: 8px;
-  min-width: 0;
+  gap: 6px;
+  overflow: hidden;
+  position: relative;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -1211,7 +1232,7 @@ body {
   font-size: 11.5px;
   font-family: var(--font-mono);
   outline: none;
-  min-width: 0;
+  min-width: 40px;
 }
 
 .ubb-ats-pill {
@@ -1224,7 +1245,7 @@ body {
   font-size: 10.5px;
   font-weight: 700;
   font-family: var(--font-mono);
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 9999px;
   cursor: pointer;
   white-space: nowrap;
@@ -1251,15 +1272,16 @@ body {
   border: none;
   font-weight: 600;
   font-size: 11.5px;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
   transition: background 0.15s ease, transform 0.1s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ubb-btn-apply:hover {
@@ -1273,20 +1295,30 @@ body {
   border: 1px solid var(--border-hairline);
   font-weight: 500;
   font-size: 11px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   transition: all 0.15s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ubb-btn-review:hover {
   background: var(--bg-hover);
   border-color: var(--border-subtle);
   color: #fff;
+}
+
+@media (max-width: 1300px) {
+  .ubb-btn-review span {
+    display: none;
+  }
+  .ubb-btn-review {
+    padding: 6px 8px;
+  }
 }
 
 /* Quick Tools Drawer Strip */
