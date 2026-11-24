@@ -5,10 +5,36 @@ const { spawn, exec } = require('child_process');
 const http = require('http');
 const crypto = require('crypto');
 
+// Log diagnostic startup information
+const debugLog = (msg) => {
+  try {
+    fs.appendFileSync(path.join(__dirname, '..', 'app_debug.log'), `[${new Date().toISOString()}] ${msg}\n`);
+  } catch (e) {}
+};
+
+process.on('uncaughtException', (err) => {
+  debugLog(`UNCAUGHT EXCEPTION: ${err.stack || err}`);
+});
+
+process.on('unhandledRejection', (reason) => {
+  debugLog(`UNHANDLED REJECTION: ${reason}`);
+});
+
 // Enforce single-instance lock to prevent port collision, double-writes and fleet races
 const gotTheLock = app.requestSingleInstanceLock();
+debugLog(`app.requestSingleInstanceLock() = ${gotTheLock}`);
 if (!gotTheLock) {
+  debugLog('Exiting because gotTheLock is false');
   app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    debugLog('second-instance event triggered');
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+    }
+  });
 }
 
 let mainWindow = null;
@@ -631,6 +657,7 @@ async function ensureRouter(maxWaitMs = 12000) {
 }
 
 function createWindow() {
+  debugLog('createWindow called');
   mainWindow = new BrowserWindow({
     width: 1680,
     height: 1000,
@@ -652,7 +679,16 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    debugLog('mainWindow finished loading index.html');
+  });
+
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    debugLog(`render-process-gone: ${JSON.stringify(details)}`);
+  });
+
   mainWindow.on('closed', () => {
+    debugLog('mainWindow on closed event fired');
     mainWindow = null;
     for (const [name, item] of activeProcesses.entries()) {
       try { item.proc.kill(); } catch (e) {}
@@ -662,12 +698,14 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  debugLog('app.whenReady fired');
   createWindow();
   startExtensionBridgeServer();
   await ensureRouter(8000);
 });
 
 app.on('window-all-closed', () => {
+  debugLog('app window-all-closed fired');
   if (process.platform !== 'darwin') app.quit();
 });
 
