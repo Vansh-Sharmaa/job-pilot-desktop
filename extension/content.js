@@ -1182,6 +1182,9 @@
         <button class="jp-action-btn" id="jp-btn-contact" style="grid-column: span 2;">
           <span>📇</span> <span>Get Contact Info</span>
         </button>
+        <button class="jp-action-btn" id="jp-btn-map-talent" style="grid-column: span 2; background: #0c1a2e; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">
+          <span>🕸</span> <span>Map Company Talent Graph (Obsidian)</span>
+        </button>
       </div>
 
       <div class="jp-pill-status" id="jp-pill-status">● Connected to Desktop Bridge (5056)</div>
@@ -1265,7 +1268,7 @@
       chrome.runtime.sendMessage({ type: 'GET_CONTACTS', payload: data }, (res) => {
         const d = (res && res.status === 'success') ? (res.data || data) : data;
         const lines = [];
-        if (d && d.company) lines.push(`${d.company} — ${d.role || ''}`);
+        if (d && d.company) lines.push(`${d.company} - ${d.role || ''}`);
         if (d && d.emails && d.emails.length) lines.push(`Contacts: ${d.emails.slice(0, 3).join(', ')}`);
         if (d && d.companyEmails && d.companyEmails.length) lines.push(`HR Domain: ${d.companyEmails.slice(0, 3).join(', ')}`);
         if (d && d.atsSearchUrl) {
@@ -1285,6 +1288,23 @@
         if (d && d.emails && d.emails.length) lines.push(`Contacts: ${d.emails.slice(0, 3).join(', ')}`);
         if (d && d.phone) lines.push(`Phone: ${d.phone}`);
         showPillNotice(lines.length ? `✓ Contact Intel: ${lines.join(' | ')}` : 'No contact info found on this page.');
+      });
+    });
+
+    document.getElementById('jp-btn-map-talent')?.addEventListener('click', (e) => {
+      if (e) e.stopPropagation();
+      const meta = extractJobMetadata() || {};
+      const company = meta.company || (document.title.split('-')[0] || 'Company').trim();
+      showPillNotice(`Mapping talent graph for ${company}...`);
+      chrome.runtime.sendMessage({
+        type: 'MAP_TALENT_GRAPH',
+        payload: { company }
+      }, (res) => {
+        if (res && res.ok) {
+          showPillNotice(`✓ Mapped ${company} network! View in Desktop App.`);
+        } else {
+          showPillNotice(`Talent request dispatched for ${company}`);
+        }
       });
     });
   }

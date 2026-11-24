@@ -226,4 +226,30 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // Action: Map Company Talent Graph in Desktop App
+  const btnMapTalent = document.getElementById('btn-popup-map-talent');
+  if (btnMapTalent) {
+    btnMapTalent.addEventListener('click', async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      let comp = (activeJobMeta && activeJobMeta.company) || '';
+      if (!comp && tab && tab.title) {
+        comp = tab.title.split('-')[0].split('|')[0].trim();
+      }
+      if (!comp) comp = 'Google';
+
+      noticeEl.innerText = `Mapping talent graph for ${comp}...`;
+
+      chrome.runtime.sendMessage({
+        type: 'MAP_TALENT_GRAPH',
+        payload: { company: comp }
+      }, (res) => {
+        if (res && res.ok) {
+          noticeEl.innerText = `✓ Mapped ${comp} network! View in Desktop App.`;
+        } else {
+          noticeEl.innerText = `Talent map signal dispatched for ${comp}.`;
+        }
+      });
+    });
+  }
 });

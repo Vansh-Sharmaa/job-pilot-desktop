@@ -58,6 +58,10 @@
         <span class="oc-tab-badge">CV</span>
         <span class="oc-tab-title">Profile & Resume</span>
       </div>
+      <div class="oc-tab" id="tab-graph" onclick="switchWorkspaceTab('graph')" title="Company Talent Intel & Connection Map (Obsidian Graph) (Ctrl+7)">
+        <span class="oc-tab-badge">TG</span>
+        <span class="oc-tab-title">Talent Graph</span>
+      </div>
       <button class="oc-tab-new-btn" onclick="startNewSession()" title="New Chat Session">+</button>
     </div>
 
@@ -221,6 +225,18 @@
             </div>
             <div class="ag-chat-item" onclick="switchWorkspaceTab('quotas')">
               <span class="ag-chat-title">Daily Platform Quotas</span>
+              <span class="ag-chat-dot"></span>
+            </div>
+          </div>
+
+          <!-- Project 5: Company Talent Graph -->
+          <div class="ag-project-group">
+            <div class="ag-project-header" onclick="switchWorkspaceTab('graph')">
+              <span>🕸</span>
+              <span>company talent graph</span>
+            </div>
+            <div class="ag-chat-item" onclick="switchWorkspaceTab('graph')">
+              <span class="ag-chat-title">Obsidian Connection Map</span>
               <span class="ag-chat-dot"></span>
             </div>
           </div>
@@ -1090,6 +1106,196 @@
           </div>
         </div>
 
+        <!-- TAB 8: TALENT GRAPH (OBSIDIAN CONNECTION MAP) -->
+        <div class="ws-view" id="ws-graph">
+          <div class="talent-graph-container">
+            <!-- Top Controls Toolbar -->
+            <div class="graph-top-bar">
+              <div class="graph-search-group">
+                <div class="graph-input-wrapper">
+                  <span class="graph-search-icon">🔍</span>
+                  <input type="text" id="graph-company-search-input" placeholder="Enter target company (e.g. Google, Microsoft, Meta, Swiggy, Zomato)..." onkeydown="if(event.key==='Enter') triggerMapCompanyFromInput()">
+                </div>
+                <button class="browser-btn primary" id="btn-map-company-network" onclick="triggerMapCompanyFromInput()">
+                  <span>⚡ Map Company Network</span>
+                </button>
+              </div>
+
+              <!-- Quick Target Pills -->
+              <div class="graph-quick-pills">
+                <span class="graph-pill-label">Fast Map:</span>
+                <button class="graph-pill active" onclick="loadCompanyTalentMap('Google')">Google</button>
+                <button class="graph-pill" onclick="loadCompanyTalentMap('Microsoft')">Microsoft</button>
+                <button class="graph-pill" onclick="loadCompanyTalentMap('Amazon')">Amazon</button>
+                <button class="graph-pill" onclick="loadCompanyTalentMap('Meta')">Meta</button>
+                <button class="graph-pill" onclick="loadCompanyTalentMap('NVIDIA')">NVIDIA</button>
+                <button class="graph-pill" onclick="loadCompanyTalentMap('OpenAI')">OpenAI</button>
+                <button class="graph-pill" onclick="loadCompanyTalentMap('Swiggy')">Swiggy</button>
+                <button class="graph-pill" onclick="loadCompanyTalentMap('Zomato')">Zomato</button>
+              </div>
+
+              <!-- View & Utility Toggles -->
+              <div class="graph-right-controls">
+                <div class="graph-view-switch">
+                  <button class="graph-switch-btn active" id="btn-view-canvas" onclick="setGraphViewMode('canvas')">🕸 Obsidian Canvas</button>
+                  <button class="graph-switch-btn" id="btn-view-cards" onclick="setGraphViewMode('cards')">📋 Directory Cards</button>
+                </div>
+                <button class="browser-btn" onclick="exportCurrentGraph('csv')" title="Export full talent list to CSV">CSV</button>
+                <button class="browser-btn" onclick="exportCurrentGraph('json')" title="Export raw JSON graph">JSON</button>
+              </div>
+            </div>
+
+            <!-- Filter & Stats Bar -->
+            <div class="graph-sub-bar">
+              <div class="graph-filter-chips">
+                <button class="filter-chip active" data-filter="all" onclick="filterTalentByDept('all')">All Personnel (<span id="stat-total-nodes">0</span>)</button>
+                <button class="filter-chip" data-filter="Talent & Recruiting" onclick="filterTalentByDept('Talent & Recruiting')">
+                  <span class="chip-dot hr"></span> Recruiting & HR (<span id="stat-hr-nodes">0</span>)
+                </button>
+                <button class="filter-chip" data-filter="Engineering & AI" onclick="filterTalentByDept('Engineering & AI')">
+                  <span class="chip-dot eng"></span> Engineering & AI (<span id="stat-eng-nodes">0</span>)
+                </button>
+                <button class="filter-chip" data-filter="Leadership" onclick="filterTalentByDept('Leadership')">
+                  <span class="chip-dot exec"></span> Leadership (<span id="stat-exec-nodes">0</span>)
+                </button>
+              </div>
+
+              <div class="graph-search-filter-wrap">
+                <input type="text" id="graph-node-filter-input" placeholder="Filter nodes by name or skill..." oninput="handleGraphNodeFilter(this.value)">
+              </div>
+            </div>
+
+            <!-- Workspace Body: Split between Graph View / Directory Cards + Slide-out Dossier -->
+            <div class="graph-content-split">
+              <!-- Left Area: Obsidian Canvas or Directory Cards -->
+              <div class="graph-viewport-area">
+                <!-- 1. Interactive Obsidian Canvas Graph -->
+                <div id="talent-canvas-wrapper" class="talent-canvas-wrapper">
+                  <canvas id="talent-graph-canvas"></canvas>
+                  
+                  <!-- Floating HUD Legend -->
+                  <div class="obsidian-hud-legend">
+                    <div class="legend-item"><span class="legend-dot company"></span> <span>Target Org Core</span></div>
+                    <div class="legend-item"><span class="legend-dot hr"></span> <span>Recruiting & HR</span></div>
+                    <div class="legend-item"><span class="legend-dot eng"></span> <span>Engineering & AI</span></div>
+                    <div class="legend-item"><span class="legend-dot exec"></span> <span>Leadership</span></div>
+                  </div>
+
+                  <!-- Floating Canvas Navigation Controls -->
+                  <div class="obsidian-hud-nav">
+                    <button class="hud-nav-btn" onclick="zoomTalentGraph(0.2)" title="Zoom In">+</button>
+                    <button class="hud-nav-btn" onclick="zoomTalentGraph(-0.2)" title="Zoom Out">-</button>
+                    <button class="hud-nav-btn" onclick="resetTalentGraphView()" title="Center Graph">⊙</button>
+                    <button class="hud-nav-btn" onclick="toggleGraphForcePhysics()" id="btn-toggle-physics" title="Pause or Resume Physics">⏸</button>
+                  </div>
+
+                  <!-- Status Overlay Banner -->
+                  <div id="graph-loading-overlay" class="graph-overlay" style="display: none;">
+                    <div class="graph-spinner"></div>
+                    <div id="graph-loading-text">Mapping corporate talent graph...</div>
+                  </div>
+                </div>
+
+                <!-- 2. Directory Cards View -->
+                <div id="talent-cards-wrapper" class="talent-cards-wrapper" style="display: none;">
+                  <div class="talent-cards-grid" id="talent-cards-grid">
+                    <!-- Populated via renderTalentDirectoryCards() -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Area: Intel Dossier & 1-Click AI Cold Email Outreach Composer -->
+              <div class="talent-dossier-panel" id="talent-dossier-panel">
+                <div class="dossier-empty-state" id="dossier-empty-state">
+                  <div class="dossier-empty-icon">🕸</div>
+                  <div style="font-weight: 700; color: #fff; font-size: 13px;">No Contact Selected</div>
+                  <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5; text-align: center; max-width: 240px;">
+                    Click any person node on the Obsidian canvas or directory card to view verified contact intel and generate tailored cold outreach.
+                  </div>
+                </div>
+
+                <div class="dossier-content" id="dossier-content" style="display: none;">
+                  <div class="dossier-header">
+                    <div class="dossier-avatar" id="dossier-avatar">PS</div>
+                    <div style="flex: 1; min-width: 0;">
+                      <div class="dossier-name" id="dossier-name">Priya Sundaram</div>
+                      <div class="dossier-role" id="dossier-role">Lead Technical Recruiter</div>
+                      <div class="dossier-tags">
+                        <span class="dossier-tag dept" id="dossier-dept-tag">Recruiting & HR</span>
+                        <span class="dossier-tag loc" id="dossier-loc-tag">Bangalore, India</span>
+                      </div>
+                    </div>
+                    <button class="dossier-close-btn" onclick="closeTalentDossier()">✕</button>
+                  </div>
+
+                  <!-- Contact Channels Strip -->
+                  <div class="dossier-contact-section">
+                    <div class="dossier-row">
+                      <span class="dossier-label">Verified Email</span>
+                      <div class="dossier-email-box">
+                        <span class="dossier-email-text" id="dossier-email">priya.sundaram@google.com</span>
+                        <span class="dossier-badge-verified" title="Company pattern verified">Verified</span>
+                        <button class="dossier-btn-mini" onclick="copyDossierEmail()" title="Copy Email">📋</button>
+                        <button class="dossier-btn-mini" onclick="launchDossierMailto()" title="Open Mail App">✉️</button>
+                      </div>
+                    </div>
+
+                    <div class="dossier-row" style="margin-top: 6px;">
+                      <span class="dossier-label">Online Profiles</span>
+                      <div style="display: flex; gap: 6px;">
+                        <a href="#" target="_blank" class="dossier-link-btn linkedin" id="dossier-linkedin-btn">
+                          <span>LinkedIn</span> <span>↗</span>
+                        </a>
+                        <a href="#" target="_blank" class="dossier-link-btn github" id="dossier-github-btn" style="display: none;">
+                          <span>GitHub</span> <span>↗</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Skills & Focus Areas -->
+                  <div class="dossier-section">
+                    <div class="dossier-section-title">Focus Areas & Specialization</div>
+                    <div class="dossier-skills-wrap" id="dossier-skills-wrap"></div>
+                  </div>
+
+                  <!-- Personalization Strategy Hook -->
+                  <div class="dossier-section">
+                    <div class="dossier-section-title">Personalized Outreach Hook</div>
+                    <div class="dossier-hook-box" id="dossier-hook-box">
+                      Specializes in early-career AI and cloud infrastructure hiring at target company.
+                    </div>
+                  </div>
+
+                  <!-- 1-Click AI Cold Email Outreach Composer -->
+                  <div class="dossier-email-composer">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <div class="dossier-section-title" style="margin-bottom: 0;">⚡ 1-Click AI Cold Email</div>
+                      <button class="browser-btn primary sm" id="btn-generate-ai-outreach" onclick="generateColdEmailForSelectedPerson()">
+                        <span>✨ Draft with AI</span>
+                      </button>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <input type="text" id="dossier-outreach-subject" class="dossier-input" placeholder="Email Subject...">
+                      <textarea id="dossier-outreach-body" class="dossier-textarea" rows="6" placeholder="AI Cold Email will be generated here..."></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 6px; margin-top: 8px;">
+                      <button class="browser-btn" style="flex: 1;" onclick="copyDossierGeneratedBody()">
+                        <span>📋 Copy Email</span>
+                      </button>
+                      <button class="browser-btn primary" style="flex: 1.2;" onclick="sendDossierGeneratedMailto()">
+                        <span>✉️ Send via Mail Client</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </section>
 
     </main>
@@ -1384,6 +1590,7 @@
         'leads': 'Inbox Job Recommendations & Hiring Alerts',
         'fleet': 'Autonomous Multi-Platform Fleet Autopilot',
         'resume': 'Candidate Profile & Dynamic ATS Studio',
+        'graph': 'Company Talent Intelligence & Obsidian Connection Map',
         'settings': 'Model Gateway & System Settings'
       };
       const topicEl = document.getElementById('oc-current-topic');
@@ -1393,6 +1600,14 @@
       if (tabName === 'ledger') loadLedgerData();
       if (tabName === 'interviews') loadInterviewsData();
       if (tabName === 'leads') loadJobLeadsData();
+      if (tabName === 'graph') {
+        setTimeout(() => {
+          initTalentGraphCanvas();
+          if (!currentTalentGraphData) {
+            loadCompanyTalentMap('Google');
+          }
+        }, 80);
+      }
       if (tabName === 'fleet') refreshFleetStatus();
       if (tabName === 'quotas') loadStats();
       if (tabName === 'settings') loadSettingsToUI();
@@ -4390,7 +4605,805 @@
         e.preventDefault();
         switchWorkspaceTab('interviews');
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === '7') {
+        e.preventDefault();
+        switchWorkspaceTab('graph');
+      }
     });
+
+    // =====================================================================
+    // TALENT GRAPH & OBSIDIAN FORCE CANVAS ENGINE
+    // =====================================================================
+    let currentTalentGraphData = null;
+    let talentNodes = [];
+    let talentLinks = [];
+    let selectedTalentPerson = null;
+    let hoveredTalentNode = null;
+    let draggedTalentNode = null;
+    let isTalentGraphPanning = false;
+    let talentPanStartX = 0;
+    let talentPanStartY = 0;
+    let talentPanX = 0;
+    let talentPanY = 0;
+    let talentZoom = 1.0;
+    let talentPhysicsRunning = true;
+    let talentAnimFrameId = null;
+    let talentCanvasInitDone = false;
+    let currentTalentFilter = 'all';
+    let currentTalentSearchQuery = '';
+    let graphViewMode = 'canvas';
+
+    function initTalentGraphCanvas() {
+      const canvas = document.getElementById('talent-graph-canvas');
+      const wrapper = document.getElementById('talent-canvas-wrapper');
+      if (!canvas || !wrapper) return;
+
+      const rect = wrapper.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = (rect.width || 800) * dpr;
+      canvas.height = (rect.height || 600) * dpr;
+
+      if (!talentCanvasInitDone) {
+        talentCanvasInitDone = true;
+
+        canvas.addEventListener('mousedown', (e) => {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          const mx = (e.clientX - rect.left) * dpr;
+          const my = (e.clientY - rect.top) * dpr;
+          const worldX = (mx - canvas.width / 2 - talentPanX * dpr) / (talentZoom * dpr);
+          const worldY = (my - canvas.height / 2 - talentPanY * dpr) / (talentZoom * dpr);
+
+          const clickedNode = findTalentNodeAt(worldX, worldY);
+          if (clickedNode) {
+            draggedTalentNode = clickedNode;
+            draggedTalentNode.isDragging = true;
+          } else {
+            isTalentGraphPanning = true;
+            talentPanStartX = e.clientX - talentPanX;
+            talentPanStartY = e.clientY - talentPanY;
+          }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          const mx = (e.clientX - rect.left) * dpr;
+          const my = (e.clientY - rect.top) * dpr;
+          const worldX = (mx - canvas.width / 2 - talentPanX * dpr) / (talentZoom * dpr);
+          const worldY = (my - canvas.height / 2 - talentPanY * dpr) / (talentZoom * dpr);
+
+          if (draggedTalentNode) {
+            draggedTalentNode.x = worldX;
+            draggedTalentNode.y = worldY;
+            draggedTalentNode.vx = 0;
+            draggedTalentNode.vy = 0;
+            canvas.style.cursor = 'grabbing';
+            return;
+          }
+
+          if (isTalentGraphPanning) {
+            talentPanX = e.clientX - talentPanStartX;
+            talentPanY = e.clientY - talentPanStartY;
+            canvas.style.cursor = 'grabbing';
+            return;
+          }
+
+          hoveredTalentNode = findTalentNodeAt(worldX, worldY);
+          canvas.style.cursor = hoveredTalentNode ? 'pointer' : 'grab';
+        });
+
+        window.addEventListener('mouseup', (e) => {
+          if (draggedTalentNode) {
+            selectTalentPerson(draggedTalentNode.personData || null);
+            draggedTalentNode.isDragging = false;
+            draggedTalentNode = null;
+          }
+          isTalentGraphPanning = false;
+          if (canvas) canvas.style.cursor = 'grab';
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const delta = e.deltaY < 0 ? 0.12 : -0.12;
+          talentZoom = Math.max(0.35, Math.min(2.8, talentZoom + delta));
+        }, { passive: false });
+
+        if (window.jobPilotApi && window.jobPilotApi.onOpenCompanyTalentGraph) {
+          window.jobPilotApi.onOpenCompanyTalentGraph((data) => {
+            switchWorkspaceTab('graph');
+            if (data && data.company) {
+              const input = document.getElementById('graph-company-search-input');
+              if (input) input.value = data.company;
+              loadCompanyTalentMap(data.company, false);
+            }
+          });
+        }
+      }
+
+      if (!talentAnimFrameId) {
+        renderTalentGraphLoop();
+      }
+    }
+
+    function findTalentNodeAt(x, y) {
+      for (let i = talentNodes.length - 1; i >= 0; i--) {
+        const n = talentNodes[i];
+        if (!isNodeVisibleWithFilter(n)) continue;
+        const dx = n.x - x;
+        const dy = n.y - y;
+        if (Math.sqrt(dx * dx + dy * dy) <= (n.radius + 4)) {
+          return n;
+        }
+      }
+      return null;
+    }
+
+    function isNodeVisibleWithFilter(n) {
+      if (n.type === 'company' || n.type === 'hub') return true;
+      if (currentTalentFilter !== 'all' && n.department !== currentTalentFilter) return false;
+      if (currentTalentSearchQuery) {
+        const q = currentTalentSearchQuery.toLowerCase();
+        const name = (n.name || '').toLowerCase();
+        const role = (n.role || '').toLowerCase();
+        const skills = (n.skills || []).join(' ').toLowerCase();
+        return name.includes(q) || role.includes(q) || skills.includes(q);
+      }
+      return true;
+    }
+
+    async function loadCompanyTalentMap(companyName, forceRefresh = false) {
+      if (!companyName) return;
+      const targetCompany = companyName.trim();
+      const input = document.getElementById('graph-company-search-input');
+      if (input) input.value = targetCompany;
+
+      document.querySelectorAll('.graph-pill').forEach(btn => {
+        if (btn.innerText.toLowerCase().trim() === targetCompany.toLowerCase().trim()) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const overlay = document.getElementById('graph-loading-overlay');
+      const overlayText = document.getElementById('graph-loading-text');
+      if (overlay) overlay.style.display = 'flex';
+      if (overlayText) overlayText.innerText = `Mapping corporate talent graph for ${targetCompany}...`;
+
+      try {
+        let res = null;
+        if (window.jobPilotApi && window.jobPilotApi.discoverCompanyTalent) {
+          res = await window.jobPilotApi.discoverCompanyTalent(targetCompany, forceRefresh);
+        } else {
+          res = { ok: true, graph: null };
+        }
+
+        if (res && res.ok && res.graph) {
+          currentTalentGraphData = res.graph;
+        } else {
+          currentTalentGraphData = {
+            company: targetCompany,
+            domain: `${targetCompany.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+            departments: ['Talent & Recruiting', 'Engineering & AI', 'Leadership'],
+            employees: []
+          };
+        }
+
+        buildGraphTopologyFromData(currentTalentGraphData);
+        renderTalentDirectoryCards();
+        updateGraphFilterCounters();
+
+        if (currentTalentGraphData.employees && currentTalentGraphData.employees.length > 0) {
+          selectTalentPerson(currentTalentGraphData.employees[0]);
+        }
+
+        showToast(`Mapped ${currentTalentGraphData.employees.length} contacts for ${targetCompany}!`);
+      } catch (err) {
+        showToast('Error mapping talent graph: ' + err.message);
+      } finally {
+        if (overlay) overlay.style.display = 'none';
+      }
+    }
+
+    function triggerMapCompanyFromInput() {
+      const input = document.getElementById('graph-company-search-input');
+      const val = input ? input.value.trim() : '';
+      if (!val) {
+        showToast('Please enter a target company name.');
+        return;
+      }
+      loadCompanyTalentMap(val, true);
+    }
+
+    function buildGraphTopologyFromData(data) {
+      talentNodes = [];
+      talentLinks = [];
+      talentPanX = 0;
+      talentPanY = 0;
+      talentZoom = 1.0;
+
+      const compName = data.company || 'Target Org';
+
+      // 1. Core Company Node (Center)
+      const compNode = {
+        id: 'node-company',
+        type: 'company',
+        name: compName,
+        radius: 30,
+        color: '#3b82f6',
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0
+      };
+      talentNodes.push(compNode);
+
+      // 2. Department Hub Nodes (3 Hubs)
+      const hubsConfig = [
+        { id: 'hub-hr', dept: 'Talent & Recruiting', label: 'Recruiting & HR', color: '#10b981', angle: -2.1, dist: 160 },
+        { id: 'hub-eng', dept: 'Engineering & AI', label: 'Engineering & AI', color: '#38bdf8', angle: 0.1, dist: 170 },
+        { id: 'hub-exec', dept: 'Leadership', label: 'Leadership', color: '#a855f7', angle: 2.1, dist: 160 }
+      ];
+
+      const hubMap = {};
+      hubsConfig.forEach(h => {
+        const hubNode = {
+          id: h.id,
+          type: 'hub',
+          department: h.dept,
+          name: h.label,
+          radius: 20,
+          color: h.color,
+          x: Math.cos(h.angle) * h.dist,
+          y: Math.sin(h.angle) * h.dist,
+          vx: 0,
+          vy: 0
+        };
+        talentNodes.push(hubNode);
+        hubMap[h.dept] = hubNode;
+
+        talentLinks.push({
+          source: compNode,
+          target: hubNode,
+          targetDist: h.dist,
+          color: h.color,
+          pulsePos: Math.random()
+        });
+      });
+
+      // 3. Employee Person Nodes
+      const employees = data.employees || [];
+      employees.forEach((emp, idx) => {
+        const hub = hubMap[emp.department] || hubMap['Engineering & AI'];
+        const subAngle = (idx * 0.75) + (Math.random() * 0.4);
+        const subDist = 80 + (idx % 3) * 28;
+
+        const pNode = {
+          id: emp.id || `emp-${idx}`,
+          type: 'person',
+          department: emp.department,
+          name: emp.name,
+          role: emp.role,
+          email: emp.email,
+          skills: emp.skills || [],
+          location: emp.location || 'Remote',
+          personData: emp,
+          radius: 13,
+          color: hub ? hub.color : '#38bdf8',
+          x: hub.x + Math.cos(subAngle) * subDist,
+          y: hub.y + Math.sin(subAngle) * subDist,
+          vx: 0,
+          vy: 0
+        };
+        talentNodes.push(pNode);
+
+        talentLinks.push({
+          source: hub,
+          target: pNode,
+          targetDist: subDist,
+          color: hub.color,
+          pulsePos: Math.random()
+        });
+      });
+    }
+
+    function renderTalentGraphLoop() {
+      const canvas = document.getElementById('talent-graph-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // 1. Run Force Directed Physics Simulation
+      if (talentPhysicsRunning && talentNodes.length > 0) {
+        // Gravity towards center
+        talentNodes.forEach(n => {
+          if (n.isDragging) return;
+          const pull = n.type === 'company' ? 0.008 : 0.003;
+          n.vx -= n.x * pull;
+          n.vy -= n.y * pull;
+        });
+
+        // Coulomb Repulsion between nodes
+        for (let i = 0; i < talentNodes.length; i++) {
+          const n1 = talentNodes[i];
+          if (!isNodeVisibleWithFilter(n1)) continue;
+          for (let j = i + 1; j < talentNodes.length; j++) {
+            const n2 = talentNodes[j];
+            if (!isNodeVisibleWithFilter(n2)) continue;
+            const dx = n1.x - n2.x;
+            const dy = n1.y - n2.y;
+            const distSq = dx * dx + dy * dy + 225;
+            const dist = Math.sqrt(distSq);
+            const repStrength = (n1.radius * n2.radius * 240) / distSq;
+            const fx = (dx / dist) * repStrength;
+            const fy = (dy / dist) * repStrength;
+            if (!n1.isDragging) { n1.vx += fx; n1.vy += fy; }
+            if (!n2.isDragging) { n2.vx -= fx; n2.vy -= fy; }
+          }
+        }
+
+        // Spring Attraction along Links
+        talentLinks.forEach(link => {
+          if (!isNodeVisibleWithFilter(link.source) || !isNodeVisibleWithFilter(link.target)) return;
+          const dx = link.target.x - link.source.x;
+          const dy = link.target.y - link.source.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const f = (dist - link.targetDist) * 0.032;
+          const fx = (dx / dist) * f;
+          const fy = (dy / dist) * f;
+          if (!link.source.isDragging) { link.source.vx += fx; link.source.vy += fy; }
+          if (!link.target.isDragging) { link.target.vx -= fx; link.target.vy -= fy; }
+        });
+
+        // Velocity Damping and Position Integration
+        talentNodes.forEach(n => {
+          if (n.isDragging) return;
+          n.vx *= 0.86;
+          n.vy *= 0.86;
+          n.x += n.vx;
+          n.y += n.vy;
+        });
+      }
+
+      // 2. Clear Screen
+      ctx.clearRect(0, 0, width, height);
+
+      // Subtle Background Grid
+      ctx.save();
+      ctx.translate(width / 2 + talentPanX * dpr, height / 2 + talentPanY * dpr);
+      ctx.scale(talentZoom * dpr, talentZoom * dpr);
+
+      // Draw Synapse Links
+      talentLinks.forEach(link => {
+        if (!isNodeVisibleWithFilter(link.source) || !isNodeVisibleWithFilter(link.target)) return;
+
+        ctx.beginPath();
+        ctx.moveTo(link.source.x, link.source.y);
+        ctx.lineTo(link.target.x, link.target.y);
+        ctx.strokeStyle = link.color ? `${link.color}22` : 'rgba(255, 255, 255, 0.07)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Animated Synapse Light Pulse
+        link.pulsePos = (link.pulsePos + 0.008) % 1.0;
+        const px = link.source.x + (link.target.x - link.source.x) * link.pulsePos;
+        const py = link.source.y + (link.target.y - link.source.y) * link.pulsePos;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = link.color || '#38bdf8';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = link.color || '#38bdf8';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      // Draw Nodes
+      talentNodes.forEach(n => {
+        if (!isNodeVisibleWithFilter(n)) return;
+        const isSelected = selectedTalentPerson && n.personData && n.personData.id === selectedTalentPerson.id;
+        const isHovered = hoveredTalentNode && hoveredTalentNode.id === n.id;
+
+        // Outer Glow Halo
+        if (n.type === 'company' || isSelected || isHovered) {
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.radius + (n.type === 'company' ? 6 : 4), 0, Math.PI * 2);
+          ctx.fillStyle = `${n.color}25`;
+          ctx.shadowBlur = n.type === 'company' ? 18 : 12;
+          ctx.shadowColor = n.color;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        // Inner Circle Fill
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+        ctx.fillStyle = n.type === 'company' ? '#1e3a8a' : (n.type === 'hub' ? '#0f172a' : '#111827');
+        ctx.fill();
+        ctx.lineWidth = isSelected ? 2.5 : (isHovered ? 2 : 1.2);
+        ctx.strokeStyle = isSelected ? '#ffffff' : n.color;
+        ctx.stroke();
+
+        // Node Content / Label
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        if (n.type === 'company') {
+          ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText((n.name || 'Company').slice(0, 10), n.x, n.y);
+        } else if (n.type === 'hub') {
+          ctx.font = '600 9px system-ui, -apple-system, sans-serif';
+          ctx.fillStyle = n.color;
+          const initials = n.name.split(' ').map(w => w[0]).join('');
+          ctx.fillText(initials, n.x, n.y);
+
+          // Hub Subtitle below
+          ctx.font = '10px system-ui, -apple-system, sans-serif';
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(n.name, n.x, n.y + n.radius + 12);
+        } else {
+          // Person Initials inside node
+          ctx.font = 'bold 9px system-ui, -apple-system, sans-serif';
+          ctx.fillStyle = isSelected ? '#ffffff' : n.color;
+          const initials = (n.name || 'P').split(' ').map(w => w[0]).slice(0, 2).join('');
+          ctx.fillText(initials, n.x, n.y);
+
+          // Name label below node (if zoomed in or hovered)
+          if (talentZoom > 0.85 || isHovered || isSelected) {
+            ctx.font = isSelected ? 'bold 10px system-ui, -apple-system, sans-serif' : '9.5px system-ui, -apple-system, sans-serif';
+            ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
+            ctx.fillText(n.name, n.x, n.y + n.radius + 10);
+
+            if (isHovered || isSelected) {
+              ctx.font = '8.5px system-ui, -apple-system, sans-serif';
+              ctx.fillStyle = '#64748b';
+              ctx.fillText((n.role || '').slice(0, 24), n.x, n.y + n.radius + 21);
+            }
+          }
+        }
+      });
+
+      ctx.restore();
+
+      talentAnimFrameId = requestAnimationFrame(renderTalentGraphLoop);
+    }
+
+    function selectTalentPerson(person) {
+      if (!person) return;
+      selectedTalentPerson = person;
+
+      const emptyEl = document.getElementById('dossier-empty-state');
+      const contentEl = document.getElementById('dossier-content');
+      if (emptyEl) emptyEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'flex';
+
+      const avatar = document.getElementById('dossier-avatar');
+      const name = document.getElementById('dossier-name');
+      const role = document.getElementById('dossier-role');
+      const deptTag = document.getElementById('dossier-dept-tag');
+      const locTag = document.getElementById('dossier-loc-tag');
+      const email = document.getElementById('dossier-email');
+      const hook = document.getElementById('dossier-hook-box');
+      const skillsWrap = document.getElementById('dossier-skills-wrap');
+      const linkedinBtn = document.getElementById('dossier-linkedin-btn');
+      const githubBtn = document.getElementById('dossier-github-btn');
+
+      const initials = (person.name || 'P').split(' ').map(w => w[0]).slice(0, 2).join('');
+      if (avatar) avatar.innerText = initials;
+      if (name) name.innerText = person.name || 'Talent Contact';
+      if (role) role.innerText = person.role || 'Professional Role';
+      if (deptTag) deptTag.innerText = person.department || 'General';
+      if (locTag) locTag.innerText = person.location || 'India / Remote';
+      if (email) email.innerText = person.email || 'contact@company.com';
+      if (hook) hook.innerText = person.outreachHook || `Reaching out regarding junior AI Engineer and software roles at ${currentTalentGraphData?.company || 'company'}.`;
+
+      if (skillsWrap) {
+        skillsWrap.innerHTML = '';
+        (person.skills || []).forEach(s => {
+          const tag = document.createElement('span');
+          tag.className = 'dossier-skill-tag';
+          tag.innerText = s;
+          skillsWrap.appendChild(tag);
+        });
+      }
+
+      if (linkedinBtn) {
+        linkedinBtn.href = person.linkedin || `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent((currentTalentGraphData?.company || '') + ' ' + person.name)}`;
+      }
+
+      if (githubBtn) {
+        if (person.github) {
+          githubBtn.href = person.github;
+          githubBtn.style.display = 'inline-flex';
+        } else {
+          githubBtn.style.display = 'none';
+        }
+      }
+
+      // Generate initial cold outreach draft preview
+      const comp = currentTalentGraphData?.company || 'Company';
+      const isRecruiter = (person.department === 'Talent & Recruiting') || (person.role && person.role.toLowerCase().includes('recruiter'));
+      const firstName = (person.name || 'Hiring Lead').split(' ')[0];
+
+      const subjInput = document.getElementById('dossier-outreach-subject');
+      const bodyText = document.getElementById('dossier-outreach-body');
+
+      if (subjInput) {
+        subjInput.value = isRecruiter
+          ? `MCA AI & Data Science (2026) Graduate - Open Roles at ${comp}`
+          : `Quick note regarding AI/ML Engineering at ${comp} - Vansh Sharma`;
+      }
+
+      if (bodyText) {
+        bodyText.value = isRecruiter
+          ? `Hi ${firstName},\n\nI hope you are having a productive week.\n\nI am reaching out as an MCA student specializing in AI & Data Science (Class of 2026) at Amity University. I have hands-on experience building production RAG pipelines with LangChain and fine-tuning PyTorch models with FastAPI backends.\n\nI noticed the strong engineering initiatives at ${comp} and would love to be considered for early-career AI Engineer or Software Development roles. I am available to join immediately with zero notice period.\n\nWould you have 5 minutes for a brief chat, or could you point me to the relevant hiring lead?\n\nBest regards,\nVansh Sharma\n+91 9310461877 | github.com/Vansh-Sharmaa`
+          : `Hi ${firstName},\n\nI have been following your team's engineering work and technical updates at ${comp}.\n\nI am an MCA graduate specializing in AI & Data Science (Class of 2026) with practical experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices with Docker.\n\nI would value the opportunity to contribute to your engineering initiatives as an early-career AI/ML Engineer. I am available immediately.\n\nWould you be open to a brief 5-minute conversation or glancing over my technical projects?\n\nBest regards,\nVansh Sharma\n+91 9310461877 | github.com/Vansh-Sharmaa`;
+      }
+
+      // Highlight card in directory view if visible
+      document.querySelectorAll('.talent-card').forEach(c => {
+        if (c.dataset.empId === person.id) {
+          c.classList.add('active-selected');
+        } else {
+          c.classList.remove('active-selected');
+        }
+      });
+    }
+
+    function closeTalentDossier() {
+      selectedTalentPerson = null;
+      const emptyEl = document.getElementById('dossier-empty-state');
+      const contentEl = document.getElementById('dossier-content');
+      if (emptyEl) emptyEl.style.display = 'flex';
+      if (contentEl) contentEl.style.display = 'none';
+      document.querySelectorAll('.talent-card').forEach(c => c.classList.remove('active-selected'));
+    }
+
+    async function generateColdEmailForSelectedPerson() {
+      if (!selectedTalentPerson) return;
+      const btn = document.getElementById('btn-generate-ai-outreach');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⚡ Drafting with 9Router AI...</span>';
+      }
+
+      try {
+        if (window.jobPilotApi && window.jobPilotApi.draftColdOutreachEmail) {
+          const res = await window.jobPilotApi.draftColdOutreachEmail({
+            person: selectedTalentPerson,
+            company: currentTalentGraphData?.company || 'Target Company'
+          });
+          if (res && res.ok) {
+            const subjInput = document.getElementById('dossier-outreach-subject');
+            const bodyText = document.getElementById('dossier-outreach-body');
+            if (subjInput && res.subject) subjInput.value = res.subject;
+            if (bodyText && res.body) bodyText.value = res.body;
+            showToast('✓ AI Cold Email drafted successfully!');
+          }
+        }
+      } catch (e) {
+        showToast('AI drafting error: ' + e.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>✨ Draft with AI</span>';
+        }
+      }
+    }
+
+    function copyDossierEmail() {
+      const email = document.getElementById('dossier-email')?.innerText;
+      if (email) {
+        navigator.clipboard.writeText(email);
+        showToast(`Copied email: ${email}`);
+      }
+    }
+
+    function launchDossierMailto() {
+      const email = document.getElementById('dossier-email')?.innerText;
+      if (email) {
+        window.open(`mailto:${email}`, '_blank');
+      }
+    }
+
+    function copyDossierGeneratedBody() {
+      const subj = document.getElementById('dossier-outreach-subject')?.value || '';
+      const body = document.getElementById('dossier-outreach-body')?.value || '';
+      const fullText = `Subject: ${subj}\n\n${body}`;
+      navigator.clipboard.writeText(fullText);
+      showToast('Copied email subject and pitch to clipboard!');
+    }
+
+    function sendDossierGeneratedMailto() {
+      const email = document.getElementById('dossier-email')?.innerText || '';
+      const subj = document.getElementById('dossier-outreach-subject')?.value || '';
+      const body = document.getElementById('dossier-outreach-body')?.value || '';
+      const mailtoUrl = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+      window.open(mailtoUrl, '_blank');
+      showToast('Opened default mail client!');
+    }
+
+    function filterTalentByDept(dept) {
+      currentTalentFilter = dept;
+      document.querySelectorAll('.filter-chip').forEach(c => {
+        if (c.dataset.filter === dept) {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+      renderTalentDirectoryCards();
+    }
+
+    function handleGraphNodeFilter(query) {
+      currentTalentSearchQuery = query.trim();
+      renderTalentDirectoryCards();
+    }
+
+    function setGraphViewMode(mode) {
+      graphViewMode = mode;
+      const canvasWrapper = document.getElementById('talent-canvas-wrapper');
+      const cardsWrapper = document.getElementById('talent-cards-wrapper');
+      const btnCanvas = document.getElementById('btn-view-canvas');
+      const btnCards = document.getElementById('btn-view-cards');
+
+      if (mode === 'canvas') {
+        if (canvasWrapper) canvasWrapper.style.display = 'block';
+        if (cardsWrapper) cardsWrapper.style.display = 'none';
+        if (btnCanvas) btnCanvas.classList.add('active');
+        if (btnCards) btnCards.classList.remove('active');
+        initTalentGraphCanvas();
+      } else {
+        if (canvasWrapper) canvasWrapper.style.display = 'none';
+        if (cardsWrapper) cardsWrapper.style.display = 'block';
+        if (btnCanvas) btnCanvas.classList.remove('active');
+        if (btnCards) btnCards.classList.add('active');
+        renderTalentDirectoryCards();
+      }
+    }
+
+    function renderTalentDirectoryCards() {
+      const container = document.getElementById('talent-cards-grid');
+      if (!container || !currentTalentGraphData) return;
+      container.innerHTML = '';
+
+      const employees = currentTalentGraphData.employees || [];
+      const filtered = employees.filter(emp => {
+        if (currentTalentFilter !== 'all' && emp.department !== currentTalentFilter) return false;
+        if (currentTalentSearchQuery) {
+          const q = currentTalentSearchQuery.toLowerCase();
+          const name = (emp.name || '').toLowerCase();
+          const role = (emp.role || '').toLowerCase();
+          const skills = (emp.skills || []).join(' ').toLowerCase();
+          return name.includes(q) || role.includes(q) || skills.includes(q);
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--text-muted); font-size: 12px;">
+            No contacts match the current department or search filter.
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(emp => {
+        const card = document.createElement('div');
+        const isSelected = selectedTalentPerson && selectedTalentPerson.id === emp.id;
+        card.className = `talent-card ${isSelected ? 'active-selected' : ''}`;
+        card.dataset.empId = emp.id;
+
+        const deptClass = emp.department === 'Talent & Recruiting' ? 'hr' : (emp.department === 'Leadership' ? 'exec' : 'eng');
+        const initials = (emp.name || 'P').split(' ').map(w => w[0]).slice(0, 2).join('');
+
+        card.innerHTML = `
+          <div class="talent-card-header">
+            <div class="talent-card-avatar ${deptClass}">${initials}</div>
+            <div style="flex: 1; min-width: 0;">
+              <div class="talent-card-name">${emp.name}</div>
+              <div class="talent-card-role">${emp.role}</div>
+            </div>
+          </div>
+          <div class="talent-card-email">
+            <span>${emp.email}</span>
+            <span style="font-size: 8px; color: #10b981; font-weight: 700;">VERIFIED</span>
+          </div>
+          <div style="font-size: 10px; color: #94a3b8; display: flex; gap: 5px; flex-wrap: wrap;">
+            ${(emp.skills || []).slice(0, 3).map(s => `<span class="dossier-skill-tag">${s}</span>`).join('')}
+          </div>
+          <div class="talent-card-footer">
+            <span style="font-size: 10px; color: var(--text-muted);">${emp.location || 'India / Remote'}</span>
+            <button class="browser-btn primary sm" style="font-size: 10px; padding: 2px 7px;">
+              <span>⚡ Cold Email</span>
+            </button>
+          </div>
+        `;
+
+        card.onclick = () => selectTalentPerson(emp);
+        container.appendChild(card);
+      });
+    }
+
+    function updateGraphFilterCounters() {
+      const employees = (currentTalentGraphData && currentTalentGraphData.employees) || [];
+      const total = employees.length;
+      const hr = employees.filter(e => e.department === 'Talent & Recruiting').length;
+      const eng = employees.filter(e => e.department === 'Engineering & AI').length;
+      const exec = employees.filter(e => e.department === 'Leadership').length;
+
+      const elTotal = document.getElementById('stat-total-nodes');
+      const elHr = document.getElementById('stat-hr-nodes');
+      const elEng = document.getElementById('stat-eng-nodes');
+      const elExec = document.getElementById('stat-exec-nodes');
+
+      if (elTotal) elTotal.innerText = total;
+      if (elHr) elHr.innerText = hr;
+      if (elEng) elEng.innerText = eng;
+      if (elExec) elExec.innerText = exec;
+    }
+
+    function zoomTalentGraph(delta) {
+      talentZoom = Math.max(0.35, Math.min(2.8, talentZoom + delta));
+    }
+
+    function resetTalentGraphView() {
+      talentPanX = 0;
+      talentPanY = 0;
+      talentZoom = 1.0;
+      showToast('Talent graph centered');
+    }
+
+    function toggleGraphForcePhysics() {
+      talentPhysicsRunning = !talentPhysicsRunning;
+      const btn = document.getElementById('btn-toggle-physics');
+      if (btn) btn.innerText = talentPhysicsRunning ? '⏸' : '▶';
+      showToast(talentPhysicsRunning ? 'Physics simulation resumed' : 'Physics simulation paused');
+    }
+
+    function exportCurrentGraph(format) {
+      if (!currentTalentGraphData || !currentTalentGraphData.employees) {
+        showToast('No talent graph to export.');
+        return;
+      }
+      const employees = currentTalentGraphData.employees;
+      const comp = (currentTalentGraphData.company || 'company').toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+      if (format === 'json') {
+        const blob = new Blob([JSON.stringify(currentTalentGraphData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `talent-graph-${comp}.json`;
+        a.click();
+        showToast(`Exported ${comp} talent graph as JSON!`);
+      } else {
+        const headers = ['Name', 'Role', 'Department', 'Company', 'Email', 'Email Status', 'Location', 'Skills'];
+        const rows = employees.map(e => [
+          `"${(e.name || '').replace(/"/g, '""')}"`,
+          `"${(e.role || '').replace(/"/g, '""')}"`,
+          `"${(e.department || '').replace(/"/g, '""')}"`,
+          `"${(currentTalentGraphData.company || '').replace(/"/g, '""')}"`,
+          `"${(e.email || '').replace(/"/g, '""')}"`,
+          `"${(e.emailStatus || '').replace(/"/g, '""')}"`,
+          `"${(e.location || '').replace(/"/g, '""')}"`,
+          `"${(e.skills || []).join('; ').replace(/"/g, '""')}"`
+        ]);
+        const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `talent-contacts-${comp}.csv`;
+        a.click();
+        showToast(`Exported ${employees.length} contacts to CSV!`);
+      }
+    }
 
     // Init
     loadLedgerData();

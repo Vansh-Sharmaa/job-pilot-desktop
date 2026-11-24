@@ -71,6 +71,12 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   tailorResume: (payload) => ipcRenderer.invoke('tailor-resume', payload),
   getLatestTailoredResume: (company) => ipcRenderer.invoke('get-latest-tailored-resume', { company }),
   
+  // Company Talent Graph & Obsidian Connection Map
+  discoverCompanyTalent: (company, forceRefresh = false) => ipcRenderer.invoke('discover-company-talent', { company, forceRefresh }),
+  getCompanyTalentGraph: (company) => ipcRenderer.invoke('get-company-talent-graph', { company }),
+  listSavedCompanyGraphs: () => ipcRenderer.invoke('list-saved-company-graphs'),
+  draftColdOutreachEmail: (payload) => ipcRenderer.invoke('draft-cold-outreach-email', payload),
+
   // Real-time Event Listeners
   onTaskLog: (callback) => {
     const handler = (event, text) => callback(text);
@@ -116,5 +122,10 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
     const handler = (event, data) => callback(data);
     ipcRenderer.on('portal-applying', handler);
     return () => ipcRenderer.removeListener('portal-applying', handler);
+  },
+  onOpenCompanyTalentGraph: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('open-company-talent-graph', handler);
+    return () => ipcRenderer.removeListener('open-company-talent-graph', handler);
   }
 });

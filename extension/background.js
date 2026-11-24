@@ -274,6 +274,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'MAP_TALENT_GRAPH') {
+    getBridgeToken().then(token => {
+      fetch(`${BRIDGE_URL}/api/company-talent-graph`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-JobPilot-Token': token
+        },
+        body: JSON.stringify(request.payload || { company: 'Google' })
+      })
+      .then(r => r.json())
+      .then(data => sendResponse(data))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    });
+    return true;
+  }
+
   if (request.type === 'AGENT_TELEMETRY') {
     getBridgeToken().then(token => {
       fetch(`${BRIDGE_URL}/api/agent-telemetry`, {
