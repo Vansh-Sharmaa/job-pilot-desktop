@@ -1179,12 +1179,40 @@
 
     if (!isAgentRunning || agentAbortRequested) return;
 
-    // PRESENT HUMAN REVIEW GATE: Never auto-submit blindly without candidate confirmation
-    presentHumanReviewGate(totalFilled, detectedSubmitBtn, meta);
-    sendTelemetry('REVIEW_GATE', `Form filled with ${totalFilled} answers. Awaiting candidate human review.`);
+    // PRESENT HUMAN REVIEW GATE: Only in legacy quick_fill mode. The autonomous LLM model-driven agent uses ask_user and request_approval directly.
+    if (params && params.mode === 'quick_fill') {
+      presentHumanReviewGate(totalFilled, detectedSubmitBtn, meta);
+      sendTelemetry('REVIEW_GATE', `Form filled with ${totalFilled} answers. Awaiting candidate human review.`);
+    }
     } finally {
       isAgentRunning = false;
     }
+  }
+
+  // Model-Driven Autonomous Browser Operator (OpenCode Style)
+  async function startModelDrivenAgentLoop(goal = 'Apply to this job using my resume. Ask me only if a value is unknown or an action is consequential.') {
+    showPillNotice('Starting model-driven agent loop...');
+    const token = await getBridgeToken();
+    try {
+      const res = await fetch('http://127.0.0.1:5056/api/agent-loop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          goal,
+          url: window.location.href
+        })
+      });
+      if (res.ok) {
+        showPillNotice('Model agent loop running on desktop');
+        return { ok: true, started: true };
+      }
+    } catch (e) {
+      console.warn('[JOBPILOT BRIDGE] Failed to trigger agent loop via bridge HTTP, falling back to quick-fill:', e.message);
+    }
+    return runAutonomousApplyAgent({ mode: 'quick_fill' });
   }
 
   // Extract human-readable question or label for any form field
@@ -1727,7 +1755,7 @@
 
     // Wire Buttons
     document.getElementById('jp-btn-tab-agent').addEventListener('click', () => {
-      runAutonomousApplyAgent();
+      startModelDrivenAgentLoop('Apply to this job using my resume. Ask me only if a value is unknown or an action is consequential.');
     });
 
     document.getElementById('jp-btn-autofill').addEventListener('click', async () => {
@@ -1981,11 +2009,52 @@
     return alerts;
   }
 
-  function executePageObserve(maxElements = 200) {
+  let lastObservedUrl = '';
+
+  function detectExpiredJob() {
+    const pageText = (document.body?.innerText || '').slice(0, 15000);
+    const expiredPatterns = [
+      /job has been closed/i,
+      /job is no longer available/i,
+      /this job has expired/i,
+      /this job is no longer available/i,
+      /no longer accepting applications/i,
+      /we can't find this page/i,
+      /404 - not found/i,
+      /page not found/i,
+      /posting has expired/i,
+      /this position has been filled/i
+    ];
+    for (const p of expiredPatterns) {
+      if (p.test(pageText)) return true;
+    }
+    return false;
+  }
+
+  function executePageFind(text) {
+    if (!text) return { ok: false, error: 'Text query is required' };
+    const q = text.toLowerCase().trim();
+    const pageText = document.body?.innerText || '';
+    const matches = [];
+    let idx = 0;
+    while (matches.length < 10) {
+      const found = pageText.toLowerCase().indexOf(q, idx);
+      if (found === -1) break;
+      const start = Math.max(0, found - 60);
+      const end = Math.min(pageText.length, found + q.length + 60);
+      const snippet = pageText.slice(start, end).replace(/[\r\n\t]+/g, ' ');
+      matches.push({ snippet, index: found });
+      idx = found + q.length;
+    }
+    return { ok: true, query: text, matchCount: matches.length, matches };
+  }
+
+  function executePageObserve(maxElements = 200, options = {}) {
+    lastObservedUrl = window.location.href;
     elementRefMap.clear();
     let refIndex = 1;
 
-    const interactiveSelectors = [
+    let interactiveSelectors = [
       'input:not([type="hidden"])',
       'select',
       'textarea',
@@ -1995,14 +2064,31 @@
       '[role="radio"]',
       '[role="button"]'
     ];
+    if (options.interactive) {
+      interactiveSelectors = ['input:not([type="hidden"])', 'select', 'textarea', 'button'];
+    }
 
-    const elements = Array.from(document.querySelectorAll(interactiveSelectors.join(',')))
-      .filter(isElementVisible)
-      .slice(0, maxElements);
+    let elements = Array.from(document.querySelectorAll(interactiveSelectors.join(',')))
+      .filter(isElementVisible);
+
+    if (options.find) {
+      const findLower = options.find.toLowerCase();
+      elements = elements.filter(el => {
+        const text = (el.innerText || el.value || getElementLabel(el) || '').toLowerCase();
+        return text.includes(findLower);
+      });
+    }
+
+    elements = elements.slice(0, maxElements);
 
     const lines = [];
     lines.push(`URL: ${window.location.href}`);
     lines.push(`TITLE: ${document.title}`);
+
+    const isExpired = detectExpiredJob();
+    if (isExpired) {
+      lines.push('STATUS: EXPIRED / UNAVAILABLE (Job posting has closed or page not found)');
+    }
 
     const meta = extractJobMetadata();
     if (meta.company || meta.role) {
@@ -2100,6 +2186,10 @@
     const value = params.value || '';
 
     if (!ref) return { ok: false, error: 'ref is required' };
+    if (lastObservedUrl && window.location.href !== lastObservedUrl) {
+      elementRefMap.clear();
+      return { ok: false, error: 'stale_ref', message: 'Element refs expired because page navigated. Call snapshot again to get fresh refs.' };
+    }
     const el = elementRefMap.get(ref);
     if (!el || !el.isConnected) {
       return { ok: false, error: 'stale_ref', message: 'Element not found or detached from DOM' };
@@ -2193,9 +2283,50 @@
 
   // Listen for commands dispatched from desktop agent via background worker
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'observe') {
-      const obs = executePageObserve(request.params?.maxElements || 200);
+    if (request.action === 'observe' || request.action === 'snapshot') {
+      const obs = executePageObserve(request.params?.maxElements || 200, request.params || {});
       sendResponse(obs);
+      return true;
+    } else if (request.action === 'find') {
+      const res = executePageFind(request.params?.text || request.text);
+      sendResponse(res);
+      return true;
+    } else if (request.action === 'click') {
+      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'click' });
+      sendResponse(res);
+      return true;
+    } else if (request.action === 'fill') {
+      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'type', value: request.params?.value ?? request.value });
+      sendResponse(res);
+      return true;
+    } else if (request.action === 'select') {
+      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'select', value: request.params?.value ?? request.value });
+      sendResponse(res);
+      return true;
+    } else if (request.action === 'check') {
+      const isChecked = request.params?.checked ?? request.checked ?? true;
+      const res = executePageAct({ ref: request.params?.ref || request.ref, op: isChecked ? 'check' : 'uncheck' });
+      sendResponse(res);
+      return true;
+    } else if (request.action === 'upload') {
+      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'type', value: request.params?.filePath || request.filePath });
+      sendResponse(res);
+      return true;
+    } else if (request.action === 'eval') {
+      try {
+        const script = request.params?.script || request.script || '';
+        if (/cookie|localStorage|sessionStorage|authorization|token/i.test(script)) {
+          sendResponse({ ok: false, error: 'Access to sensitive storage restricted in eval.' });
+        } else {
+          const evalRes = eval(script);
+          sendResponse({ ok: true, result: String(evalRes).slice(0, 5000) });
+        }
+      } catch (err) {
+        sendResponse({ ok: false, error: err.message });
+      }
+      return true;
+    } else if (request.action === 'dialog') {
+      sendResponse({ ok: true, action: request.params?.action || 'dismiss' });
       return true;
     } else if (request.action === 'act') {
       const actRes = executePageAct(request.params || {});
@@ -2244,7 +2375,12 @@
       });
       return true;
     } else if (request.action === 'start_autonomous_apply' || request.action === 'apply') {
-      runAutonomousApplyAgent().then(() => {
+      startModelDrivenAgentLoop(request.goal).then(() => {
+        sendResponse({ status: 'completed' });
+      });
+      return true;
+    } else if (request.action === 'quick_fill') {
+      runAutonomousApplyAgent({ mode: 'quick_fill' }).then(() => {
         sendResponse({ status: 'completed' });
       });
       return true;

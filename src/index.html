@@ -5887,17 +5887,18 @@
         try {
           const p = await window.jobPilotApi.getCandidateProfile();
           if (p) {
+            const cand = p.candidate || p;
             const el = (id) => document.getElementById(id);
-            if (el('prof-name')) el('prof-name').value = p.name || 'Vansh Sharma';
-            if (el('prof-email')) el('prof-email').value = p.email || 'engagevansh@gmail.com';
-            if (el('prof-phone')) el('prof-phone').value = p.phone || '+919368478556';
-            if (el('prof-location')) el('prof-location').value = p.location || 'Gurgaon / Delhi NCR / Remote';
-            if (el('prof-degree')) el('prof-degree').value = p.degree || p.education || 'Master of Computer Applications (MCA) in AI & Data Science';
-            if (el('prof-college')) el('prof-college').value = p.college || 'Graphic Era Hill University';
-            if (el('prof-grad')) el('prof-grad').value = `${p.gradYear || 2026} (CGPA: ${p.cgpa || '8.0'} / 10)`;
-            if (el('prof-exp')) el('prof-exp').value = p.experienceLabel || 'Fresher (0 YOE : Immediate Joiner)';
-            if (el('prof-skills') && p.skills) el('prof-skills').value = Array.isArray(p.skills) ? p.skills.join(', ') : p.skills;
-            if (el('prof-pitch')) el('prof-pitch').value = p.pitch || '';
+            if (el('prof-name')) el('prof-name').value = cand.name || 'Vansh Sharma';
+            if (el('prof-email')) el('prof-email').value = cand.email || 'engagevansh@gmail.com';
+            if (el('prof-phone')) el('prof-phone').value = cand.phone || '+919368478556';
+            if (el('prof-location')) el('prof-location').value = cand.location || 'Gurgaon / Delhi NCR / Remote';
+            if (el('prof-degree')) el('prof-degree').value = cand.degree || cand.education || 'Master of Computer Applications (MCA) in AI & Data Science';
+            if (el('prof-college')) el('prof-college').value = cand.college || 'Graphic Era Hill University';
+            if (el('prof-grad')) el('prof-grad').value = `${cand.gradYear || 2026} (CGPA: ${cand.cgpa || '8.0'} / 10)`;
+            if (el('prof-exp')) el('prof-exp').value = cand.experienceLabel || 'Fresher (0 YOE : Immediate Joiner)';
+            if (el('prof-skills') && cand.skills) el('prof-skills').value = Array.isArray(cand.skills) ? cand.skills.join(', ') : cand.skills;
+            if (el('prof-pitch')) el('prof-pitch').value = cand.pitch || '';
           }
         } catch (err) {}
       }

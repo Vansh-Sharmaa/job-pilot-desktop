@@ -124,6 +124,149 @@ async function executeCommandInActiveTab(cmd) {
     return;
   }
 
+  const startTime = Date.now();
+
+  // Tab Lifecycle Management Tools
+  if (cmd.action === 'tabs_list') {
+    try {
+      const allTabs = await chrome.tabs.query({});
+      const tabs = allTabs.map(t => ({
+        id: t.id,
+        url: t.url || '',
+        title: t.title || '',
+        active: !!t.active,
+        status: t.status || 'complete'
+      }));
+      reportCommandResult(cmd.action, { ok: true, tabs }, cmd.id, Date.now() - startTime);
+    } catch (e) {
+      reportCommandResult(cmd.action, { ok: false, error: e.message }, cmd.id, Date.now() - startTime);
+    }
+    return;
+  }
+
+  if (cmd.action === 'tabs_open') {
+    try {
+      const openUrl = cmd.params?.url || cmd.url || 'about:blank';
+      const newTab = await chrome.tabs.create({ url: openUrl, active: false });
+      if (newTab && newTab.id) {
+        agentTabIds.add(newTab.id);
+        reportCommandResult(cmd.action, { ok: true, tab: newTab.id, url: newTab.url || openUrl }, cmd.id, Date.now() - startTime);
+      } else {
+        reportCommandResult(cmd.action, { ok: false, error: 'Failed to create tab' }, cmd.id, Date.now() - startTime);
+      }
+    } catch (e) {
+      reportCommandResult(cmd.action, { ok: false, error: e.message }, cmd.id, Date.now() - startTime);
+    }
+    return;
+  }
+
+  if (cmd.action === 'tabs_close') {
+    try {
+      const closeTabId = cmd.params?.tab || cmd.tab;
+      if (closeTabId) {
+        await chrome.tabs.remove(closeTabId);
+        agentTabIds.delete(closeTabId);
+        reportCommandResult(cmd.action, { ok: true, closedTab: closeTabId }, cmd.id, Date.now() - startTime);
+      } else {
+        reportCommandResult(cmd.action, { ok: false, error: 'No tab ID specified to close' }, cmd.id, Date.now() - startTime);
+      }
+    } catch (e) {
+      reportCommandResult(cmd.action, { ok: false, error: e.message }, cmd.id, Date.now() - startTime);
+    }
+    return;
+  }
+
+  if (cmd.action === 'navigate') {
+    try {
+      const navUrl = cmd.params?.url || cmd.url;
+      let targetTabId = cmd.params?.tab || cmd.tab;
+      if (!targetTabId) {
+        const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        targetTabId = activeTab?.id || Array.from(agentTabIds)[0];
+      }
+      if (!targetTabId && navUrl) {
+        const newTab = await chrome.tabs.create({ url: navUrl, active: true });
+        targetTabId = newTab.id;
+      }
+      if (targetTabId && navUrl) {
+        agentTabIds.add(targetTabId);
+        let completed = false;
+        const tabListener = (tId, changeInfo, tab) => {
+          if (tId === targetTabId && changeInfo.status === 'complete' && !completed) {
+            completed = true;
+            chrome.tabs.onUpdated.removeListener(tabListener);
+            reportCommandResult(cmd.action, { ok: true, tab: targetTabId, url: tab.url, title: tab.title }, cmd.id, Date.now() - startTime);
+          }
+        };
+        chrome.tabs.onUpdated.addListener(tabListener);
+        setTimeout(() => {
+          if (!completed) {
+            completed = true;
+            chrome.tabs.onUpdated.removeListener(tabListener);
+            chrome.tabs.get(targetTabId).then(t => {
+              reportCommandResult(cmd.action, { ok: true, tab: targetTabId, url: t.url, title: t.title, warning: 'Navigation timeout, proceeding' }, cmd.id, Date.now() - startTime);
+            }).catch(() => {
+              reportCommandResult(cmd.action, { ok: true, tab: targetTabId }, cmd.id, Date.now() - startTime);
+            });
+          }
+        }, 15000);
+        await chrome.tabs.update(targetTabId, { url: navUrl, active: true });
+      } else {
+        reportCommandResult(cmd.action, { ok: false, error: 'Target tab or URL missing' }, cmd.id, Date.now() - startTime);
+      }
+    } catch (e) {
+      reportCommandResult(cmd.action, { ok: false, error: e.message }, cmd.id, Date.now() - startTime);
+    }
+    return;
+  }
+
+  if (['back', 'forward', 'reload'].includes(cmd.action)) {
+    try {
+      let targetTabId = cmd.params?.tab || cmd.tab;
+      if (!targetTabId) {
+        const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        targetTabId = activeTab?.id || Array.from(agentTabIds)[0];
+      }
+      if (targetTabId) {
+        if (cmd.action === 'back') await chrome.tabs.goBack(targetTabId);
+        if (cmd.action === 'forward') await chrome.tabs.goForward(targetTabId);
+        if (cmd.action === 'reload') await chrome.tabs.reload(targetTabId);
+        reportCommandResult(cmd.action, { ok: true, tab: targetTabId, action: cmd.action }, cmd.id, Date.now() - startTime);
+      } else {
+        reportCommandResult(cmd.action, { ok: false, error: 'No active tab found' }, cmd.id, Date.now() - startTime);
+      }
+    } catch (e) {
+      reportCommandResult(cmd.action, { ok: false, error: e.message }, cmd.id, Date.now() - startTime);
+    }
+    return;
+  }
+
+  // Page-Level Browser Tools
+  const pageActions = ['snapshot', 'find', 'click', 'fill', 'select', 'check', 'upload', 'wait_for', 'screenshot', 'eval', 'dialog', 'act', 'observe', 'grant_approval_token', 'extract', 'read_dom'];
+  if (pageActions.includes(cmd.action)) {
+    let targetTab = null;
+    const explicitTabId = cmd.params?.tab || cmd.tab;
+    if (explicitTabId) {
+      try {
+        targetTab = await chrome.tabs.get(explicitTabId);
+      } catch (e) {}
+    }
+    if (!targetTab) {
+      const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      targetTab = activeTab;
+    }
+    if (!targetTab && agentTabIds.size > 0) {
+      try {
+        targetTab = await chrome.tabs.get(Array.from(agentTabIds)[0]);
+      } catch (e) {}
+    }
+    if (targetTab && targetTab.id) {
+      agentTabIds.add(targetTab.id);
+      dispatchCommandToTab(targetTab, cmd);
+      return;
+    }
+  }
+
   const targetUrl = cmd.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
 
   if (targetUrl.toLowerCase().includes('linkedin.com')) {

@@ -11,13 +11,14 @@ const Menu = electronModule && electronModule.Menu;
 
 // Friendly startup check for direct node invocation or ELECTRON_RUN_AS_NODE
 if (!app || typeof app.requestSingleInstanceLock !== 'function') {
-  if (process.env.ELECTRON_RUN_AS_NODE) {
+  const fs = require('fs');
+  const path = require('path');
+  const localElectron = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron.exe');
+  if ('ELECTRON_RUN_AS_NODE' in process.env && fs.existsSync(localElectron)) {
     const { spawn } = require('child_process');
-    const path = require('path');
-    const electronExe = typeof electronModule === 'string' ? electronModule : process.execPath;
     const cleanEnv = Object.assign({}, process.env);
     delete cleanEnv.ELECTRON_RUN_AS_NODE;
-    const child = spawn(electronExe, [path.join(__dirname, '..')], {
+    const child = spawn(localElectron, [path.join(__dirname, '..')], {
       detached: true,
       stdio: 'ignore',
       env: cleanEnv
@@ -828,6 +829,26 @@ function startExtensionBridgeServer() {
           debugLog(`Bridge AI Q&A answered "${(payload.question || '').slice(0, 40)}": ${(ansResult.answer || '').slice(0, 50)}`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(ansResult));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      });
+      return;
+    }
+
+    if (parsedUrl.pathname === '/api/agent-loop' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', async () => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          const goal = payload.goal || 'Apply to this job using my resume. Ask me only if a value is unknown or an action is consequential.';
+          runModelDrivenAgentLoop(goal, { url: payload.url }).catch(err => {
+            console.warn('[AGENT LOOP API ERROR]', err.message);
+          });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, status: 'started', goal }));
         } catch (e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: false, error: e.message }));
@@ -1833,7 +1854,7 @@ ipcMain.handle('answer-screening-question', async (event, { question, company, r
 
 // IPC: Candidate Profile Retrieval & Update
 ipcMain.handle('get-candidate-profile', async () => {
-  return { ok: true, candidate: CANDIDATE_PROFILE };
+  return { ok: true, candidate: CANDIDATE_PROFILE, ...CANDIDATE_PROFILE };
 });
 
 ipcMain.handle('update-candidate-profile', async (event, profile) => {
@@ -2843,12 +2864,24 @@ ipcMain.handle('submit-clarification-answer', async (event, { id, answer, action
     const entry = pendingClarifications.get(id);
     clearTimeout(entry.timeoutTimer);
     pendingClarifications.delete(id);
-    try {
-      entry.res.writeHead(200, { 'Content-Type': 'application/json' });
-      entry.res.end(JSON.stringify({ ok: true, answer: answer || '', action: action || 'fill' }));
+    if (entry.question && answer) {
+      qaCache[entry.question] = answer;
+      try {
+        fs.writeFileSync(QA_CACHE_PATH, JSON.stringify(qaCache, null, 2), 'utf-8');
+      } catch (e) {}
+    }
+    if (entry.resolve) {
+      entry.resolve({ ok: true, answer: answer || '', action: action || 'fill', source: 'user' });
       return { ok: true };
-    } catch (err) {
-      return { ok: false, error: err.message };
+    }
+    if (entry.res) {
+      try {
+        entry.res.writeHead(200, { 'Content-Type': 'application/json' });
+        entry.res.end(JSON.stringify({ ok: true, answer: answer || '', action: action || 'fill' }));
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
     }
   }
   return { ok: false, error: 'Clarification request not found or expired.' };
@@ -3018,97 +3051,23 @@ const AGENT_TOOLS = [
   {
     type: 'function',
     function: {
-      name: 'browser_observe',
-      description: 'Observe the live browser page. Returns deterministic element tree, input fields with refs (e1, e2, ...), CAPTCHA detection, login wall state, and page context.',
+      name: 'tabs_list',
+      description: 'List all open browser tabs with id, url, title, and active state.',
       parameters: {
         type: 'object',
-        properties: {
-          maxElements: { type: 'number', description: 'Maximum interactive elements to inspect (default 200).' }
-        }
+        properties: {}
       }
     }
   },
   {
     type: 'function',
     function: {
-      name: 'browser_act',
-      description: 'Execute an action on an element on the live browser page by ref (e.g. click, type, select, check, uncheck, scroll_into_view, press).',
+      name: 'tabs_open',
+      description: 'Open a new background browser tab with the specified URL and return the tab ID.',
       parameters: {
         type: 'object',
         properties: {
-          ref: { type: 'string', description: 'Target element ref (e.g. e1, e2).' },
-          op: { type: 'string', enum: ['click', 'type', 'clear', 'select', 'check', 'uncheck', 'scroll_into_view', 'press'] },
-          value: { type: 'string', description: 'Text or option value to type or select.' }
-        },
-        required: ['ref', 'op']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'browser_wait',
-      description: 'Wait for a condition or selector on the page with a timeout.',
-      parameters: {
-        type: 'object',
-        properties: {
-          condition: { type: 'string', description: 'CSS selector or text condition to wait for.' },
-          timeoutMs: { type: 'number', description: 'Timeout in milliseconds (default 5000).' }
-        },
-        required: ['condition']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'browser_extract',
-      description: 'Extract structured metadata from the current browser page based on a schema.',
-      parameters: {
-        type: 'object',
-        properties: {
-          schema: { type: 'object', description: 'Field schema to extract.' }
-        }
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'browser_upload',
-      description: 'Upload candidate resume PDF to a file input on the active page via Chrome CDP debugger.',
-      parameters: {
-        type: 'object',
-        properties: {
-          selector: { type: 'string', description: 'File input selector.' },
-          filePath: { type: 'string', description: 'Path to resume PDF file.' }
-        }
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'browser_submit',
-      description: 'Safely submit the completed application after verification gate.',
-      parameters: {
-        type: 'object',
-        properties: {
-          ref: { type: 'string', description: 'Submit button ref.' }
-        },
-        required: ['ref']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'browser_navigate',
-      description: 'Navigate browser tab to a specified URL.',
-      parameters: {
-        type: 'object',
-        properties: {
-          url: { type: 'string', description: 'Web URL to load.' }
+          url: { type: 'string', description: 'Destination web URL to open.' }
         },
         required: ['url']
       }
@@ -3117,8 +3076,330 @@ const AGENT_TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'tabs_close',
+      description: 'Close an open browser tab by tab ID.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tab: { type: 'number', description: 'Tab ID to close.' }
+        },
+        required: ['tab']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'navigate',
+      description: 'Navigate a browser tab to a specified URL and wait for page load.',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: { type: 'string', description: 'Target URL.' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        },
+        required: ['url']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'back',
+      description: 'Navigate back in browser history for the target tab.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'forward',
+      description: 'Navigate forward in browser history for the target tab.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'reload',
+      description: 'Reload the current page in the target tab.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'snapshot',
+      description: 'Inspect live page accessibility tree and interactive elements with assigned refs (e1, e2, ...). Note: element refs expire after page navigation or DOM mutations; call snapshot again to get fresh refs.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tab: { type: 'number', description: 'Optional tab ID.' },
+          interactive: { type: 'boolean', description: 'Filter only interactive form fields and buttons.' },
+          find: { type: 'string', description: 'Filter elements containing matching text.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'find',
+      description: 'Locate text on the page with surrounding contextual snippets.',
+      parameters: {
+        type: 'object',
+        properties: {
+          text: { type: 'string', description: 'Text phrase to locate.' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        },
+        required: ['text']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'click',
+      description: 'Click an element identified by ref from the LATEST snapshot.',
+      parameters: {
+        type: 'object',
+        properties: {
+          ref: { type: 'string', description: 'Element ref from latest snapshot (e.g. e1, e2).' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        },
+        required: ['ref']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'fill',
+      description: 'Type a value into an input or textarea identified by ref from the LATEST snapshot.',
+      parameters: {
+        type: 'object',
+        properties: {
+          ref: { type: 'string', description: 'Element ref from latest snapshot.' },
+          value: { type: 'string', description: 'Text value to enter.' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        },
+        required: ['ref', 'value']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'select',
+      description: 'Select an option in a dropdown select element identified by ref from the LATEST snapshot.',
+      parameters: {
+        type: 'object',
+        properties: {
+          ref: { type: 'string', description: 'Element ref from latest snapshot.' },
+          value: { type: 'string', description: 'Option text or value to select.' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        },
+        required: ['ref', 'value']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'check',
+      description: 'Check or uncheck a checkbox or radio button identified by ref from the LATEST snapshot.',
+      parameters: {
+        type: 'object',
+        properties: {
+          ref: { type: 'string', description: 'Element ref from latest snapshot.' },
+          checked: { type: 'boolean', description: 'True to check, false to uncheck.' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        },
+        required: ['ref']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'upload',
+      description: 'Upload candidate resume PDF or document to a file input identified by ref.',
+      parameters: {
+        type: 'object',
+        properties: {
+          ref: { type: 'string', description: 'File input element ref.' },
+          filePath: { type: 'string', description: 'Path to resume PDF file (defaults to master resume).' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'wait_for',
+      description: 'Wait for a CSS selector or text string to appear on the page with a timeout.',
+      parameters: {
+        type: 'object',
+        properties: {
+          condition: { type: 'string', description: 'CSS selector or text condition to wait for.' },
+          timeoutMs: { type: 'number', description: 'Timeout in milliseconds (default 5000).' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        },
+        required: ['condition']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'screenshot',
+      description: 'Capture a visible screenshot of the active browser tab.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'eval',
+      description: 'Execute a safe read-only JavaScript expression on the page tab.',
+      parameters: {
+        type: 'object',
+        properties: {
+          script: { type: 'string', description: 'JavaScript code to evaluate.' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        },
+        required: ['script']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'dialog',
+      description: 'Handle an alert, confirm, or prompt dialog on the page.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['accept', 'dismiss'] },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'ask_user',
+      description: 'Ask the candidate user a question when an answer is not known from resume or candidate profile. Returns user answer as a tool result and saves to memory.',
+      parameters: {
+        type: 'object',
+        properties: {
+          question: { type: 'string', description: 'Clarification question to present to user.' },
+          options: { type: 'array', items: { type: 'string' }, description: 'Optional list of choice options.' },
+          reason: { type: 'string', description: 'Reason this question is required for application.' }
+        },
+        required: ['question']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'request_approval',
+      description: 'Request explicit human approval before submitting an application or performing a consequential action. Returns approved:true or approved:false. NEVER call browser_submit without approved:true.',
+      parameters: {
+        type: 'object',
+        properties: {
+          preview: {
+            type: 'object',
+            description: 'Preview details containing company, role, url, and filled fields dictionary.'
+          }
+        },
+        required: ['preview']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'read_resume',
-      description: 'Read the authentic full markdown text of Vansh Sharma resume.',
+      description: 'Read the authentic full markdown text of Vansh Sharma verified resume.',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_saved_answers',
+      description: 'Search previously saved answers in memory for a question or keyword.',
+      parameters: {
+        type: 'object',
+        properties: {
+          question: { type: 'string', description: 'Question or keyword to search in memory.' }
+        },
+        required: ['question']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'save_answer',
+      description: 'Save a verified answer to memory so the candidate is never asked twice.',
+      parameters: {
+        type: 'object',
+        properties: {
+          question: { type: 'string', description: 'Question text.' },
+          answer: { type: 'string', description: 'Verified answer value.' }
+        },
+        required: ['question', 'answer']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'browser_submit',
+      description: 'Safely submit the completed application. STRICT REQUIREMENT: Only permitted after request_approval returns approved:true.',
+      parameters: {
+        type: 'object',
+        properties: {
+          ref: { type: 'string', description: 'Submit button element ref from latest snapshot.' },
+          tab: { type: 'number', description: 'Optional tab ID.' }
+        },
+        required: ['ref']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_candidate_profile',
+      description: 'Get full candidate profile, qualifications, skills, and target roles for Vansh Sharma.',
       parameters: {
         type: 'object',
         properties: {}
@@ -3160,26 +3441,11 @@ const AGENT_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          company: { type: 'string', description: 'Target employer name (e.g. Google, Zomato, TCS).' },
-          role: { type: 'string', description: 'Target job title (e.g. AI Engineer, Python Developer).' },
+          company: { type: 'string', description: 'Target employer name.' },
+          role: { type: 'string', description: 'Target job title.' },
           jd: { type: 'string', description: 'Job description text or requirements snippet.' }
         },
         required: ['company', 'role']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'run_fleet_agent',
-      description: 'Execute an autonomous Python job hunting fleet script (e.g. daily_autopilot_daemon.py, inbound_email_calendar_runner.py, auto_quota_closer.py, assessment_prep_engine.py).',
-      parameters: {
-        type: 'object',
-        properties: {
-          scriptName: { type: 'string', description: 'Name of the script in D:\\opencode stuff\\job-agents to execute.' },
-          args: { type: 'array', items: { type: 'string' }, description: 'CLI arguments to pass.' }
-        },
-        required: ['scriptName']
       }
     }
   },
@@ -3229,19 +3495,374 @@ const AGENT_TOOLS = [
   {
     type: 'function',
     function: {
-      name: 'get_candidate_profile',
-      description: 'Get full candidate profile, qualifications, skills, and target roles for Vansh Sharma.',
+      name: 'browser_observe',
+      description: 'Legacy alias for snapshot tool.',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {
+          maxElements: { type: 'number' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'browser_act',
+      description: 'Legacy alias for click, fill, select, check tools.',
+      parameters: {
+        type: 'object',
+        properties: {
+          ref: { type: 'string' },
+          op: { type: 'string' },
+          value: { type: 'string' }
+        },
+        required: ['ref', 'op']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'browser_navigate',
+      description: 'Legacy alias for navigate tool.',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: { type: 'string' }
+        },
+        required: ['url']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'browser_wait',
+      description: 'Legacy alias for wait_for tool.',
+      parameters: {
+        type: 'object',
+        properties: {
+          condition: { type: 'string' }
+        },
+        required: ['condition']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'browser_upload',
+      description: 'Legacy alias for upload tool.',
+      parameters: {
+        type: 'object',
+        properties: {
+          filePath: { type: 'string' }
+        }
       }
     }
   }
 ];
 
 // Tool Executor Implementation
+let lastGrantedApprovalToken = null;
+
+async function handleAskUser(args) {
+  const question = args.question || '';
+  const options = args.options || [];
+  const reason = args.reason || '';
+
+  // 1. Search in qaCache
+  const qLower = question.toLowerCase().trim();
+  for (const [k, v] of Object.entries(qaCache)) {
+    if (k.toLowerCase().trim() === qLower || (k.length > 5 && qLower.includes(k.toLowerCase().trim()))) {
+      return { ok: true, answer: v, source: 'cache', cached: true };
+    }
+  }
+
+  // 2. Check candidate facts directly
+  if (/name/i.test(question) && !/company|college|university/i.test(question)) {
+    return { ok: true, answer: CANDIDATE_PROFILE.name, source: 'profile' };
+  }
+  if (/email/i.test(question)) {
+    return { ok: true, answer: CANDIDATE_PROFILE.email, source: 'profile' };
+  }
+  if (/phone|mobile|contact/i.test(question)) {
+    return { ok: true, answer: CANDIDATE_PROFILE.phone, source: 'profile' };
+  }
+  if (/college|university/i.test(question)) {
+    return { ok: true, answer: CANDIDATE_PROFILE.college, source: 'profile' };
+  }
+  if (/degree|qualification/i.test(question)) {
+    return { ok: true, answer: CANDIDATE_PROFILE.education, source: 'profile' };
+  }
+  if (/grad|passing year/i.test(question)) {
+    return { ok: true, answer: CANDIDATE_PROFILE.gradYear, source: 'profile' };
+  }
+  if (/cgpa|gpa|percentage/i.test(question)) {
+    return { ok: true, answer: CANDIDATE_PROFILE.cgpa, source: 'profile' };
+  }
+  if (/experience|yoe/i.test(question)) {
+    return { ok: true, answer: CANDIDATE_PROFILE.experienceYears, source: 'profile' };
+  }
+  if (/notice/i.test(question)) {
+    return { ok: true, answer: CANDIDATE_PROFILE.noticePeriod, source: 'profile' };
+  }
+
+  // 3. Prompt user via UI
+  const id = `clarify_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  return new Promise((resolve) => {
+    const timeoutTimer = setTimeout(() => {
+      pendingClarifications.delete(id);
+      resolve({ ok: false, timedOut: true, answer: '', reason: 'User response timed out' });
+    }, 120000);
+
+    pendingClarifications.set(id, { resolve, timeoutTimer, question });
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('agent-clarification-request', {
+        id,
+        question,
+        options,
+        reason: reason || 'Information required for application',
+        fieldType: options && options.length > 0 ? 'select' : 'text'
+      });
+    } else {
+      clearTimeout(timeoutTimer);
+      pendingClarifications.delete(id);
+      resolve({ ok: false, answer: '', reason: 'No active desktop window' });
+    }
+  });
+}
+
 async function executeAgentTool(name, args) {
   switch (name) {
+    case 'tabs_list': {
+      try {
+        const res = await rpc('tabs_list', {}, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'tabs_open': {
+      try {
+        const res = await rpc('tabs_open', { url: args.url }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'tabs_close': {
+      try {
+        const res = await rpc('tabs_close', { tab: args.tab }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'navigate': {
+      let targetUrl = args.url || 'https://in.indeed.com';
+      if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        targetUrl = 'https://' + targetUrl;
+      }
+      try {
+        const res = await rpc('navigate', { url: targetUrl, tab: args.tab }, 30000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'back': {
+      try {
+        const res = await rpc('back', { tab: args.tab }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'forward': {
+      try {
+        const res = await rpc('forward', { tab: args.tab }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'reload': {
+      try {
+        const res = await rpc('reload', { tab: args.tab }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'snapshot': {
+      try {
+        const res = await rpc('snapshot', {
+          tab: args.tab,
+          interactive: args.interactive,
+          find: args.find,
+          maxElements: args.maxElements || 200
+        }, 30000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'find': {
+      try {
+        const res = await rpc('find', { tab: args.tab, text: args.text }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'click': {
+      try {
+        const res = await rpc('click', { tab: args.tab, ref: args.ref }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'fill': {
+      try {
+        const res = await rpc('fill', { tab: args.tab, ref: args.ref, value: args.value }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'select': {
+      try {
+        const res = await rpc('select', { tab: args.tab, ref: args.ref, value: args.value }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'check': {
+      try {
+        const res = await rpc('check', { tab: args.tab, ref: args.ref, checked: args.checked !== false }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'upload': {
+      try {
+        const res = await rpc('upload', {
+          tab: args.tab,
+          ref: args.ref,
+          filePath: args.filePath || RESUME_PDF_PATH
+        }, 30000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'wait_for': {
+      try {
+        const res = await rpc('wait_for', {
+          tab: args.tab,
+          condition: args.condition || args.text || args.selector,
+          timeoutMs: args.timeoutMs || 5000
+        }, 30000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'screenshot': {
+      try {
+        const res = await rpc('screenshot', { tab: args.tab }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'eval': {
+      try {
+        const res = await rpc('eval', { tab: args.tab, script: args.script }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'dialog': {
+      try {
+        const res = await rpc('dialog', { tab: args.tab, action: args.action || 'accept' }, 15000);
+        return res.data || res;
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    case 'ask_user': {
+      return handleAskUser(args);
+    }
+
+    case 'request_approval': {
+      const preview = args.preview || {};
+      const approval = await requestHumanApproval({
+        title: 'Application Submission Approval Required',
+        preview,
+        action: 'submit'
+      });
+      if (approval.approved) {
+        lastGrantedApprovalToken = crypto.randomUUID();
+        try {
+          await rpc('grant_approval_token', { token: lastGrantedApprovalToken }, 10000);
+        } catch (e) {}
+        return { ok: true, approved: true, token: lastGrantedApprovalToken, message: 'User explicitly approved application submission.' };
+      } else {
+        lastGrantedApprovalToken = null;
+        return { ok: false, approved: false, reason: approval.reason || 'denied', error: 'User denied application submission.' };
+      }
+    }
+
+    case 'search_saved_answers': {
+      const q = (args.question || '').toLowerCase().trim();
+      const matches = {};
+      for (const [k, v] of Object.entries(qaCache)) {
+        if (k.toLowerCase().includes(q) || q.includes(k.toLowerCase())) {
+          matches[k] = v;
+        }
+      }
+      return { ok: true, query: args.question, matches, matchCount: Object.keys(matches).length };
+    }
+
+    case 'save_answer': {
+      const q = args.question;
+      const a = args.answer;
+      if (q && a) {
+        qaCache[q] = a;
+        try {
+          fs.writeFileSync(QA_CACHE_PATH, JSON.stringify(qaCache, null, 2), 'utf-8');
+        } catch (e) {}
+        return { ok: true, saved: true, question: q, answer: a };
+      }
+      return { ok: false, error: 'Question and answer required' };
+    }
+
     case 'browser_observe': {
       try {
         const res = await rpc('observe', { maxElements: args.maxElements || 200 }, 30000);
@@ -3305,43 +3926,47 @@ async function executeAgentTool(name, args) {
     }
 
     case 'browser_submit': {
-      let pageData = {};
-      try {
-        const obs = await rpc('observe', { maxElements: 60 }, 5000);
-        pageData = obs?.data || obs || {};
-      } catch (e) {}
+      if (!lastGrantedApprovalToken) {
+        let pageData = {};
+        try {
+          const obs = await rpc('snapshot', { maxElements: 60 }, 5000);
+          pageData = obs?.data || obs || {};
+        } catch (e) {}
 
-      const preview = {
-        company: pageData.title || args.company || 'Active Job Portal Tab',
-        role: args.role || 'AI / Software Engineer',
-        url: pageData.url || args.url || 'Active Job Portal Tab',
-        fields: {
-          name: CANDIDATE_PROFILE.name,
-          email: CANDIDATE_PROFILE.email,
-          phone: CANDIDATE_PROFILE.phone,
-          education: `${CANDIDATE_PROFILE.education} (${CANDIDATE_PROFILE.college})`,
-          experience: CANDIDATE_PROFILE.experienceLabel,
-          resume: RESUME_PDF_PATH
+        const preview = {
+          company: pageData.title || args.company || 'Active Job Portal Tab',
+          role: args.role || 'AI / Software Engineer',
+          url: pageData.url || args.url || 'Active Job Portal Tab',
+          fields: {
+            name: CANDIDATE_PROFILE.name,
+            email: CANDIDATE_PROFILE.email,
+            phone: CANDIDATE_PROFILE.phone,
+            education: `${CANDIDATE_PROFILE.education} (${CANDIDATE_PROFILE.college})`,
+            experience: CANDIDATE_PROFILE.experienceLabel,
+            resume: RESUME_PDF_PATH
+          }
+        };
+
+        const approval = await requestHumanApproval({
+          title: 'Application Submission Approval Required',
+          preview,
+          action: 'submit'
+        });
+
+        if (!approval.approved) {
+          return { ok: false, error: 'Approval required - submission cancelled' };
         }
-      };
 
-      const approval = await requestHumanApproval({
-        title: 'Application Submission Approval Required',
-        preview,
-        action: 'submit'
-      });
-
-      if (!approval.approved) {
-        return { ok: false, error: 'Approval required - submission cancelled' };
+        lastGrantedApprovalToken = crypto.randomUUID();
+        try {
+          await rpc('grant_approval_token', { token: lastGrantedApprovalToken }, 10000);
+        } catch (e) {}
       }
 
-      const approvalToken = crypto.randomUUID();
+      const tokenToUse = lastGrantedApprovalToken;
+      lastGrantedApprovalToken = null;
       try {
-        await rpc('grant_approval_token', { token: approvalToken }, 10000);
-      } catch (e) {}
-
-      try {
-        const res = await rpc('act', { ref: args.ref, op: 'submit', approvalToken }, 30000);
+        const res = await rpc('act', { ref: args.ref, op: 'submit', approvalToken: tokenToUse, tab: args.tab }, 30000);
         return res.data || res;
       } catch (e) {
         return { ok: false, error: e.message };
@@ -3542,14 +4167,13 @@ async function executeAgentTool(name, args) {
 }
 
 // =====================================================================
-// AUTONOMOUS LOCAL OFFLINE INTELLIGENCE ENGINE
+// AUTONOMOUS LOCAL MODEL-DRIVEN BROWSER AGENT ENGINE
 // =====================================================================
 function generateOfflineAgentReply() {
   return 'Router offline - no live data available';
 }
 
-// IPC: Execute Autonomous Agent Loop
-ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory = [] }) => {
+async function runModelDrivenAgentLoop(userPrompt, options = {}) {
   let isAlive = await isRouterAlive();
   if (!isAlive) {
     await ensureRouter(4000);
@@ -3570,17 +4194,21 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
 
   const systemMessage = {
     role: 'system',
-    content: 'You are the JobPilot Autonomous Operator. You have tool access to the browser, extension bridge, and ATS resume engine. The user is Vansh Sharma (MCA in AI and Data Science, Class of 2026, Fresher). Never call browser_submit or click Submit/Apply without explicit user approval. Never send messages, publish, buy, delete, or change account/privacy settings without approval. If a login, 2FA, passkey, CAPTCHA, or payment step appears, STOP and hand off to the user. Never guess or fabricate answer values - ask. Keep responses concise, structured, and factual. Never use em-dashes or en-dashes.'
+    content: 'You are a browser operator attached to the user\'s real Brave profile. Use tools one step at a time. After every action, call snapshot and verify the result before continuing. Never call browser_submit or click Submit/Apply without explicit user approval. Never submit, send, publish, delete, or change settings without request_approval returning approved. Never guess answer values; call ask_user. If CAPTCHA/login/2FA/payment appears, stop and ask_user. Keep going until the user\'s goal is complete, then report a short summary.'
   };
+
+  const initialGoal = userPrompt.includes('Goal:')
+    ? userPrompt
+    : `Goal: ${userPrompt}\nCandidate: Vansh Sharma (MCA AI & Data Science 2026, Graphic Era Hill University, Fresher).\nResume available via read_resume.\nInitial Target URL: ${options.url || 'https://in.indeed.com'}`;
 
   const messages = [
     systemMessage,
-    ...conversationHistory,
-    { role: 'user', content: userPrompt }
+    ...(options.conversationHistory || []),
+    { role: 'user', content: initialGoal }
   ];
 
   let loopCount = 0;
-  const maxLoops = 6;
+  const maxLoops = 40;
   const toolExecutions = [];
 
   const planningModel = (config.routing && config.routing.planning) || config.model || 'Fable5';
@@ -3588,10 +4216,16 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
 
   while (loopCount < maxLoops) {
     if (agentAbortRequested) {
-      return { ok: true, reply: 'Agent execution aborted by user.', toolExecutions };
+      return { ok: true, reply: 'Agent execution aborted by user.', toolExecutions, steps: loopCount };
     }
 
     loopCount++;
+
+    mainWindow?.webContents.send('agent-loop-progress', {
+      step: loopCount,
+      maxSteps: maxLoops,
+      status: `Step ${loopCount}/${maxLoops}: Planning next operator action...`
+    });
 
     const payload = JSON.stringify({
       model: planningModel,
@@ -3620,7 +4254,8 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
           ok: false,
           reply: 'Router offline - no live data available',
           reasoning: `Model error (HTTP ${res.status})`,
-          toolExecutions
+          toolExecutions,
+          steps: loopCount
         };
       }
 
@@ -3655,7 +4290,8 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
           ok: false,
           reply: 'Router offline - no live data available',
           reasoning: 'Gateway connection failed',
-          toolExecutions
+          toolExecutions,
+          steps: loopCount
         };
       }
     }
@@ -3666,7 +4302,8 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
         ok: false,
         reply: 'Router offline - no live data available',
         reasoning: 'Empty model response',
-        toolExecutions
+        toolExecutions,
+        steps: loopCount
       };
     }
 
@@ -3678,7 +4315,7 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
 
       for (const tCall of message.tool_calls) {
         if (agentAbortRequested) {
-          return { ok: true, reply: 'Agent execution aborted by user.', toolExecutions };
+          return { ok: true, reply: 'Agent execution aborted by user.', toolExecutions, steps: loopCount };
         }
 
         const toolName = tCall.function.name;
@@ -3697,12 +4334,14 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
 
         let toolResult = await executeAgentTool(toolName, toolArgs);
 
-        // Priority 6: Verify after every browser action
-        if (['browser_act', 'browser_navigate', 'browser_upload'].includes(toolName)) {
+        // Verification after action: take snapshot if action modified DOM or navigated
+        if (['click', 'fill', 'select', 'check', 'upload', 'navigate', 'browser_act', 'browser_navigate'].includes(toolName)) {
           try {
-            const postObs = await rpc('observe', { maxElements: 100 }, 8000);
+            const extractionModel = (config.routing && config.routing.extraction) || config.model || 'Fable5';
+            debugLog(`[MODEL CALL] Task: extraction, Model: ${extractionModel}`);
+            const postObs = await rpc('snapshot', { maxElements: 100 }, 8000);
             if (postObs) {
-              const diff = {
+              toolResult.verification = {
                 url: postObs.url || '',
                 title: postObs.title || '',
                 fieldCount: postObs.fieldCount,
@@ -3710,41 +4349,23 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
                 captchaProvider: postObs.captchaProvider || null,
                 alerts: postObs.alerts || []
               };
-              toolResult.verification = diff;
-
-              if (toolName === 'browser_navigate' && toolArgs.url) {
-                const expected = toolArgs.url.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-                const actual = (postObs.url || '').toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-                if (actual && !actual.includes(expected.split('/')[0])) {
-                  toolResult.warning = 'URL did not navigate to expected destination.';
-                }
+              if (postObs.snapshot && postObs.snapshot.includes('STATUS: EXPIRED')) {
+                toolResult.isExpired = true;
+                toolResult.note = 'Job posting has expired or is no longer available. Skip this posting and continue with next job in goal.';
               }
-
               if (postObs.blocked || postObs.captchaDetected) {
                 toolResult.blocked = true;
                 toolResult.requiresHuman = true;
                 toolResult.error = `CAPTCHA challenge detected (${postObs.captchaProvider || 'verification'}). Pausing agent loop for human handoff.`;
-                mainWindow?.webContents.send('agent-clarification-request', {
-                  id: `captcha_${Date.now()}`,
-                  title: 'CAPTCHA Verification Detected',
-                  question: 'Please complete the verification challenge in the browser tab.',
-                  action: 'captcha_wait'
+                await handleAskUser({
+                  question: 'A verification or CAPTCHA challenge appeared in the browser. Please solve it and click Continue.',
+                  options: ['Done, continue', 'Skip this job'],
+                  reason: 'Bot challenge gate'
                 });
-                toolExecutions.push({
-                  id: tCall.id,
-                  name: toolName,
-                  args: toolArgs,
-                  result: toolResult
-                });
-                return {
-                  ok: false,
-                  reply: `Encountered verification challenge (${postObs.captchaProvider || 'CAPTCHA'}). Paused for human handoff.`,
-                  toolExecutions
-                };
               }
             }
           } catch (e) {
-            toolResult.verificationWarning = `Verification observe failed: ${e.message}`;
+            toolResult.verificationWarning = `Verification snapshot failed: ${e.message}`;
           }
         }
 
@@ -3771,14 +4392,20 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
     } else {
       return {
         ok: true,
-        reply: message.content || 'Task completed.',
+        reply: message.content || 'Goal execution completed successfully.',
         reasoning: reasoning,
-        toolExecutions
+        toolExecutions,
+        steps: loopCount
       };
     }
   }
 
-  return { ok: true, reply: 'Agent loop reached maximum execution depth.', toolExecutions };
+  return { ok: true, reply: 'Agent loop reached maximum execution steps (40).', toolExecutions, steps: maxLoops };
+}
+
+// IPC: Execute Autonomous Agent Loop
+ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory = [] }) => {
+  return runModelDrivenAgentLoop(userPrompt, { conversationHistory });
 });
 
 // =====================================================================
