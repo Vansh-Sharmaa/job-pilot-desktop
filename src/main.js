@@ -190,8 +190,8 @@ const CANDIDATE_PROFILE = {
   firstName: 'Vansh',
   lastName: 'Sharma',
   email: 'engagevansh@gmail.com',
-  phone: '+919310461877',
-  phoneDigits: '9310461877',
+  phone: '+919368478556',
+  phoneDigits: '9368478556',
   city: 'Gurgaon',
   state: 'Haryana',
   country: 'India',
@@ -200,23 +200,28 @@ const CANDIDATE_PROFILE = {
   education: 'Master of Computer Applications (MCA) in AI and Data Science',
   degree: 'Master of Computer Applications',
   specialization: 'Artificial Intelligence & Data Science',
-  college: 'Amity University',
+  college: 'Graphic Era Hill University',
   gradYear: '2026',
   startYear: '2024',
-  cgpa: '8.5',
-  experienceYears: '1',
-  experienceLabel: '0 - 2 YOE (Fresher / Intern / Associate)',
+  cgpa: '8.0',
+  undergradCollege: 'DIT University',
+  undergradDegree: 'Bachelor of Computer Applications (BCA)',
+  undergradCgpa: '7.7',
+  undergradGradYear: '2024',
+  experienceYears: '0',
+  experienceLabel: 'Fresher (0 YOE : Immediate Joiner)',
   noticePeriod: 'Immediate',
   noticeDays: '0',
   currentCtc: '0',
   expectedCtc: '600000',
   expectedCtcLabel: 'Negotiable / 6 - 10 LPA',
+  linkedin: 'https://linkedin.com/in/vnxsh',
   github: 'https://github.com/Vansh-Sharmaa',
   portfolio: 'https://github.com/Vansh-Sharmaa',
   workAuthIndia: 'Yes',
   needSponsorship: 'No',
   willingToRelocate: 'Yes',
-  skills: ['Python', 'PyTorch', 'LangChain', 'RAG Pipelines', 'FastAPI', 'Docker', 'SQL', 'Algorithms'],
+  skills: ['Python', 'C++', 'SQL', 'LangChain', 'LangGraph', 'PyTorch', 'Hugging Face', 'Scikit-learn', 'XGBoost', 'RAG Pipelines', 'Multi-Agent Systems', 'FAISS', 'FastAPI', 'Docker', 'Streamlit'],
   skillsExperience: {
     'python': 2,
     'machine learning': 2,
@@ -225,6 +230,7 @@ const CANDIDATE_PROFILE = {
     'pytorch': 1,
     'tensorflow': 1,
     'langchain': 1,
+    'langgraph': 1,
     'rag': 1,
     'vector database': 1,
     'fastapi': 1,
@@ -234,7 +240,7 @@ const CANDIDATE_PROFILE = {
     'docker': 1,
     'git': 2
   },
-  pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, PyTorch models, and scalable Python/FastAPI microservices. Immediate joiner.'
+  pitch: 'AI/ML Engineer (MCA in AI & Data Science, Class of 2026, Graphic Era Hill University). Specialized in RAG pipelines, multi-agent orchestration with LangGraph, FAISS vector search, and production FastAPI ML microservices. Immediate joiner.'
 };
 
 // Knowledge QA Cache Path
@@ -372,10 +378,10 @@ async function answerQuestionWithAI(question, company = '', role = '', fieldType
       'Gender: Male',
       'Citizenship: Indian',
       'Location: Gurgaon Haryana India (open to relocate)',
-      'Education: Master of Computer Applications (MCA) in AI and Data Science at Amity University (2024 to 2026, CGPA 8.5)',
-      'Experience level: Fresher / 0 to 2 years hands on project and internship experience',
-      'Core Skills: Python, PyTorch, LangChain, RAG pipelines, Vector Databases, FastAPI, Docker, SQL, PostgreSQL, Git',
-      'Key Projects: Built an autonomous multi platform job application agent, a live RAG question answering system, and fine tuned PyTorch classifiers',
+      'Education: Master of Computer Applications (MCA) in AI and Data Science at Graphic Era Hill University (2024 to 2026, CGPA 8.0 / 10), BCA from DIT University (2021 to 2024, CGPA 7.7 / 10)',
+      'Experience level: Fresher (0 YOE : Immediate Joiner, Class of 2026)',
+      'Core Skills: Python, C++, SQL, LangChain, LangGraph, PyTorch, Hugging Face, Scikit-learn, XGBoost, RAG pipelines, Vector Databases, FAISS, FastAPI, Docker, Streamlit, Git',
+      'Key Projects: FileGenie (ML file classification engine), ResearchMind (multi-agent research system in LangGraph), LexAI (legal document intelligence platform with FAISS & LangChain)',
       'Availability: Immediate joiner (0 days notice), authorized to work in India, no sponsorship needed'
     ].join('\n');
 
@@ -2261,8 +2267,8 @@ async function draftColdOutreachEmail({ person, company, candidate }) {
   const systemPrompt = `You are an elite career strategist. Draft a hyper-personalized, ultra-crisp cold outreach email from Vansh Sharma to ${pName} (${pRole} at ${comp}).
 Candidate Profile:
 - Name: Vansh Sharma
-- Background: Master of Computer Applications (MCA) in AI & Data Science (Class of 2026), Amity University (CGPA 8.5)
-- Technical Strengths: Python, PyTorch, LangChain, RAG Pipelines, FastAPI, Vector Databases, PostgreSQL, Docker
+- Background: Master of Computer Applications (MCA) in AI & Data Science (Class of 2026), Graphic Era Hill University (CGPA 8.0 / 10)
+- Technical Strengths: Python, C++, SQL, LangChain, LangGraph, PyTorch, RAG Pipelines, Multi-Agent Systems, FAISS, FastAPI, Docker
 - Status: Available immediately for full-time or internship roles with zero notice period
 - Target Company: ${comp}
 
@@ -2318,8 +2324,8 @@ Guidelines:
     : `Quick note regarding AI/ML Engineering at ${comp} - Vansh Sharma`;
 
   const body = isRecruiter
-    ? `Hi ${firstName},\n\nI hope you are having a productive week.\n\nI am reaching out as an MCA student specializing in AI & Data Science (Class of 2026) at Amity University. I have hands-on experience building production RAG pipelines with LangChain and fine-tuning PyTorch models with FastAPI backends.\n\nI noticed the strong engineering initiatives at ${comp} and would love to be considered for early-career AI Engineer or Software Development roles. I am available to join immediately with zero notice period.\n\nWould you have 5 minutes for a brief chat, or could you point me to the relevant hiring lead?\n\nBest regards,\nVansh Sharma\n+91 9310461877 | github.com/Vansh-Sharmaa`
-    : `Hi ${firstName},\n\nI have been following your team's engineering work and technical updates at ${comp}.\n\nI am an MCA graduate specializing in AI & Data Science (Class of 2026) with practical experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices with Docker.\n\nI would value the opportunity to contribute to your engineering initiatives as an early-career AI/ML Engineer. I am available immediately.\n\nWould you be open to a brief 5-minute conversation or glancing over my technical projects?\n\nBest regards,\nVansh Sharma\n+91 9310461877 | github.com/Vansh-Sharmaa`;
+    ? `Hi ${firstName},\n\nI hope you are having a productive week.\n\nI am reaching out as an MCA student specializing in AI & Data Science (Class of 2026) at Graphic Era Hill University. I have hands-on experience building production RAG pipelines with LangChain and fine-tuning PyTorch models with FastAPI backends.\n\nI noticed the strong engineering initiatives at ${comp} and would love to be considered for early-career AI Engineer or Software Development roles. I am available to join immediately with zero notice period.\n\nWould you have 5 minutes for a brief chat, or could you point me to the relevant hiring lead?\n\nBest regards,\nVansh Sharma\n+91 9368478556 | linkedin.com/in/vnxsh | github.com/Vansh-Sharmaa`
+    : `Hi ${firstName},\n\nI have been following your team's engineering work and technical updates at ${comp}.\n\nI am an MCA graduate specializing in AI & Data Science (Class of 2026) from Graphic Era Hill University with practical experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices with Docker.\n\nI would value the opportunity to contribute to your engineering initiatives as an early-career AI/ML Engineer. I am available immediately.\n\nWould you be open to a brief 5-minute conversation or glancing over my technical projects?\n\nBest regards,\nVansh Sharma\n+91 9368478556 | linkedin.com/in/vnxsh | github.com/Vansh-Sharmaa`;
 
   return { ok: true, subject, body };
 }

@@ -995,7 +995,7 @@
               <div class="drawer-grid-2">
                 <div class="setting-field">
                   <span class="setting-label">Phone</span>
-                  <input type="text" class="setting-input" id="prof-phone" value="+919310461877">
+                  <input type="text" class="setting-input" id="prof-phone" value="+919368478556">
                 </div>
                 <div class="setting-field">
                   <span class="setting-label">Location / Cities</span>
@@ -1010,29 +1010,29 @@
                 </div>
                 <div class="setting-field">
                   <span class="setting-label">University / College</span>
-                  <input type="text" class="setting-input" id="prof-college" value="Amity University">
+                  <input type="text" class="setting-input" id="prof-college" value="Graphic Era Hill University">
                 </div>
               </div>
 
               <div class="drawer-grid-2">
                 <div class="setting-field">
                   <span class="setting-label">Graduation Year & CGPA</span>
-                  <input type="text" class="setting-input" id="prof-grad" value="2026 (CGPA: 8.5)">
+                  <input type="text" class="setting-input" id="prof-grad" value="2026 (CGPA: 8.0 / 10)">
                 </div>
                 <div class="setting-field">
                   <span class="setting-label">Total Experience & Notice</span>
-                  <input type="text" class="setting-input" id="prof-exp" value="1 year (0 to 2 YOE - Immediate Joiner)">
+                  <input type="text" class="setting-input" id="prof-exp" value="Fresher (0 YOE : Immediate Joiner)">
                 </div>
               </div>
 
               <div class="setting-field">
                 <span class="setting-label">Key Technical Skills</span>
-                <input type="text" class="setting-input" id="prof-skills" value="Python, PyTorch, LangChain, FastAPI, Docker, SQL, Machine Learning, RAG Pipelines">
+                <input type="text" class="setting-input" id="prof-skills" value="Python, C++, SQL, LangChain, LangGraph, PyTorch, Hugging Face, Scikit-learn, RAG, Multi-Agent Systems, FAISS, FastAPI, Docker">
               </div>
 
               <div class="setting-field">
                 <span class="setting-label">Tailored Application Pitch</span>
-                <textarea class="setting-input" id="prof-pitch" rows="2">MCA in AI & Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and scaling Python FastAPI microservices. Immediate joiner.</textarea>
+                <textarea class="setting-input" id="prof-pitch" rows="2">AI/ML Engineer (MCA, AI & Data Science) specializing in Retrieval-Augmented Generation (RAG), multi-agent orchestration, and production-ready machine learning architectures. Hands-on experience developing autonomous agent pipelines with LangGraph, semantic vector search with FAISS, and feature-engineered classical ML classifiers. Immediate joiner.</textarea>
               </div>
             </div>
 
@@ -1501,7 +1501,7 @@
         <div style="display: flex; gap: 8px;">
           <div style="flex: 1;">
             <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">University / College</label>
-            <input type="text" id="ui-cand-college" class="browser-input" style="width: 100%; margin-top: 3px;" value="Amity University" />
+            <input type="text" id="ui-cand-college" class="browser-input" style="width: 100%; margin-top: 3px;" value="Graphic Era Hill University" />
           </div>
           <div style="flex: 1;">
             <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Graduation Year</label>
@@ -2064,8 +2064,8 @@
             firstName: 'Vansh',
             lastName: 'Sharma',
             email: 'engagevansh@gmail.com',
-            phone: '+919310461877',
-            phoneDigits: '9310461877',
+            phone: '+919368478556',
+            phoneDigits: '9368478556',
             city: 'Gurgaon',
             state: 'Haryana',
             country: 'India',
@@ -2073,10 +2073,10 @@
             location: 'Gurgaon / Delhi NCR / Remote',
             education: 'Master of Computer Applications (MCA) in AI and Data Science',
             degree: 'Master of Computer Applications',
-            college: 'Amity University',
+            college: 'Graphic Era Hill University',
             gradYear: '2026',
-            cgpa: '8.5',
-            experienceYears: '1',
+            cgpa: '8.0',
+            experienceYears: '0',
             noticePeriod: 'Immediate',
             noticeDays: '0',
             currentCtc: '0',
@@ -2084,7 +2084,7 @@
             expectedCtcLabel: 'Negotiable (6 - 10 LPA)',
             github: 'https://github.com/Vansh-Sharmaa',
             portfolio: 'https://github.com/Vansh-Sharmaa',
-            pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices. Immediate joiner.'
+            pitch: 'AI/ML Engineer (MCA in AI & Data Science, Class of 2026, Graphic Era Hill University). Specialized in RAG pipelines, multi-agent orchestration with LangGraph, FAISS vector search, and production FastAPI ML microservices. Immediate joiner.'
           };
 
           const triggerEvents = (elem) => {
@@ -2574,7 +2574,7 @@
 
         try {
           const ok = await smartApplyInBrowser();
-          logRadarTelemetry('AGENT', 'Autofilled 12 inputs with verified profile (Amity University, 2026, 0-2 YOE).');
+          logRadarTelemetry('AGENT', 'Autofilled 12 inputs with verified profile (Graphic Era Hill University, 2026, Fresher).');
           logRadarTelemetry('SUCCESS', `Application submitted on ${portal.name}. Record logged.`);
 
           if (activeNode) {
@@ -2599,10 +2599,10 @@
     async function injectManualFieldsIntoForm() {
       const name = document.getElementById('man-name')?.value || 'Vansh Sharma';
       const email = document.getElementById('man-email')?.value || 'engagevansh@gmail.com';
-      const phone = document.getElementById('man-phone')?.value || '+919310461877';
+      const phone = document.getElementById('man-phone')?.value || '+919368478556';
       const city = document.getElementById('man-city')?.value || 'Delhi NCR';
       const degree = document.getElementById('man-degree')?.value || 'MCA in AI & Data Science';
-      const college = document.getElementById('man-college')?.value || 'Amity University';
+      const college = document.getElementById('man-college')?.value || 'Graphic Era Hill University';
       const gradYear = document.getElementById('man-gradyear')?.value || '2026';
       const curCtc = document.getElementById('man-curctc')?.value || '0';
       const expCtc = document.getElementById('man-expctc')?.value || '600000';
@@ -2659,10 +2659,10 @@
     async function saveCandidateProfileFromUI() {
       const name = document.getElementById('prof-name')?.value || 'Vansh Sharma';
       const email = document.getElementById('prof-email')?.value || 'engagevansh@gmail.com';
-      const phone = document.getElementById('prof-phone')?.value || '+919310461877';
+      const phone = document.getElementById('prof-phone')?.value || '+919368478556';
       const location = document.getElementById('prof-location')?.value || 'Delhi NCR';
       const degree = document.getElementById('prof-degree')?.value || 'Master of Computer Applications';
-      const college = document.getElementById('prof-college')?.value || 'Amity University';
+      const college = document.getElementById('prof-college')?.value || 'Graphic Era Hill University';
       const pitch = document.getElementById('prof-pitch')?.value || '';
 
       if (window.jobPilotApi && window.jobPilotApi.updateCandidateProfile) {
@@ -4389,7 +4389,7 @@
           const comp = item.company || 'Hiring Team';
           const sender = item.sender || item.platform || 'Recruitment Team';
           const snip = item.snippet || item.subject || '';
-          bodyEl.innerText = `From: ${sender}\nTo: ${accEmail}\nDate: ${item.date || 'Recent'}\nSubject: ${item.subject || `${role} Opportunities`}\n\nDear Vansh Sharma,\n\nWe are reaching out regarding the ${role} opening at ${comp}.\n\nDetails:\n${snip}\n\nCandidate Profile: MCA in AI & Data Science (Class of 2026), Amity University.\nSkills: Python, Machine Learning, AI Agents, Prompt Engineering, LLM Integration.\n\nBest regards,\n${sender}\n${comp} Hiring Team`;
+          bodyEl.innerText = `From: ${sender}\nTo: ${accEmail}\nDate: ${item.date || 'Recent'}\nSubject: ${item.subject || `${role} Opportunities`}\n\nDear Vansh Sharma,\n\nWe are reaching out regarding the ${role} opening at ${comp}.\n\nDetails:\n${snip}\n\nCandidate Profile: MCA in AI & Data Science (Class of 2026), Graphic Era Hill University.\nSkills: Python, C++, SQL, LangChain, LangGraph, PyTorch, RAG Pipelines, Multi-Agent Systems, FAISS, FastAPI, Docker.\n\nBest regards,\n${sender}\n${comp} Hiring Team`;
         }
       }
 
@@ -4923,7 +4923,7 @@
       applied: 0,
       quota: 20,
       model: 'Local Fable5 (LLM Router :20128)',
-      candidate: 'Vansh Sharma (MCA AI 2026, Amity)'
+      candidate: 'Vansh Sharma (MCA AI 2026, Graphic Era Hill University)'
     };
 
     function activateOpenCodeAgentView(portalName = 'Indeed', targetUrl = '', maxQuota = 20) {
@@ -5208,7 +5208,7 @@
         phone: document.getElementById('ui-cand-phone')?.value.trim() || '+919368478556',
         education: document.getElementById('ui-cand-degree')?.value.trim() || 'MCA in AI & Data Science',
         degree: document.getElementById('ui-cand-degree')?.value.trim() || 'MCA in AI & Data Science',
-        college: document.getElementById('ui-cand-college')?.value.trim() || 'Amity University',
+        college: document.getElementById('ui-cand-college')?.value.trim() || 'Graphic Era Hill University',
         gradYear: document.getElementById('ui-cand-gradyear')?.value.trim() || '2026',
         expectedCtc: document.getElementById('ui-cand-ctc')?.value.trim() || '600000',
         expectedCtcLabel: document.getElementById('ui-cand-ctc')?.value.trim() || 'Negotiable (6 - 10 LPA)',
@@ -6248,8 +6248,8 @@
 
       if (bodyText) {
         bodyText.value = isRecruiter
-          ? `Hi ${firstName},\n\nI hope you are having a productive week.\n\nI am reaching out as an MCA student specializing in AI & Data Science (Class of 2026) at Amity University. I have hands-on experience building production RAG pipelines with LangChain and fine-tuning PyTorch models with FastAPI backends.\n\nI noticed the strong engineering initiatives at ${comp} and would love to be considered for early-career AI Engineer or Software Development roles. I am available to join immediately with zero notice period.\n\nWould you have 5 minutes for a brief chat, or could you point me to the relevant hiring lead?\n\nBest regards,\nVansh Sharma\n+91 9310461877 | github.com/Vansh-Sharmaa`
-          : `Hi ${firstName},\n\nI have been following your team's engineering work and technical updates at ${comp}.\n\nI am an MCA graduate specializing in AI & Data Science (Class of 2026) with practical experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices with Docker.\n\nI would value the opportunity to contribute to your engineering initiatives as an early-career AI/ML Engineer. I am available immediately.\n\nWould you be open to a brief 5-minute conversation or glancing over my technical projects?\n\nBest regards,\nVansh Sharma\n+91 9310461877 | github.com/Vansh-Sharmaa`;
+          ? `Hi ${firstName},\n\nI hope you are having a productive week.\n\nI am reaching out as an MCA student specializing in AI & Data Science (Class of 2026) at Graphic Era Hill University. I have hands-on experience building production RAG pipelines with LangChain and fine-tuning PyTorch models with FastAPI backends.\n\nI noticed the strong engineering initiatives at ${comp} and would love to be considered for early-career AI Engineer or Software Development roles. I am available to join immediately with zero notice period.\n\nWould you have 5 minutes for a brief chat, or could you point me to the relevant hiring lead?\n\nBest regards,\nVansh Sharma\n+91 9368478556 | linkedin.com/in/vnxsh | github.com/Vansh-Sharmaa`
+          : `Hi ${firstName},\n\nI have been following your team's engineering work and technical updates at ${comp}.\n\nI am an MCA graduate specializing in AI & Data Science (Class of 2026) from Graphic Era Hill University with practical experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices with Docker.\n\nI would value the opportunity to contribute to your engineering initiatives as an early-career AI/ML Engineer. I am available immediately.\n\nWould you be open to a brief 5-minute conversation or glancing over my technical projects?\n\nBest regards,\nVansh Sharma\n+91 9368478556 | linkedin.com/in/vnxsh | github.com/Vansh-Sharmaa`;
       }
 
       // Highlight card in directory view if visible

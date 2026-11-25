@@ -1062,8 +1062,8 @@
       firstName: 'Vansh',
       lastName: 'Sharma',
       email: 'engagevansh@gmail.com',
-      phone: '+919310461877',
-      phoneDigits: '9310461877',
+      phone: '+919368478556',
+      phoneDigits: '9368478556',
       city: 'Gurgaon',
       state: 'Haryana',
       country: 'India',
@@ -1072,15 +1072,16 @@
       degree: 'Master of Computer Applications',
       college: 'Graphic Era Hill University',
       gradYear: '2026',
-      cgpa: '8.5',
-      experienceYears: '1',
+      cgpa: '8.0',
+      experienceYears: '0',
       noticePeriod: 'Immediate',
       noticeDays: '0',
       currentCtc: '0',
       expectedCtc: '600000',
+      linkedin: 'https://linkedin.com/in/vnxsh',
       github: 'https://github.com/Vansh-Sharmaa',
       portfolio: 'https://github.com/Vansh-Sharmaa',
-      pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices. Immediate joiner.'
+      pitch: 'AI/ML Engineer (MCA in AI & Data Science, Class of 2026, Graphic Era Hill University). Specialized in RAG pipelines, multi-agent orchestration with LangGraph, FAISS vector search, and production FastAPI ML microservices. Immediate joiner.'
     };
 
     const meta = extractJobMetadata();
@@ -1508,9 +1509,9 @@
       } else if (identifier.includes('email') || type === 'email') {
         valToSet = cand.email;
       } else if (identifier.includes('phone') || identifier.includes('mobile') || identifier.includes('contact') || type === 'tel') {
-        valToSet = type === 'number' ? (cand.phoneDigits || '9310461877') : cand.phone;
+        valToSet = type === 'number' ? (cand.phoneDigits || '9368478556') : cand.phone;
       } else if (identifier.includes('linkedin')) {
-        valToSet = cand.linkedin || 'https://linkedin.com/in/vansh-sharma';
+        valToSet = cand.linkedin || 'https://linkedin.com/in/vnxsh';
       } else if (identifier.includes('github') || identifier.includes('git profile')) {
         valToSet = cand.github || 'https://github.com/Vansh-Sharmaa';
       } else if (identifier.includes('portfolio') || identifier.includes('website') || identifier.includes('personal url')) {
@@ -1520,13 +1521,13 @@
       } else if (identifier.includes('pin') || identifier.includes('postal') || identifier.includes('zip')) {
         valToSet = cand.pinCode || '122001';
       } else if (identifier.includes('college') || identifier.includes('university') || identifier.includes('institute') || identifier.includes('school')) {
-        valToSet = cand.college || 'Amity University';
+        valToSet = cand.college || 'Graphic Era Hill University';
       } else if (identifier.includes('degree') || identifier.includes('qualification') || identifier.includes('major')) {
         valToSet = cand.education || 'Master of Computer Applications (MCA) in AI & Data Science';
       } else if (identifier.includes('passing year') || identifier.includes('grad year') || identifier.includes('graduation year')) {
         valToSet = cand.gradYear || '2026';
       } else if (identifier.includes('cgpa') || identifier.includes('gpa') || identifier.includes('percentage')) {
-        valToSet = cand.cgpa || '8.5';
+        valToSet = cand.cgpa || '8.0';
       } else if (identifier.includes('notice') || identifier.includes('how soon') || identifier.includes('joining date')) {
         valToSet = type === 'number' ? (cand.noticeDays || '0') : (cand.noticePeriod || 'Immediate');
       } else if (identifier.includes('current ctc') || identifier.includes('current salary') || identifier.includes('present ctc')) {
@@ -1574,17 +1575,18 @@
       firstName: 'Vansh',
       lastName: 'Sharma',
       email: 'engagevansh@gmail.com',
-      phone: '+919310461877',
-      phoneDigits: '9310461877',
+      phone: '+919368478556',
+      phoneDigits: '9368478556',
       city: 'Gurgaon',
-      college: 'Amity University',
+      college: 'Graphic Era Hill University',
       education: 'MCA in AI & Data Science',
       gradYear: '2026',
-      cgpa: '8.5',
+      cgpa: '8.0',
       noticePeriod: 'Immediate',
       noticeDays: '0',
       expectedCtc: '600000',
-            github: 'https://github.com/Vansh-Sharmaa',
+      linkedin: 'https://linkedin.com/in/vnxsh',
+      github: 'https://github.com/Vansh-Sharmaa',
       portfolio: 'https://github.com/Vansh-Sharmaa'
     };
     const meta = extractJobMetadata();
