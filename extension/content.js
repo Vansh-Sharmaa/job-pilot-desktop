@@ -426,6 +426,7 @@
         submitBtn.classList.remove('jobpilot-target-highlight');
         await sleep(1200);
         syncJobToDesktop();
+        try { chrome.runtime.sendMessage({ type: 'JOB_APPLY_COMPLETED' }); } catch (e) {}
         updateAgentHud(`✓ Application Submitted! (${(meta && meta.company) || 'Job'})`, true);
         hideAgentHud(4000);
         isAgentRunning = false;
@@ -472,6 +473,7 @@
         await sleep(1200);
 
         syncJobToDesktop();
+        try { chrome.runtime.sendMessage({ type: 'JOB_APPLY_COMPLETED' }); } catch (e) {}
         updateAgentHud(`✓ Application Submitted! (${meta.company})`, true);
         sendTelemetry('SUCCESS', `Application verified and logged for ${meta.title} at ${meta.company}!`);
         hideAgentHud(4000);
@@ -621,13 +623,21 @@
   }
 
   function findApplyButtonInCurrentContext() {
+    // Priority: explicit high-confidence apply button IDs and data attributes
+    const explicit = document.querySelector(
+      '#indeedApplyButton, [id*="indeedApply"], [data-testid*="indeedApply"], .ia-IndeedApplyButton, [aria-label*="Apply now" i], [aria-label*="Easy Apply" i], .jobsearch-IndeedApplyButton-buttonWrapper button, [data-testid="apply-button"], [data-testid="easy-apply-button"], .apply-button, .btn-apply, #btn-apply, a[href*="indeedapply"]'
+    );
+    if (explicit && explicit.offsetParent !== null && !explicit.disabled) {
+      return explicit;
+    }
+
     const candidates = Array.from(document.querySelectorAll('button, a, [role="button"], input[type="submit"], input[type="button"]'))
       .filter(b => b.offsetParent !== null && !b.disabled);
 
     for (const b of candidates) {
       const txt = (b.innerText || b.value || '').trim().toLowerCase();
       if (!txt || txt.length > 40) continue;
-      if (txt.includes('sign in') || txt.includes('login') || txt.includes('register') || txt.includes('save') || txt.includes('share') || txt.includes('report') || txt === 'applied') {
+      if (txt.includes('sign in') || txt.includes('login') || txt.includes('register') || txt.includes('save') || txt.includes('share') || txt.includes('report') || txt === 'applied' || txt.includes('already applied')) {
         continue;
       }
       if (
@@ -651,7 +661,18 @@
       .filter(b => b.offsetParent !== null && !b.disabled);
     for (const b of candidates) {
       const txt = (b.innerText || b.value || '').trim().toLowerCase();
-      if (txt === 'next' || txt.includes('save and continue') || txt.includes('save & continue') || txt.includes('continue') || txt.includes('proceed') || txt.includes('step') || txt.includes('next step')) {
+      if (
+        txt === 'continue' ||
+        txt.includes('continue') ||
+        txt === 'next' ||
+        txt.includes('next step') ||
+        txt.includes('save and continue') ||
+        txt.includes('save & continue') ||
+        txt.includes('proceed') ||
+        txt.includes('review your application') ||
+        txt.includes('review application') ||
+        txt === 'review'
+      ) {
         return b;
       }
     }
@@ -663,11 +684,124 @@
       .filter(b => b.offsetParent !== null && !b.disabled);
     for (const b of candidates) {
       const txt = (b.innerText || b.value || '').trim().toLowerCase();
-      if (txt.includes('submit application') || txt === 'submit' || txt.includes('send application') || txt.includes('complete application') || txt.includes('confirm application') || txt.includes('finish')) {
+      if (
+        txt.includes('submit your application') ||
+        txt.includes('submit application') ||
+        txt === 'submit' ||
+        txt.includes('send application') ||
+        txt.includes('complete application') ||
+        txt.includes('confirm application') ||
+        txt.includes('finish application')
+      ) {
         return b;
       }
     }
     return null;
+  }
+
+  // Wait up to timeoutMs for interactive application form fields, an Apply trigger button, or cards to mount
+  async function waitForApplicationElements(timeoutMs = 12000) {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeoutMs) {
+      if (!isAgentRunning || agentAbortRequested) return { status: 'aborted' };
+
+      // 1. Check if application form fields are visible and ready
+      const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea, [role="radiogroup"], fieldset input'))
+        .filter(el => el.offsetParent !== null);
+      if (inputs.length >= 2) {
+        return { status: 'form_ready', inputs };
+      }
+
+      // 2. Check if an Apply trigger button is visible
+      const applyBtn = findApplyButtonInCurrentContext();
+      if (applyBtn) {
+        return { status: 'apply_ready', button: applyBtn };
+      }
+
+      // 3. Check if we are on a feed of job cards
+      const cards = findJobCardsOnPage();
+      if (cards && cards.length >= 2) {
+        return { status: 'feed_ready', cards };
+      }
+
+      // 4. Check if a loading spinner is active
+      const spinner = document.querySelector('[class*="loading"], [class*="spinner"], .ia-BasePage-loading, [aria-busy="true"]');
+      if (spinner && spinner.offsetParent !== null) {
+        updateAgentHud('Page elements loading in browser...');
+      }
+
+      await sleep(350);
+    }
+
+    // Fallback: check one last time
+    const finalInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea'))
+      .filter(el => el.offsetParent !== null);
+    if (finalInputs.length > 0) return { status: 'form_ready', inputs: finalInputs };
+
+    const finalApplyBtn = findApplyButtonInCurrentContext();
+    if (finalApplyBtn) return { status: 'apply_ready', button: finalApplyBtn };
+
+    const finalCards = findJobCardsOnPage();
+    if (finalCards && finalCards.length > 0) return { status: 'feed_ready', cards: finalCards };
+
+    return { status: 'timeout' };
+  }
+
+  // Extract direct job links from cards on feed pages
+  function extractDirectJobUrlsFromCards(cards) {
+    const directList = [];
+    const seen = new Set();
+
+    for (const card of cards) {
+      let directUrl = '';
+      const host = window.location.hostname.toLowerCase();
+
+      // Indeed
+      const jk = card.getAttribute('data-jk') || card.querySelector('[data-jk]')?.getAttribute('data-jk');
+      if (jk) {
+        directUrl = `https://${window.location.host}/viewjob?jk=${jk}`;
+      } else {
+        const link = card.querySelector('a[href*="/viewjob"], a[href*="/rc/clk"], a[id^="job_"], a.jcs-JobTitle');
+        if (link && link.href) directUrl = link.href;
+      }
+
+      // Foundit
+      if (!directUrl && host.includes('foundit')) {
+        const fLink = card.querySelector('a[href*="/job/"]');
+        if (fLink && fLink.href) directUrl = fLink.href;
+      }
+
+      // Naukri
+      if (!directUrl && host.includes('naukri')) {
+        const nLink = card.querySelector('a.title[href], a[href*="/job-listings"]');
+        if (nLink && nLink.href) directUrl = nLink.href;
+      }
+
+      // Cuvette
+      if (!directUrl && host.includes('cuvette')) {
+        const cLink = card.querySelector('a[href*="/jobs/"], a[href*="/job/"]');
+        if (cLink && cLink.href) directUrl = cLink.href;
+      }
+
+      // Hirist
+      if (!directUrl && host.includes('hirist')) {
+        const hLink = card.querySelector('a[href*="/j/"]');
+        if (hLink && hLink.href) directUrl = hLink.href;
+      }
+
+      // Unstop
+      if (!directUrl && host.includes('unstop')) {
+        const uLink = card.querySelector('a[href*="/jobs/"]');
+        if (uLink && uLink.href) directUrl = uLink.href;
+      }
+
+      if (directUrl && !seen.has(directUrl)) {
+        seen.add(directUrl);
+        const cardMeta = extractActiveJobDetails(card);
+        directList.push({ url: directUrl, meta: cardMeta });
+      }
+    }
+    return directList;
   }
 
   function extractActiveJobDetails(card, portalName) {
@@ -715,15 +849,15 @@
     });
   }
 
-  // BATCH FEED AUTO-APPLY AGENT (Iterates through listings until daily quota is filled)
-  // Protected with strict Anti-Ban safeguards: Jittered intervals, duplicate suppression, and immediate halt on bot challenges
+  // BATCH FEED AUTO-APPLY AGENT
+  // Extracts direct job URLs and sequentially navigates through listings
   async function runBatchFeedApplyAgent(cand, meta, maxQuota = 20) {
     if (isAgentRunning) return;
     isAgentRunning = true;
     agentAbortRequested = false;
 
     ensureAgentHud();
-    updateAgentHud(`Scanning ${meta.portal || 'portal'} feed (Daily Safe Quota: ${maxQuota})...`);
+    updateAgentHud(`Scanning ${meta.portal || 'portal'} feed (Safe Quota: ${maxQuota})...`);
     sendTelemetry('BATCH_START', `Initiating autonomous batch apply agent on ${meta.portal || 'portal'} (Target Quota: ${maxQuota})...`);
 
     await sleep(800);
@@ -744,167 +878,43 @@
       return runAutonomousApplyAgent();
     }
 
-    updateAgentHud(`Found ${cards.length} job openings. Starting safe application pipeline...`);
-    sendTelemetry('PERCEPTION', `Discovered ${cards.length} candidate job openings on ${meta.portal || 'portal'} feed. Initiating autonomous evaluation.`, { totalCards: cards.length, portal: meta.portal });
-
-    let appliedCount = 0;
-
-    for (let i = 0; i < cards.length && appliedCount < maxQuota; i++) {
-      if (!isAgentRunning || agentAbortRequested) break;
-
-      const defense = isBotDefensePresent();
-      if (defense) {
-        sendTelemetry('ANTI_BAN_HALT', `[ANTI-BAN] Bot verification challenge detected (${defense}). Halting immediately to preserve account safety.`);
-        stopAgent(`Bot verification challenge detected (${defense}). Paused for account safety.`);
-        break;
-      }
-
-      const card = cards[i];
-      if (isCardAlreadyApplied(card)) {
-        sendTelemetry('SKIP', `Job opening #${i + 1} already applied. Skipping.`);
-        continue;
-      }
-
-      // Smooth human scroll into view with natural jitter
-      card.classList.add('jobpilot-target-highlight');
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      updateAgentHud(`Reviewing job ${i + 1}/${cards.length} (${appliedCount}/${maxQuota} applied)...`);
-      sendTelemetry('REASONING', `Evaluating job opening #${i + 1}/${cards.length} (${appliedCount}/${maxQuota} applied). Target verified against candidate profile (Vansh Sharma, MCA AI 2026).`, { cardIndex: i + 1, appliedCount, maxQuota });
-      sendTelemetry('ACTION_CLICK', `Targeting opening #${i + 1} card element. Smooth scrolling into focus and clicking to open details drawer.`, { cardIndex: i + 1 });
-
-      // Human reading pause (1.5s - 2.5s)
-      await sleep(1500 + Math.random() * 1000);
-      if (!isAgentRunning || agentAbortRequested) {
-        card.classList.remove('jobpilot-target-highlight');
-        break;
-      }
-
-      // Click card to open job details pane or drawer
-      card.click();
-      const innerLink = card.querySelector('a');
-      if (innerLink && innerLink !== card) {
-        try { innerLink.click(); } catch (e) {}
-      }
-      card.classList.remove('jobpilot-target-highlight');
-
-      // Allow details view to render (2.0s - 2.8s)
-      await sleep(2000 + Math.random() * 800);
-      if (!isAgentRunning || agentAbortRequested) break;
-
-      const jobMeta = extractActiveJobDetails(card, meta.portal);
-
-      const applyBtn = findApplyButtonInCurrentContext();
-      if (!applyBtn) {
-        sendTelemetry('INFO', `Opening "${jobMeta.title}" does not support 1-click apply on this feed. Skipping.`);
-        continue;
-      }
-
-      const btnTxt = (applyBtn.innerText || applyBtn.value || '').toLowerCase();
-      if (btnTxt.includes('applied')) {
-        sendTelemetry('SKIP', `Job at ${jobMeta.company} already marked applied. Skipping.`);
-        continue;
-      }
-
-      // Click Apply trigger button
-      applyBtn.classList.add('jobpilot-target-highlight');
-      applyBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      updateAgentHud(`Clicking Apply for ${jobMeta.company}...`);
-      sendTelemetry('PERCEPTION', `Parsed job opening details: ${jobMeta.title} at ${jobMeta.company}. Application trigger identified.`, { company: jobMeta.company, role: jobMeta.title });
-      sendTelemetry('ACTION_CLICK', `Direct application trigger detected ("${(applyBtn.innerText || 'Apply').trim()}"). Highlighting with neon beacon and clicking to mount modal.`, { company: jobMeta.company, role: jobMeta.title, btnText: (applyBtn.innerText || 'Apply').trim() });
-      await sleep(800 + Math.random() * 400);
-      if (!isAgentRunning || agentAbortRequested) {
-        applyBtn.classList.remove('jobpilot-target-highlight');
-        break;
-      }
-
-      applyBtn.click();
-      applyBtn.classList.remove('jobpilot-target-highlight');
-
-      // Wait for modal or form to mount (1.5s - 2.2s)
-      await sleep(1600 + Math.random() * 600);
-      if (!isAgentRunning || agentAbortRequested) break;
-
-      // Check if multi-step form fields appeared
-      const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea'))
-        .filter(el => el.offsetParent !== null);
-
-      if (inputs.length > 0) {
-        sendTelemetry('PERCEPTION', `Application modal mounted with ${inputs.length} active form fields. Initializing autonomous autofill with AI Q&A.`, { inputCount: inputs.length, company: jobMeta.company });
-        let step = 0;
-        while (step < 4 && isAgentRunning && !agentAbortRequested) {
-          step++;
-          updateAgentHud(`Filling application step ${step} for ${jobMeta.company}...`);
-          const fillRes = await executeSmartFormFillingWithAI(cand, jobMeta);
-          if (fillRes && fillRes.skipped) {
-            sendTelemetry('SKIP', `Candidate opted to skip application for ${jobMeta.company}.`);
-            const dismissBtn = document.querySelector('button[aria-label*="close" i], button[aria-label*="dismiss" i], .ia-BasePage-dismiss, [data-testid="modal-close"]');
-            if (dismissBtn) { try { dismissBtn.click(); } catch(e){} }
-            await sleep(1000);
-            break;
-          }
-          await sleep(600 + Math.random() * 400);
-          if (!isAgentRunning || agentAbortRequested) break;
-
-          const submitBtn = findSubmitButton();
-          if (submitBtn) {
-            submitBtn.classList.add('jobpilot-target-highlight');
-            submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            updateAgentHud(`Submitting application to ${jobMeta.company}...`);
-            sendTelemetry('SUBMIT', `Targeted final Submit button ("${(submitBtn.innerText || submitBtn.value || 'Submit').trim()}"). Dispatching application to ${jobMeta.company}...`, { company: jobMeta.company, role: jobMeta.title });
-            await sleep(800);
-            submitBtn.click();
-            submitBtn.classList.remove('jobpilot-target-highlight');
-            await sleep(1400);
-            break;
-          }
-
-          const nextBtn = findNextStepButton();
-          if (nextBtn) {
-            nextBtn.classList.add('jobpilot-target-highlight');
-            nextBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            updateAgentHud(`Advancing to form step ${step + 1}...`);
-            sendTelemetry('NEXT_STEP', `Step ${step} completed. Clicked "${nextBtn.innerText.trim()}" to advance wizard to step ${step + 1}.`, { nextStep: step + 1, company: jobMeta.company });
-            await sleep(600);
-            nextBtn.click();
-            nextBtn.classList.remove('jobpilot-target-highlight');
-            await sleep(1500);
-          } else {
-            break;
-          }
-        }
-      }
-
-      // Record successful application and sync to desktop Applications Ledger
-      syncApplicationRecord(jobMeta);
-      appliedCount++;
-      updateAgentHud(`✓ Applied ${appliedCount}/${maxQuota} on ${meta.portal}! (${jobMeta.company})`, true);
-      sendTelemetry('SUCCESS', `Applied to ${jobMeta.company} for "${jobMeta.title}" (${appliedCount}/${maxQuota})!`);
-
-      if (appliedCount >= maxQuota) {
-        updateAgentHud(`🎯 Daily safe quota reached (${appliedCount}/${maxQuota}). Agent stopped cleanly.`, true);
-        sendTelemetry('QUOTA_REACHED', `Completed daily safe quota of ${maxQuota} applications on ${meta.portal}. Account preserved.`);
-        break;
-      }
-
-      // STRICT ANTI-BAN COOLDOWN (8 to 13 seconds randomized delay between applications)
-      const cooldownMs = Math.floor(8000 + Math.random() * 5000);
-      const cooldownSec = Math.round(cooldownMs / 1000);
-      sendTelemetry('ANTI_BAN_WAIT', `[ANTI-BAN] Human delay cooldown: waiting ${cooldownSec}s before opening next job card...`);
-
-      for (let s = cooldownSec; s > 0; s--) {
-        if (!isAgentRunning || agentAbortRequested) break;
-        updateAgentHud(`Anti-Ban cooldown: ${s}s remaining (${appliedCount}/${maxQuota} applied)...`);
-        await sleep(1000);
-      }
+    const directJobUrls = extractDirectJobUrlsFromCards(cards);
+    if (directJobUrls.length === 0) {
+      updateAgentHud('Cards detected but no direct URLs resolved. Falling back to single-page apply...');
+      isAgentRunning = false;
+      return runAutonomousApplyAgent();
     }
 
-    if (appliedCount > 0) {
-      updateAgentHud(`✓ Batch session complete: ${appliedCount} applications submitted cleanly!`, true);
-      hideAgentHud(5000);
-    } else {
-      updateAgentHud('Batch session completed.', true);
-      hideAgentHud(3000);
-    }
+    updateAgentHud(`Found ${directJobUrls.length} direct job openings. Initializing queue...`);
+    sendTelemetry('PERCEPTION', `Discovered ${directJobUrls.length} direct openings on ${meta.portal || 'portal'} feed. Initializing batch navigation queue.`, { totalUrls: directJobUrls.length, portal: meta.portal });
+
+    // Initialize background batch queue
+    const firstJob = directJobUrls[0];
+    const remainingQueue = directJobUrls.slice(1);
+
+    chrome.runtime.sendMessage({
+      type: 'INIT_BATCH_QUEUE',
+      queue: remainingQueue,
+      appliedCount: 0,
+      quota: maxQuota
+    });
+
+    sendTelemetry('NAVIGATE', `Navigating tab to Job #1 (${firstJob.meta.company || 'Job'}): ${firstJob.url}`, {
+      url: firstJob.url,
+      company: firstJob.meta.company,
+      role: firstJob.meta.title
+    });
+
+    updateAgentHud(`Navigating to Job #1: ${firstJob.meta.company || 'Opening'}...`);
+    await sleep(600);
+
+    // Command background script to navigate this tab to the first direct job URL
+    chrome.runtime.sendMessage({
+      type: 'NAVIGATE_AGENT_TAB',
+      url: firstJob.url,
+      meta: firstJob.meta
+    });
+
     isAgentRunning = false;
   }
 
@@ -929,7 +939,7 @@
       pinCode: '122001',
       education: 'Master of Computer Applications (MCA) in AI & Data Science',
       degree: 'Master of Computer Applications',
-      college: 'Amity University',
+      college: 'Graphic Era Hill University',
       gradYear: '2026',
       cgpa: '8.5',
       experienceYears: '1',
@@ -950,73 +960,43 @@
     await sleep(600);
     if (!isAgentRunning || agentAbortRequested) return;
 
-    // Step 1: Detect if form fields are already open or if an Apply button needs clicking
-    const visibleInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea'))
-      .filter(el => el.offsetParent !== null);
+    // Wait up to 12s for elements to settle (handles client-side React hydration like smartapply.indeed.com)
+    updateAgentHud('Waiting for application DOM elements to mount...');
+    const domState = await waitForApplicationElements(12000);
 
-    if (visibleInputs.length < 2) {
-      updateAgentHud('Detecting Apply button trigger...');
-      const applySelectors = [
-        'button',
-        'a',
-        '[role="button"]',
-        'input[type="submit"]',
-        'input[type="button"]'
-      ];
-      const buttons = Array.from(document.querySelectorAll(applySelectors.join(',')))
-        .filter(b => b.offsetParent !== null);
+    if (domState.status === 'feed_ready') {
+      updateAgentHud(`Feed detected with ${domState.cards.length} openings. Transitioning to Batch Agent...`);
+      sendTelemetry('TRANSITION', `Detected ${domState.cards.length} job cards on feed. Switching to batch agent pipeline.`);
+      isAgentRunning = false;
+      return runBatchFeedApplyAgent(cand, meta, meta.quota || 20);
+    }
 
-      let targetBtn = document.querySelector('#indeedApplyButton, [id*="indeedApply"], [data-testid*="indeedApply"], .ia-IndeedApplyButton, [aria-label*="Apply now" i], [aria-label*="Easy Apply" i]');
-      if (!targetBtn || targetBtn.offsetParent === null) {
-        targetBtn = null;
-        for (const btn of buttons) {
-        const text = (btn.innerText || btn.value || '').trim().toLowerCase();
-        if (
-          text === 'easy apply' ||
-          text.includes('easy apply') ||
-          text === 'apply now' ||
-          text === 'quick apply' ||
-          text === 'apply with 1-click' ||
-          text === 'apply' ||
-          text.includes('apply for this job') ||
-          text.includes('apply online') ||
-          text.includes('fill application')
-        ) {
-          // Avoid generic external login / sign-in links if not apply
-          if (!text.includes('sign in') && !text.includes('login')) {
-            targetBtn = btn;
-            break;
-          }
-        }
-      }
-      }
+    if (domState.status === 'apply_ready') {
+      const targetBtn = domState.button;
+      targetBtn.classList.add('jobpilot-target-highlight');
+      targetBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      updateAgentHud(`Clicking "${targetBtn.innerText.trim().slice(0, 24)}"...`);
+      sendTelemetry('ACTION_CLICK', `Clicked application trigger button: ${targetBtn.innerText.trim()}`, {
+        btnText: targetBtn.innerText.trim(),
+        company: meta.company,
+        role: meta.title
+      });
+      await sleep(600);
+      if (!isAgentRunning || agentAbortRequested) return;
+      targetBtn.click();
+      targetBtn.classList.remove('jobpilot-target-highlight');
 
-      if (targetBtn) {
-        targetBtn.classList.add('jobpilot-target-highlight');
-        targetBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        updateAgentHud(`Clicking "${targetBtn.innerText.trim().slice(0, 24)}"...`);
-        sendTelemetry('CLICK', `Clicked application trigger button: ${targetBtn.innerText.trim()}`);
-        await sleep(500);
-        if (!isAgentRunning || agentAbortRequested) return;
-        targetBtn.click();
-        targetBtn.classList.remove('jobpilot-target-highlight');
-        await sleep(1200); // Allow application modal to load
-      } else {
-        const feedCards = findJobCardsOnPage();
-        if (feedCards && feedCards.length > 0) {
-          updateAgentHud(`Feed detected with ${feedCards.length} openings. Transitioning to Batch Agent...`);
-          sendTelemetry('TRANSITION', `Detected ${feedCards.length} job cards on feed. Switching to batch agent pipeline.`);
-          isAgentRunning = false;
-          return runBatchFeedApplyAgent(cand, meta, meta.quota || 20);
-        }
-      }
+      updateAgentHud('Waiting for application modal or step 1 to load...');
+      await sleep(1500);
+      if (!isAgentRunning || agentAbortRequested) return;
+      await waitForApplicationElements(12000);
     }
 
     if (!isAgentRunning || agentAbortRequested) return;
 
-    // Multi-Step loop (handles up to 4 sequential application form steps)
+    // Multi-Step loop (handles up to 6 sequential application form steps)
     let stepCount = 0;
-    const maxSteps = 4;
+    const maxSteps = 6;
     let totalFilled = 0;
     let detectedSubmitBtn = null;
 
@@ -1025,42 +1005,40 @@
       updateAgentHud(`Step ${stepCount}: Scanning & answering form fields...`);
       sendTelemetry('FILL_STEP', `Autonomous agent filling fields & answering AI questions on Step ${stepCount}...`);
 
-      const filledOnThisStep = await executeSmartFormFillingWithAI(cand, meta);
-      totalFilled += filledOnThisStep;
+      const fillRes = await executeSmartFormFillingWithAI(cand, meta);
+      if (fillRes && fillRes.skipped) {
+        sendTelemetry('SKIP', `Candidate opted to skip application for ${meta.company}.`);
+        updateAgentHud(`Skipped application for ${meta.company}.`, true);
+        break;
+      }
+      totalFilled += (typeof fillRes === 'number' ? fillRes : (fillRes?.filled || 0));
       await sleep(600);
       if (!isAgentRunning || agentAbortRequested) return;
 
-      // Check for Next / Continue / Proceed buttons vs Final Submit buttons
-      const nextButtons = Array.from(document.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]'))
-        .filter(b => b.offsetParent !== null && !b.disabled);
-
-      let nextBtn = null;
-      let submitBtn = null;
-
-      for (const b of nextButtons) {
-        const txt = (b.innerText || b.value || '').trim().toLowerCase();
-        if (txt === 'next' || txt.includes('save and continue') || txt.includes('save & continue') || txt.includes('continue') || txt.includes('proceed') || txt.includes('review')) {
-          nextBtn = b;
-          break;
-        } else if (txt.includes('submit application') || txt === 'submit' || txt.includes('send application') || txt.includes('complete application') || txt.includes('confirm application')) {
-          submitBtn = b;
-        }
-      }
-
+      const submitBtn = findSubmitButton();
       if (submitBtn) {
         detectedSubmitBtn = submitBtn;
         break; // Stop auto-advancing; present human review gate before submitting!
-      } else if (nextBtn) {
+      }
+
+      const nextBtn = findNextStepButton();
+      if (nextBtn) {
         nextBtn.classList.add('jobpilot-target-highlight');
         nextBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
         updateAgentHud(`Navigating to Next Step (${nextBtn.innerText.trim()})...`);
-        sendTelemetry('NEXT_STEP', `Advancing multi-step application: ${nextBtn.innerText.trim()}`);
+        sendTelemetry('NEXT_STEP', `Advancing multi-step application: ${nextBtn.innerText.trim()}`, {
+          step: stepCount,
+          nextLabel: nextBtn.innerText.trim()
+        });
         await sleep(600);
         if (!isAgentRunning || agentAbortRequested) return;
         nextBtn.click();
         nextBtn.classList.remove('jobpilot-target-highlight');
-        await sleep(1200);
+
+        // Allow next step to mount
+        await sleep(1500);
         if (!isAgentRunning || agentAbortRequested) return;
+        await waitForApplicationElements(8000);
       } else {
         // No further steps found
         break;

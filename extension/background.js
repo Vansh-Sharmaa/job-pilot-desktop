@@ -10,6 +10,9 @@ let lastContacts = { status: 'none' };
 const agentTabIds = new Set();
 let activeGroupId = null;
 let activeAgentCmd = null;
+let activeBatchQueue = [];
+let batchAppliedCount = 0;
+let batchMaxQuota = 20;
 
 async function getBridgeToken() {
   if (cachedBridgeToken) return cachedBridgeToken;
@@ -449,11 +452,64 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'INIT_BATCH_QUEUE') {
+    activeBatchQueue = request.queue || [];
+    batchAppliedCount = request.appliedCount || 0;
+    batchMaxQuota = request.quota || 20;
+    sendResponse({ ok: true, queuedCount: activeBatchQueue.length });
+    return true;
+  }
+
+  if (request.type === 'NAVIGATE_AGENT_TAB') {
+    const targetUrl = request.url;
+    const tabId = (sender.tab && sender.tab.id) || Array.from(agentTabIds)[0];
+    if (tabId && targetUrl) {
+      agentTabIds.add(tabId);
+      activeAgentCmd = {
+        action: 'start_autonomous_apply',
+        url: targetUrl,
+        meta: request.meta || {}
+      };
+      chrome.tabs.update(tabId, { url: targetUrl, active: true }).then(() => {
+        sendResponse({ ok: true });
+      }).catch(err => sendResponse({ ok: false, error: err.message }));
+      return true;
+    }
+  }
+
+  if (request.type === 'JOB_APPLY_COMPLETED') {
+    batchAppliedCount++;
+    if (activeBatchQueue.length > 0 && batchAppliedCount < batchMaxQuota) {
+      const nextJob = activeBatchQueue.shift();
+      const tabId = (sender.tab && sender.tab.id) || Array.from(agentTabIds)[0];
+      if (tabId && nextJob && nextJob.url) {
+        activeAgentCmd = {
+          action: 'start_autonomous_apply',
+          url: nextJob.url,
+          meta: nextJob.meta || {}
+        };
+        sendTelemetry('NEXT_JOB', `Advancing queue: opening next job listing (${batchAppliedCount}/${batchMaxQuota}): ${nextJob.meta?.company || nextJob.url}`, {
+          url: nextJob.url,
+          company: nextJob.meta?.company,
+          applied: batchAppliedCount,
+          quota: batchMaxQuota
+        });
+        setTimeout(() => {
+          chrome.tabs.update(tabId, { url: nextJob.url, active: true }).catch(() => {});
+        }, 3000);
+      }
+    } else {
+      sendTelemetry('QUEUE_COMPLETE', `Batch apply queue finished (${batchAppliedCount} jobs applied).`, { applied: batchAppliedCount });
+    }
+    sendResponse({ ok: true, remaining: activeBatchQueue.length, applied: batchAppliedCount });
+    return true;
+  }
+
   if (request.type === 'CHECK_ACTIVE_AGENT_SESSION') {
     const tabId = sender.tab && sender.tab.id;
     const isTabInAgentSet = tabId && agentTabIds.has(tabId);
     const isGroupMatch = activeGroupId && sender.tab && (sender.tab.groupId === activeGroupId);
-    const isIndeedApply = sender.tab && sender.tab.url && sender.tab.url.includes('indeedapply');
+    const isIndeedApply = sender.tab && sender.tab.url && (sender.tab.url.includes('indeedapply') || sender.tab.url.includes('smartapply'));
     const isActive = !!(activeAgentCmd && (isTabInAgentSet || isGroupMatch || isIndeedApply));
 
     if (isActive && tabId) {

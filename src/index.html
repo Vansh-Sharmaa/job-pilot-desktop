@@ -4956,7 +4956,11 @@
       let execOutput = '';
       let thoughtTxt = '';
 
-      if (stepType.includes('CLICK') || stepType === 'ACTION_CLICK') {
+      if (stepType.includes('NAVIGATE') || stepType === 'DISPATCH') {
+        execCmd = `browse.navigate [tab=12438934, url=${escapeHtml(url || 'https://in.indeed.com')}]`;
+        execOutput = `browse.wait_for [tab=12438934, ms=1500, timeout=15000]`;
+        thoughtTxt = 'Navigated to target opening. Establishing DOM observer.';
+      } else if (stepType.includes('CLICK') || stepType === 'ACTION_CLICK') {
         execCmd = `browse.eval [tab=12438934, expression=(() => { const el = document.querySelector('${escapeHtml(t.details?.btnText || 'button')}'); el.scrollIntoView({behavior:'smooth'}); el.click(); })]`;
         execOutput = 'Output 1 lines';
         thoughtTxt = 'Target clicked successfully in Brave tab.';
@@ -4964,11 +4968,19 @@
         execCmd = `browse.snapshot [tab=12438934, url=${escapeHtml(url || 'https://in.indeed.com')}, timeout=20000]`;
         execOutput = `Output ${t.details?.totalCards ? t.details.totalCards * 6 : 81} lines`;
         thoughtTxt = 'DOM tree evaluated. Application elements recognized.';
-      } else if (stepType.includes('AUTOFILL')) {
-        execCmd = `browse.eval [tab=12438934, expression=(() => { injectCandidateCredentials(Vansh Sharma, MCA AI 2026); })]`;
-        execOutput = `Output ${t.details?.filled || 4} fields filled`;
+      } else if (stepType.includes('AUTOFILL') || stepType.includes('FILL_STEP')) {
+        execCmd = `browse.eval [tab=12438934, expression=(() => { fillCandidateProfile(Vansh Sharma, MCA AI 2026); })]`;
+        execOutput = `Output ${t.details?.filled || 6} fields filled`;
         thoughtTxt = 'Profile credentials injected into active form.';
-      } else if (stepType.includes('AI_QA')) {
+      } else if (stepType.includes('NEXT_STEP')) {
+        execCmd = `browse.eval [tab=12438934, expression=(() => { const next = document.querySelector('button[data-testid*="continue"], .ia-BasePage-button'); next.click(); })]`;
+        execOutput = 'Output 1 lines';
+        thoughtTxt = 'Advanced multi-step wizard to next module.';
+      } else if (stepType.includes('SUBMIT')) {
+        execCmd = `browse.eval [tab=12438934, expression=(() => { const submit = document.querySelector('button[type="submit"]'); submit.click(); })]`;
+        execOutput = 'Output application submitted';
+        thoughtTxt = 'Application confirmed and dispatched.';
+      } else if (stepType.includes('AI_QA') || stepType === 'QUESTION') {
         execCmd = `browse.eval [tab=12438934, expression=(() => { setOption("${escapeHtml((t.details?.answer || '').slice(0, 30))}"); })]`;
         execOutput = 'Output 2 lines';
         thoughtTxt = 'AI generated response verified and applied.';
