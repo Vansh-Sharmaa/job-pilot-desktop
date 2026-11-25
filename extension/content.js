@@ -701,6 +701,7 @@
     if (isAgentRunning) return;
     isAgentRunning = true;
     agentAbortRequested = false;
+    try {
 
     const cand = activeCandidate || {
       name: 'Vansh Sharma',
@@ -752,8 +753,10 @@
       const buttons = Array.from(document.querySelectorAll(applySelectors.join(',')))
         .filter(b => b.offsetParent !== null);
 
-      let targetBtn = null;
-      for (const btn of buttons) {
+      let targetBtn = document.querySelector('#indeedApplyButton, [id*="indeedApply"], [data-testid*="indeedApply"], .ia-IndeedApplyButton, [aria-label*="Apply now" i], [aria-label*="Easy Apply" i]');
+      if (!targetBtn || targetBtn.offsetParent === null) {
+        targetBtn = null;
+        for (const btn of buttons) {
         const text = (btn.innerText || btn.value || '').trim().toLowerCase();
         if (
           text === 'easy apply' ||
@@ -772,6 +775,7 @@
             break;
           }
         }
+      }
       }
 
       if (targetBtn) {
@@ -855,6 +859,9 @@
     // PRESENT HUMAN REVIEW GATE: Never auto-submit blindly without candidate confirmation
     presentHumanReviewGate(totalFilled, detectedSubmitBtn, meta);
     sendTelemetry('REVIEW_GATE', `Form filled with ${totalFilled} answers. Awaiting candidate human review.`);
+    } finally {
+      isAgentRunning = false;
+    }
   }
 
   // Extract human-readable question or label for any form field
@@ -995,12 +1002,6 @@
 
         if (labelText.includes('gender') || labelText.includes('sex') || identifier.includes('gender')) {
           if ((labelText.includes('male') && !labelText.includes('female')) || el.value.toLowerCase() === 'male') {
-            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
-          }
-          continue;
-        } else if (labelText.includes('u.s. citizen') || labelText.includes('us citizen') || labelText.includes('united states citizen')) {
-          // Indian citizen candidate in India: not a US citizen
-          if (optVal.includes('no') || optVal === 'no') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
@@ -1584,6 +1585,13 @@
     } else if (request.action === 'inject_pitch') {
       const injected = executeInjectPitch();
       sendResponse({ status: 'success', injected });
+    } else if (request.action === 'get_agent_state') {
+      sendResponse({ isRunning: isAgentRunning });
+      return true;
+    } else if (request.action === 'sync_to_ledger') {
+      syncJobToDesktop();
+      sendResponse({ ok: true });
+      return true;
     } else if (request.action === 'extract_job') {
       const meta = extractJobMetadata();
       sendResponse({ status: 'success', metadata: meta });

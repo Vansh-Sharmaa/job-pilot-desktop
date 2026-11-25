@@ -2504,11 +2504,12 @@ ipcMain.handle('submit-clarification-answer', async (event, { id, answer, action
   return { ok: false, error: 'Clarification request not found or expired.' };
 });
 
-ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_autonomous_apply', quota = 20 } = {}) => {
+ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_autonomous_apply', quota = 20, meta = {} } = {}) => {
   try {
     const targetUrl = url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
     if (action) {
-      pendingExtensionCommands.push({ action, url: targetUrl, quota });
+      pendingExtensionCommands = pendingExtensionCommands.filter(c => c.url !== targetUrl);
+      pendingExtensionCommands.push({ action, url: targetUrl, quota, meta });
     }
 
     // 1. If companion extension in user's running Brave browser is active, route directly without new window

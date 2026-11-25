@@ -28,7 +28,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      width: 360px;
+      width: 340px;
       background: var(--canvas);
       color: var(--text-main);
       font-family: var(--font-ui);
@@ -40,12 +40,11 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Header */
     .pop-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 10px;
+      padding-bottom: 8px;
       border-bottom: 1px solid var(--border-hairline);
     }
 
@@ -69,7 +68,6 @@
       border-radius: var(--radius-sm);
     }
 
-    /* Online / Offline Status Button & Pill */
     .status-group {
       display: flex;
       align-items: center;
@@ -88,8 +86,6 @@
       background: rgba(16, 185, 129, 0.12);
       color: var(--status-online);
       border: 1px solid rgba(16, 185, 129, 0.3);
-      letter-spacing: 0.3px;
-      transition: all 0.2s ease;
     }
 
     .status-pill.offline {
@@ -104,21 +100,14 @@
       border-radius: 50%;
       background: var(--status-online);
       box-shadow: 0 0 8px var(--status-online);
-      animation: pulseDot 1.8s infinite;
     }
 
     .status-pill.offline .status-dot {
       background: var(--status-offline);
-      box-shadow: 0 0 8px var(--status-offline);
-      animation: none;
+      box-shadow: none;
     }
 
-    @keyframes pulseDot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-    }
-
-    .btn-reconnect {
+    .btn-ping {
       background: var(--raised);
       border: 1px solid var(--border-hairline);
       color: var(--text-muted);
@@ -127,19 +116,13 @@
       padding: 3px 7px;
       border-radius: var(--radius-sm);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      transition: all 0.15s ease;
     }
 
-    .btn-reconnect:hover {
+    .btn-ping:hover {
       background: #1e2333;
       color: #fff;
-      border-color: var(--border-subtle);
     }
 
-    /* Cards */
     .card {
       background: var(--surface);
       border: 1px solid var(--border-hairline);
@@ -157,7 +140,7 @@
     }
 
     .card-title {
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: 600;
       letter-spacing: 0.5px;
       text-transform: uppercase;
@@ -165,7 +148,6 @@
       font-family: var(--font-mono);
     }
 
-    /* Detected Job Info */
     .job-portal-badge {
       font-size: 10px;
       font-family: var(--font-mono);
@@ -197,58 +179,57 @@
       text-overflow: ellipsis;
     }
 
-    /* Action Grid */
-    .action-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      margin-top: 2px;
+    .btn-apply-primary {
+      background: var(--accent);
+      border: 1px solid #60a5fa;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all 0.15s ease;
+      box-shadow: 0 0 14px rgba(59, 130, 246, 0.35);
+      width: 100%;
     }
 
-    .btn-action {
+    .btn-apply-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-apply-primary.running {
+      background: #dc2626;
+      border-color: #ef4444;
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-sync-secondary {
       background: var(--raised);
       border: 1px solid var(--border-hairline);
       border-radius: var(--radius-md);
       color: var(--text-main);
       font-size: 11px;
       font-weight: 600;
-      padding: 8px 10px;
+      padding: 7px 10px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
+      width: 100%;
       transition: all 0.15s ease;
-      text-align: center;
     }
 
-    .btn-action:hover {
+    .btn-sync-secondary:hover {
       background: #1c2132;
       border-color: var(--border-subtle);
       color: #fff;
     }
 
-    .btn-action.primary {
-      background: var(--accent);
-      border-color: #60a5fa;
-      color: #fff;
-      grid-column: span 2;
-      padding: 10px 12px;
-      font-size: 12px;
-      font-weight: 700;
-      box-shadow: 0 0 14px rgba(59, 130, 246, 0.4);
-    }
-
-    .btn-action.primary:hover {
-      background: var(--accent-hover);
-    }
-
-    .btn-action:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    /* Candidate Dossier Card */
     .cand-row {
       display: flex;
       justify-content: space-between;
@@ -256,7 +237,7 @@
     }
 
     .cand-name {
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 600;
       color: #fff;
     }
@@ -268,49 +249,27 @@
     }
 
     .cand-sub {
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--text-muted);
     }
 
-    .skills-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-top: 4px;
-    }
-
-    .skill-chip {
-      font-size: 10px;
-      font-family: var(--font-mono);
-      background: var(--raised);
-      border: 1px solid var(--border-hairline);
-      color: #cbd5e1;
-      padding: 1px 5px;
-      border-radius: var(--radius-sm);
-    }
-
-    /* Live Telemetry Notice */
     .notice-bar {
       background: #0b0d14;
       border: 1px solid var(--border-hairline);
       border-radius: var(--radius-md);
       padding: 6px 10px;
-      font-size: 10.5px;
+      font-size: 10px;
       font-family: var(--font-mono);
       color: var(--text-dim);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-
-    .notice-bar strong {
-      color: var(--text-muted);
-    }
   </style>
 </head>
 <body>
 
-  <!-- Header with Brand & Online/Offline Status Indicator -->
+  <!-- Header -->
   <div class="pop-header">
     <div class="pop-brand">
       <span>⚡</span>
@@ -322,76 +281,47 @@
         <span class="status-dot"></span>
         <span id="bridge-status-text">ONLINE</span>
       </div>
-      <button class="btn-reconnect" id="btn-reconnect" title="Test Bridge Connection">⟳ Ping</button>
+      <button class="btn-ping" id="btn-reconnect" title="Test Desktop Bridge Connection">⟳ Ping</button>
     </div>
   </div>
 
   <!-- Detected Job Card -->
   <div class="card" id="card-detected-job">
     <div class="card-header-row">
-      <span class="card-title">DETECTED JOB POSTING</span>
+      <span class="card-title">DETECTED ACTIVE JOB</span>
       <span class="job-portal-badge" id="job-portal">DETECTING...</span>
     </div>
     <div class="job-title-text" id="job-title">Scanning active browser tab...</div>
     <div class="job-company-text">
-      <span id="job-company">Open any job on Indeed, foundit, Unstop, or company portal</span>
+      <span id="job-company">Open any job on Indeed, foundit, or careers portal</span>
       <span style="color: var(--border-subtle);">&bull;</span>
       <span id="job-location" style="color: var(--text-dim);">India / Remote</span>
     </div>
   </div>
 
-  <!-- 1-Click Application Actions -->
-  <div class="card">
-    <div class="card-header-row">
-      <span class="card-title">ONE-CLICK AUTONOMOUS ACTIONS</span>
-      <span style="font-size: 10px; color: var(--text-dim); font-family: var(--font-mono);">0-2 YOE SAFE</span>
-    </div>
-    <div class="action-grid">
-      <button class="btn-action primary" id="btn-popup-tab-agent">
-        <span>⚡</span> <span>Start Autonomous Apply Agent</span>
-      </button>
-      <button class="btn-action" id="btn-popup-stop" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" title="Immediately halt autonomous agent">
-        <span>■</span> <span>Stop Agent</span>
-      </button>
-      <button class="btn-action" id="btn-popup-autofill">
-        <span>📝</span> <span>Autofill Form</span>
-      </button>
-      <button class="btn-action" id="btn-popup-pitch">
-        <span>📄</span> <span>Inject Pitch</span>
-      </button>
-      <button class="btn-action" id="btn-popup-tailor">
-        <span>⚡</span> <span>Tailor ATS PDF</span>
-      </button>
-      <button class="btn-action" id="btn-popup-sync">
-        <span>📋</span> <span>Sync to Ledger</span>
-      </button>
-      <button class="btn-action" id="btn-popup-map-talent" style="grid-column: span 2; background: #0c1a2e; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
-        <span>🕸</span> <span>Map Company Talent Graph</span>
-      </button>
-    </div>
+  <!-- 1-Click Autonomous Action -->
+  <div class="card" style="gap: 8px;">
+    <button class="btn-apply-primary" id="btn-popup-tab-agent">
+      <span>⚡</span> <span id="agent-btn-text">Start Autonomous Apply Agent</span>
+    </button>
+    <button class="btn-sync-secondary" id="btn-popup-sync">
+      <span>📋</span> <span>Sync Application to Desktop Ledger</span>
+    </button>
   </div>
 
-  <!-- Candidate Profile Dossier -->
+  <!-- Candidate Profile Badge -->
   <div class="card">
     <div class="cand-row">
       <span class="cand-name" id="cand-name">Vansh Sharma</span>
-      <span class="cand-tier">0 - 2 YOE | Immediate</span>
+      <span class="cand-tier">MCA 2026 | Immediate</span>
     </div>
-    <div class="cand-sub" id="cand-edu">MCA in AI & Data Science (2024 - 2026)</div>
-    <div class="skills-row">
-      <span class="skill-chip">Python</span>
-      <span class="skill-chip">PyTorch</span>
-      <span class="skill-chip">LangChain</span>
-      <span class="skill-chip">RAG Pipelines</span>
-      <span class="skill-chip">FastAPI</span>
-      <span class="skill-chip">Docker</span>
-    </div>
+    <div class="cand-sub" id="cand-edu">Amity University : CGPA 8.5 : AI & Data Science</div>
   </div>
 
-  <!-- Status / Diagnostics Footer -->
+  <!-- Live Status Footer -->
   <div class="notice-bar">
     <span id="popup-notice">Desktop Bridge: 127.0.0.1:5056</span>
-    <span id="popup-ping-ms" style="color: var(--status-online);">2ms ping</span>
+    <span id="popup-ping-ms" style="color: var(--status-online);">2ms</span>
   </div>
 
   <script src="popup.js"></script>

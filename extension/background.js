@@ -5,7 +5,10 @@ let isConnected = false;
 let candidateProfile = null;
 let cachedBridgeToken = '';
 let lastContacts = { status: 'none' };
-let activeAgentTabId = null;
+
+// Active agent tab tracking
+const agentTabIds = new Set();
+let activeGroupId = null;
 let activeAgentCmd = null;
 
 async function getBridgeToken() {
@@ -83,17 +86,16 @@ async function executeCommandInActiveTab(cmd) {
   }
 
   if (cmd.action === 'abort' || cmd.action === 'stop') {
-    activeAgentTabId = null;
     activeAgentCmd = null;
-    chrome.tabs.query({}, (tabs) => {
-      if (tabs) {
-        for (const t of tabs) {
-          try {
-            chrome.tabs.sendMessage(t.id, { action: 'abort' });
-          } catch (e) {}
+    for (const tabId of agentTabIds) {
+      try {
+        if (chrome.debugger) {
+          chrome.debugger.detach({ tabId }).catch(() => {});
         }
-      }
-    });
+        chrome.tabs.sendMessage(tabId, { action: 'abort' });
+      } catch (e) {}
+    }
+    agentTabIds.clear();
     return;
   }
 
@@ -104,6 +106,8 @@ async function executeCommandInActiveTab(cmd) {
     sendTelemetry('SAFETY', 'LinkedIn automation blocked to protect user account from bans.');
     return;
   }
+
+  activeAgentCmd = cmd;
 
   // 1. Query all open tabs to check if an existing tab is already on targetUrl or same host
   let allTabs = [];
@@ -129,10 +133,26 @@ async function executeCommandInActiveTab(cmd) {
 
   // 2. If matching domain tab exists, bring to front and route command
   if (targetTab && targetTab.id) {
+    agentTabIds.add(targetTab.id);
     await chrome.tabs.update(targetTab.id, { active: true });
     if (targetTab.windowId) {
       try { await chrome.windows.update(targetTab.windowId, { focused: true }); } catch (e) {}
     }
+
+    // Group under Agents : 1 tab group
+    try {
+      if (chrome.tabs.group && chrome.tabGroups) {
+        activeGroupId = await chrome.tabs.group({ tabIds: [targetTab.id] });
+        await chrome.tabGroups.update(activeGroupId, { title: 'Agents : 1', color: 'grey' });
+      }
+    } catch (e) {}
+
+    // Attach debugger banner if permitted
+    try {
+      if (chrome.debugger) {
+        chrome.debugger.attach({ tabId: targetTab.id }, '1.3').catch(() => {});
+      }
+    } catch (e) {}
 
     if (targetTab.url !== targetUrl && cmd.action !== 'navigate') {
       await chrome.tabs.update(targetTab.id, { url: targetUrl });
@@ -163,11 +183,22 @@ async function executeCommandInActiveTab(cmd) {
     activeTab = await chrome.tabs.create({ url: targetUrl, active: true });
   }
 
-  // Create or add to Agents · 1 tab group (as in OpenCode agent mode)
+  if (activeTab && activeTab.id) {
+    agentTabIds.add(activeTab.id);
+  }
+
+  // Create or add to Agents : 1 tab group (as in OpenCode agent mode)
   try {
     if (activeTab && activeTab.id && chrome.tabs.group && chrome.tabGroups) {
-      const groupId = await chrome.tabs.group({ tabIds: [activeTab.id] });
-      await chrome.tabGroups.update(groupId, { title: 'Agents · 1', color: 'grey' });
+      activeGroupId = await chrome.tabs.group({ tabIds: [activeTab.id] });
+      await chrome.tabGroups.update(activeGroupId, { title: 'Agents : 1', color: 'grey' });
+    }
+  } catch (e) {}
+
+  // Attach debugger banner if permitted
+  try {
+    if (activeTab && activeTab.id && chrome.debugger) {
+      chrome.debugger.attach({ tabId: activeTab.id }, '1.3').catch(() => {});
     }
   } catch (e) {}
 
@@ -188,9 +219,53 @@ async function executeCommandInActiveTab(cmd) {
   chrome.tabs.onUpdated.addListener(tabListener);
 }
 
+// Track child tabs opened by the agent (e.g. Indeed Apply opening in a new tab)
+chrome.tabs.onCreated.addListener(async (newTab) => {
+  if (!newTab || !newTab.id) return;
+
+  const isChildOfAgent = newTab.openerTabId && agentTabIds.has(newTab.openerTabId);
+  const isAgentGroup = activeGroupId && newTab.groupId === activeGroupId;
+
+  if (isChildOfAgent || isAgentGroup) {
+    agentTabIds.add(newTab.id);
+
+    // Group into Agents : 1
+    if (activeGroupId && chrome.tabs.group) {
+      try {
+        await chrome.tabs.group({ tabIds: [newTab.id], groupId: activeGroupId });
+      } catch (e) {}
+    }
+
+    // Attach debugger banner
+    try {
+      if (chrome.debugger) {
+        chrome.debugger.attach({ tabId: newTab.id }, '1.3').catch(() => {});
+      }
+    } catch (e) {}
+
+    // When child tab finishes loading, automatically dispatch autonomous apply command
+    const childListener = (tabId, changeInfo, tab) => {
+      if (tabId === newTab.id && changeInfo.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(childListener);
+        if (activeAgentCmd) {
+          setTimeout(() => {
+            dispatchCommandToTab(tab, activeAgentCmd);
+          }, 1000);
+        }
+      }
+    };
+    chrome.tabs.onUpdated.addListener(childListener);
+  }
+});
+
+// Clean up tabs removed by user
+chrome.tabs.onRemoved.addListener((tabId) => {
+  agentTabIds.delete(tabId);
+});
+
 async function dispatchCommandToTab(tab, cmd) {
   if (!tab || !tab.id) return;
-  activeAgentTabId = tab.id;
+  agentTabIds.add(tab.id);
   activeAgentCmd = cmd;
 
   const sendMsg = () => {
@@ -203,7 +278,7 @@ async function dispatchCommandToTab(tab, cmd) {
         // Tab might not have content script loaded. Inject dynamically
         try {
           await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
+            target: { tabId: tab.id, allFrames: true },
             files: ['content.js']
           });
           await chrome.scripting.insertCSS({
@@ -245,6 +320,19 @@ async function reportCommandResult(action, response) {
   } catch (e) {}
 }
 
+function sendTelemetry(step, message, details = {}) {
+  getBridgeToken().then(token => {
+    fetch(`${BRIDGE_URL}/api/agent-telemetry`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-JobPilot-Token': token
+      },
+      body: JSON.stringify({ step, message, details, timestamp: Date.now() })
+    }).catch(() => {});
+  });
+}
+
 // Listen for messages from content script or popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'GET_STATUS') {
@@ -253,6 +341,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.type === 'ABORT_AGENT') {
+    activeAgentCmd = null;
     getBridgeToken().then(token => {
       fetch(`${BRIDGE_URL}/api/abort-agent`, {
         method: 'POST',
@@ -262,16 +351,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       }).catch(() => {});
     });
-    // Broadcast abort to any other active tabs
-    chrome.tabs.query({}, (tabs) => {
-      if (tabs) {
-        for (const t of tabs) {
-          try {
-            chrome.tabs.sendMessage(t.id, { action: 'abort' });
-          } catch (e) {}
+    // Broadcast abort to all agent tabs
+    for (const tabId of agentTabIds) {
+      try {
+        if (chrome.debugger) {
+          chrome.debugger.detach({ tabId }).catch(() => {});
         }
-      }
-    });
+        chrome.tabs.sendMessage(tabId, { action: 'abort' });
+      } catch (e) {}
+    }
+    agentTabIds.clear();
     sendResponse({ ok: true });
     return true;
   }
@@ -291,23 +380,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'GET_CONTACTS') {
     lastContacts = request.payload || { status: 'none' };
     sendResponse({ status: 'success', data: lastContacts });
-    return true;
-  }
-
-  if (request.type === 'MAP_TALENT_GRAPH') {
-    getBridgeToken().then(token => {
-      fetch(`${BRIDGE_URL}/api/company-talent-graph`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-JobPilot-Token': token
-        },
-        body: JSON.stringify(request.payload || { company: 'Google' })
-      })
-      .then(r => r.json())
-      .then(data => sendResponse(data))
-      .catch(err => sendResponse({ ok: false, error: err.message }));
-    });
     return true;
   }
 
@@ -378,8 +450,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.type === 'CHECK_ACTIVE_AGENT_SESSION') {
-    const isTabActive = sender.tab && (sender.tab.id === activeAgentTabId);
-    sendResponse({ active: !!(isTabActive && activeAgentCmd), cmd: activeAgentCmd });
+    const tabId = sender.tab && sender.tab.id;
+    const isTabInAgentSet = tabId && agentTabIds.has(tabId);
+    const isGroupMatch = activeGroupId && sender.tab && (sender.tab.groupId === activeGroupId);
+    const isIndeedApply = sender.tab && sender.tab.url && sender.tab.url.includes('indeedapply');
+    const isActive = !!(activeAgentCmd && (isTabInAgentSet || isGroupMatch || isIndeedApply));
+
+    if (isActive && tabId) {
+      agentTabIds.add(tabId);
+    }
+
+    sendResponse({ active: isActive, cmd: activeAgentCmd });
     return true;
   }
 
@@ -401,7 +482,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Automatically continue multi-step application forms on step transitions
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (tabId === activeAgentTabId && changeInfo.status === 'complete') {
+  if (agentTabIds.has(tabId) && changeInfo.status === 'complete') {
     if (activeAgentCmd && tab.url && !isInternalBrowserUrl(tab.url)) {
       setTimeout(() => {
         dispatchCommandToTab(tab, activeAgentCmd);

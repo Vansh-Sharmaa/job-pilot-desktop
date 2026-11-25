@@ -4053,20 +4053,16 @@
 
       // 2. Dispatch command to user's running Brave browser
       try {
+        const payload = {
+          url: url,
+          action: 'start_autonomous_apply',
+          quota: 20,
+          meta: { company: company || 'Target Company', role: role || 'AI Role', url: url }
+        };
         if (window.jobPilotApi && window.jobPilotApi.launchChromeAgent) {
-          await window.jobPilotApi.launchChromeAgent({
-            url: url,
-            action: 'start_autonomous_apply',
-            quota: 20
-          });
-        }
-        if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
-          await window.jobPilotApi.sendExtensionCommand({
-            action: 'start_autonomous_apply',
-            url: url,
-            quota: 20,
-            meta: { company: company || 'Target Company', role: role || 'AI Role', url: url }
-          });
+          await window.jobPilotApi.launchChromeAgent(payload);
+        } else if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
+          await window.jobPilotApi.sendExtensionCommand(payload);
         }
         renderAgentTelemetryStep({
           step: 'NAVIGATE',
