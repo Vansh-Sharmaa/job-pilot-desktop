@@ -316,9 +316,10 @@
               <div class="ag-dock-left">
                 <button class="ag-dock-btn" onclick="switchWorkspaceTab('resume')"
                   title="Attach Resume Context">+</button>
-                <div class="ag-model-badge" onclick="switchWorkspaceTab('settings')" title="Select Model">
+                <div class="ag-model-badge" onclick="toggleModelPicker(event)" title="Select Model from 9router" style="position: relative;">
                   <span id="dock-model-label">Fable5 (9Router)</span>
                   <span class="ag-chip-chevron">⌄</span>
+                  <div id="dock-model-menu" style="display: none; position: absolute; bottom: 32px; left: 0; min-width: 220px; max-height: 240px; overflow-y: auto; background: #0f1118; border: 1px solid var(--border-subtle); border-radius: 8px; z-index: 9999; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);"></div>
                 </div>
               </div>
               <div class="ag-dock-right">
@@ -2809,6 +2810,59 @@
     let activeReasoningText = '';
     let activeTurnContainer = null;
     let lastSubmittedTask = '';
+    let selectedChatModel = 'Fable5';
+
+    async function toggleModelPicker(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('dock-model-menu');
+      if (!menu) return;
+      if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        return;
+      }
+      menu.style.display = 'block';
+      menu.innerHTML = '<div style="padding: 8px; font-size: 11px; color: var(--text-dim);">Loading models from 9router...</div>';
+      try {
+        if (window.jobPilotApi && window.jobPilotApi.chatModels) {
+          const res = await window.jobPilotApi.chatModels();
+          if (res && res.ok && Array.isArray(res.models)) {
+            menu.innerHTML = '';
+            res.models.forEach(m => {
+              const item = document.createElement('div');
+              item.style.padding = '6px 10px';
+              item.style.fontSize = '11.5px';
+              item.style.cursor = 'pointer';
+              item.style.borderRadius = '4px';
+              item.style.color = (m === selectedChatModel) ? '#38bdf8' : '#e2e8f0';
+              item.style.fontWeight = (m === selectedChatModel) ? '600' : 'normal';
+              item.innerText = m;
+              item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.06)';
+              item.onmouseleave = () => item.style.background = 'transparent';
+              item.onclick = (ev) => {
+                ev.stopPropagation();
+                selectModel(m);
+                menu.style.display = 'none';
+              };
+              menu.appendChild(item);
+            });
+          }
+        }
+      } catch (err) {
+        menu.innerHTML = '<div style="padding: 8px; font-size: 11px; color: #ef4444;">Could not load models</div>';
+      }
+    }
+
+    function selectModel(m) {
+      selectedChatModel = m;
+      const label = document.getElementById('dock-model-label');
+      if (label) label.innerText = `${m} (9Router)`;
+      showToast(`Active model switched to ${m}`);
+    }
+
+    document.addEventListener('click', () => {
+      const menu = document.getElementById('dock-model-menu');
+      if (menu) menu.style.display = 'none';
+    });
 
     function initChatEventListeners() {
       if (!window.jobPilotApi) return;
@@ -2853,33 +2907,54 @@
       if (window.jobPilotApi.onChatTool) {
         window.jobPilotApi.onChatTool((data) => {
           if (data.turnId !== currentChatTurnId || !activeTurnContainer) return;
+          const formatArgsSnippet = (args) => {
+            if (!args || Object.keys(args).length === 0) return '';
+            const items = Object.entries(args).map(([k, v]) => `${k}=${typeof v === 'string' && v.length > 40 ? v.slice(0, 37) + '...' : JSON.stringify(v)}`);
+            return `[${items.join(', ')}]`;
+          };
+
           if (data.phase === 'start') {
             const toolCard = document.createElement('div');
-            toolCard.className = 'agent-thought-card tool-execution-card';
+            toolCard.className = 'tool-exec-card';
             toolCard.id = `tool_card_${data.id}`;
-            toolCard.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+            toolCard.style.background = '#0a0d14';
+            toolCard.style.border = '1px solid rgba(56, 189, 248, 0.25)';
+            toolCard.style.borderRadius = '8px';
+            toolCard.style.padding = '8px 12px';
+            toolCard.style.margin = '6px 0';
+            toolCard.style.fontFamily = 'var(--font-mono)';
             toolCard.innerHTML = `
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <span class="ag-pill-dot" style="background: #38bdf8; width: 6px; height: 6px;"></span>
-                  <strong style="color: #38bdf8; font-size: 11px;">Tool: ${escapeHtml(data.name)}</strong>
-                </div>
-                <span style="font-size: 10px; color: var(--text-dim);">Running...</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                <span style="font-size: 11px; color: #cbd5e1; font-weight: 500;">Execute ▾ &lt;/&gt;</span>
+                <span style="font-size: 10px; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 1px 6px; border-radius: 4px;">running...</span>
               </div>
+              <div style="font-size: 11px; color: #38bdf8;">&gt; browse.${escapeHtml(data.name)} ${escapeHtml(formatArgsSnippet(data.args))}</div>
             `;
             activeTurnContainer.insertBefore(toolCard, activeStreamingElement);
           } else if (data.phase === 'end') {
             const card = document.getElementById(`tool_card_${data.id}`);
             if (card) {
-              card.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+              const res = data.result || {};
+              let outputSummary = 'completed';
+              if (res.lines) outputSummary = `Output ${res.lines.length} lines`;
+              else if (res.elements) outputSummary = `Output ${res.elements.length} elements inspected`;
+              else if (res.ok) outputSummary = `Success : ${res.status || res.action || 'done'}`;
+              else if (res.error) outputSummary = `Error: ${res.error}`;
+
+              card.style.borderColor = res.ok === false ? 'rgba(239, 68, 68, 0.35)' : 'rgba(16, 185, 129, 0.3)';
               card.innerHTML = `
                 <details style="font-size: 11px;">
-                  <summary style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="color: #10b981;">✅ Tool: ${escapeHtml(data.name)} completed</span>
-                    <span style="font-size: 10px; color: var(--text-dim);">Details ⌄</span>
+                  <summary style="cursor: pointer; list-style: none;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                      <span style="font-size: 11px; color: #cbd5e1; font-weight: 500;">Execute ▾ &lt;/&gt;</span>
+                      <span style="font-size: 10px; color: ${res.ok === false ? '#ef4444' : '#10b981'}; background: ${res.ok === false ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; padding: 1px 6px; border-radius: 4px;">${res.ok === false ? 'failed' : 'success'}</span>
+                    </div>
+                    <div style="font-size: 11px; color: #38bdf8;">&gt; browse.${escapeHtml(data.name)} ${escapeHtml(formatArgsSnippet(data.args))}</div>
+                    <div style="font-size: 10.5px; color: #94a3b8; margin-top: 3px;">&gt; ${escapeHtml(outputSummary)}</div>
+                    <div style="font-size: 10.5px; color: #c084fc; font-style: italic; margin-top: 2px;">Thought: ${escapeHtml(data.name)} action evaluated.</div>
                   </summary>
-                  <div style="margin-top: 6px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow-x: auto; font-family: var(--font-mono); font-size: 10.5px; color: #94a3b8;">
-                    <pre style="margin: 0;">${escapeHtml(JSON.stringify(data.result || {}, null, 2))}</pre>
+                  <div style="margin-top: 6px; padding: 6px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow-x: auto; font-family: var(--font-mono); font-size: 10px; color: #94a3b8;">
+                    <pre style="margin: 0;">${escapeHtml(JSON.stringify(res, null, 2))}</pre>
                   </div>
                 </details>
               `;
@@ -3016,11 +3091,10 @@
       }
 
       let task = rawTask;
-      let mode = 'chat';
+      let mode = 'agent';
 
       if (rawTask === '/apply' || rawTask.toLowerCase().includes('apply to this job') || rawTask.toLowerCase().includes('auto apply')) {
         task = 'Please autonomously inspect the active job application on the live browser tab and proceed to fill candidate qualifications with review gate.';
-        mode = 'agent';
       } else if (rawTask === '/scan') {
         task = 'Analyze the current job on the active browser tab, extract requirements, and compare fit against my master resume.';
       } else if (rawTask === '/tailor') {
@@ -3078,6 +3152,7 @@
           const res = await window.jobPilotApi.chatSend({
             sessionId: currentChatSessionId,
             text: task,
+            model: selectedChatModel,
             mode
           });
           if (res.ok) {
@@ -3132,14 +3207,43 @@
     function formatMarkdown(text) {
       if (!text) return '';
       let escaped = escapeHtml(text);
-      escaped = escaped.replace(/```([\s\S]*?)```/g, (match, code) => {
-        return `<pre style="background: #0d0d12; border: 1px solid var(--border-hairline); border-radius: 6px; padding: 10px; margin: 8px 0; overflow-x: auto; font-family: var(--font-mono); font-size: 11.5px; color: #7dd3fc;"><code>${code.trim()}</code></pre>`;
+      escaped = escaped.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+        const id = 'code_' + Math.random().toString(36).substring(2, 9);
+        return `
+          <div style="position: relative; margin: 10px 0; border: 1px solid var(--border-hairline); border-radius: 6px; overflow: hidden; background: #0c0e14;">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 4px 10px; border-bottom: 1px solid var(--border-hairline); font-size: 10.5px; color: var(--text-dim);">
+              <span>${lang || 'code'}</span>
+              <button class="browser-btn" style="font-size: 10px; padding: 2px 8px;" onclick="copyCodeBlock('${id}')">Copy</button>
+            </div>
+            <pre style="margin: 0; padding: 10px; overflow-x: auto; font-family: var(--font-mono); font-size: 11px; color: #7dd3fc;"><code id="${id}">${code.trim()}</code></pre>
+          </div>
+        `;
       });
-      escaped = escaped.replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px; font-family: var(--font-mono); font-size: 11px;">$1</code>');
-      escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #fff;">$1</strong>');
+      escaped = escaped.replace(/```([\s\S]*?)```/g, (match, code) => {
+        const id = 'code_' + Math.random().toString(36).substring(2, 9);
+        return `
+          <div style="position: relative; margin: 10px 0; border: 1px solid var(--border-hairline); border-radius: 6px; overflow: hidden; background: #0c0e14;">
+            <div style="display: flex; justify-content: flex-end; background: rgba(255,255,255,0.03); padding: 4px 10px; border-bottom: 1px solid var(--border-hairline); font-size: 10.5px;">
+              <button class="browser-btn" style="font-size: 10px; padding: 2px 8px;" onclick="copyCodeBlock('${id}')">Copy</button>
+            </div>
+            <pre style="margin: 0; padding: 10px; overflow-x: auto; font-family: var(--font-mono); font-size: 11px; color: #7dd3fc;"><code id="${id}">${code.trim()}</code></pre>
+          </div>
+        `;
+      });
+      escaped = escaped.replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 11.5px; color: #38bdf8;">$1</code>');
+      escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #fff; font-weight: 600;">$1</strong>');
       escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
       escaped = escaped.replace(/\n/g, '<br>');
       return escaped;
+    }
+
+    function copyCodeBlock(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        navigator.clipboard.writeText(el.innerText).then(() => {
+          showToast('Code copied to clipboard!');
+        }).catch(() => {});
+      }
     }
 
     // =====================================================================

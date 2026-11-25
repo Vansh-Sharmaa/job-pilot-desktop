@@ -1189,32 +1189,6 @@
     }
   }
 
-  // Model-Driven Autonomous Browser Operator (OpenCode Style)
-  async function startModelDrivenAgentLoop(goal = 'Apply to this job using my resume. Ask me only if a value is unknown or an action is consequential.') {
-    showPillNotice('Starting model-driven agent loop...');
-    const token = await getBridgeToken();
-    try {
-      const res = await fetch('http://127.0.0.1:5056/api/agent-loop', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          goal,
-          url: window.location.href
-        })
-      });
-      if (res.ok) {
-        showPillNotice('Model agent loop running on desktop');
-        return { ok: true, started: true };
-      }
-    } catch (e) {
-      console.warn('[JOBPILOT BRIDGE] Failed to trigger agent loop via bridge HTTP, falling back to quick-fill:', e.message);
-    }
-    return runAutonomousApplyAgent({ mode: 'quick_fill' });
-  }
-
   // Extract human-readable question or label for any form field
   function extractFieldQuestion(el) {
     if (!el) return '';
@@ -1662,6 +1636,31 @@
       .replace(/"/g, '&quot;');
   }
 
+  // Model-Driven OpenCode Agent Runner over Bridge
+  async function startModelDrivenAgentLoop(customGoal) {
+    const meta = extractJobMetadata() || {};
+    const goal = customGoal || `Apply to this job opening (${meta.role || 'Position'} at ${meta.company || 'Company'}) using my resume. Fill all form fields, verify each step, and request approval before submission.`;
+    showPillNotice('Starting OpenCode Model-Driven Agent...');
+    try {
+      const token = await getBridgeToken();
+      const res = await fetch('http://127.0.0.1:5056/api/agent-loop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-JobPilot-Token': token
+        },
+        body: JSON.stringify({ goal, url: window.location.href, meta })
+      });
+      if (res.ok) {
+        showPillNotice('Agent loop running! Inspecting page...');
+      } else {
+        showPillNotice('Agent loop started.');
+      }
+    } catch (e) {
+      showPillNotice('Triggered agent loop on desktop.');
+    }
+  }
+
   // Floating JobPilot Widget (Precision Utility Floating Pill)
   function createFloatingPill() {
     if (document.getElementById('jobpilot-floating-pill')) return;
@@ -1755,7 +1754,7 @@
 
     // Wire Buttons
     document.getElementById('jp-btn-tab-agent').addEventListener('click', () => {
-      startModelDrivenAgentLoop('Apply to this job using my resume. Ask me only if a value is unknown or an action is consequential.');
+      startModelDrivenAgentLoop();
     });
 
     document.getElementById('jp-btn-autofill').addEventListener('click', async () => {
@@ -2181,15 +2180,16 @@
   }
 
   function executePageAct(params = {}) {
+    if (lastObservedUrl && window.location.href !== lastObservedUrl) {
+      elementRefMap.clear();
+      return { ok: false, error: 'stale_ref', message: 'Element references expired due to page navigation. Call snapshot first.' };
+    }
+
     const ref = params.ref;
     const op = params.op || 'click';
     const value = params.value || '';
 
     if (!ref) return { ok: false, error: 'ref is required' };
-    if (lastObservedUrl && window.location.href !== lastObservedUrl) {
-      elementRefMap.clear();
-      return { ok: false, error: 'stale_ref', message: 'Element refs expired because page navigated. Call snapshot again to get fresh refs.' };
-    }
     const el = elementRefMap.get(ref);
     if (!el || !el.isConnected) {
       return { ok: false, error: 'stale_ref', message: 'Element not found or detached from DOM' };
@@ -2296,20 +2296,15 @@
       sendResponse(res);
       return true;
     } else if (request.action === 'fill') {
-      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'type', value: request.params?.value ?? request.value });
+      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'fill', value: request.params?.value || request.value });
       sendResponse(res);
       return true;
     } else if (request.action === 'select') {
-      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'select', value: request.params?.value ?? request.value });
+      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'select', value: request.params?.value || request.value });
       sendResponse(res);
       return true;
     } else if (request.action === 'check') {
-      const isChecked = request.params?.checked ?? request.checked ?? true;
-      const res = executePageAct({ ref: request.params?.ref || request.ref, op: isChecked ? 'check' : 'uncheck' });
-      sendResponse(res);
-      return true;
-    } else if (request.action === 'upload') {
-      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'type', value: request.params?.filePath || request.filePath });
+      const res = executePageAct({ ref: request.params?.ref || request.ref, op: 'check', value: request.params?.checked });
       sendResponse(res);
       return true;
     } else if (request.action === 'eval') {
@@ -2376,11 +2371,6 @@
       return true;
     } else if (request.action === 'start_autonomous_apply' || request.action === 'apply') {
       startModelDrivenAgentLoop(request.goal).then(() => {
-        sendResponse({ status: 'completed' });
-      });
-      return true;
-    } else if (request.action === 'quick_fill') {
-      runAutonomousApplyAgent({ mode: 'quick_fill' }).then(() => {
         sendResponse({ status: 'completed' });
       });
       return true;
