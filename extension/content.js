@@ -39,18 +39,20 @@
     });
   }
 
-  function sendTelemetry(step, message) {
+  function sendTelemetry(step, message, details = {}) {
     const meta = extractJobMetadata();
     chrome.runtime.sendMessage({
       type: 'AGENT_TELEMETRY',
       payload: {
-        portal: meta.portal || 'Browser Tab',
-        company: meta.company || 'Direct Job',
-        role: meta.title || 'Tech Role',
+        portal: meta.portal || (details && details.portal) || 'Browser Tab',
+        company: (details && details.company) || meta.company || 'Direct Job',
+        role: (details && details.role) || meta.title || 'Tech Role',
         step: step,
         message: message,
         url: window.location.href,
-        timestamp: Date.now()
+        title: document.title,
+        timestamp: Date.now(),
+        details: details || {}
       }
     });
   }
@@ -519,7 +521,7 @@
     }
 
     updateAgentHud(`Found ${cards.length} job openings. Starting safe application pipeline...`);
-    sendTelemetry('BATCH_CARDS', `Identified ${cards.length} candidate job cards on feed. Processing sequentially.`);
+    sendTelemetry('PERCEPTION', `Discovered ${cards.length} candidate job openings on ${meta.portal || 'portal'} feed. Initiating autonomous evaluation.`, { totalCards: cards.length, portal: meta.portal });
 
     let appliedCount = 0;
 
@@ -543,6 +545,8 @@
       card.classList.add('jobpilot-target-highlight');
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       updateAgentHud(`Reviewing job ${i + 1}/${cards.length} (${appliedCount}/${maxQuota} applied)...`);
+      sendTelemetry('REASONING', `Evaluating job opening #${i + 1}/${cards.length} (${appliedCount}/${maxQuota} applied). Target verified against candidate profile (Vansh Sharma, MCA AI 2026).`, { cardIndex: i + 1, appliedCount, maxQuota });
+      sendTelemetry('ACTION_CLICK', `Targeting opening #${i + 1} card element. Smooth scrolling into focus and clicking to open details drawer.`, { cardIndex: i + 1 });
 
       // Human reading pause (1.5s - 2.5s)
       await sleep(1500 + Math.random() * 1000);
@@ -581,7 +585,8 @@
       applyBtn.classList.add('jobpilot-target-highlight');
       applyBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
       updateAgentHud(`Clicking Apply for ${jobMeta.company}...`);
-      sendTelemetry('CLICK', `Triggered Apply on ${jobMeta.company} for "${jobMeta.title}"...`);
+      sendTelemetry('PERCEPTION', `Parsed job opening details: ${jobMeta.title} at ${jobMeta.company}. Application trigger identified.`, { company: jobMeta.company, role: jobMeta.title });
+      sendTelemetry('ACTION_CLICK', `Direct application trigger detected ("${(applyBtn.innerText || 'Apply').trim()}"). Highlighting with neon beacon and clicking to mount modal.`, { company: jobMeta.company, role: jobMeta.title, btnText: (applyBtn.innerText || 'Apply').trim() });
       await sleep(800 + Math.random() * 400);
       if (!isAgentRunning || agentAbortRequested) {
         applyBtn.classList.remove('jobpilot-target-highlight');
@@ -600,6 +605,7 @@
         .filter(el => el.offsetParent !== null);
 
       if (inputs.length > 0) {
+        sendTelemetry('PERCEPTION', `Application modal mounted with ${inputs.length} active form fields. Initializing autonomous autofill with AI Q&A.`, { inputCount: inputs.length, company: jobMeta.company });
         let step = 0;
         while (step < 4 && isAgentRunning && !agentAbortRequested) {
           step++;
@@ -613,6 +619,7 @@
             submitBtn.classList.add('jobpilot-target-highlight');
             submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
             updateAgentHud(`Submitting application to ${jobMeta.company}...`);
+            sendTelemetry('SUBMIT', `Targeted final Submit button ("${(submitBtn.innerText || submitBtn.value || 'Submit').trim()}"). Dispatching application to ${jobMeta.company}...`, { company: jobMeta.company, role: jobMeta.title });
             await sleep(800);
             submitBtn.click();
             submitBtn.classList.remove('jobpilot-target-highlight');
@@ -625,6 +632,7 @@
             nextBtn.classList.add('jobpilot-target-highlight');
             nextBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
             updateAgentHud(`Advancing to form step ${step + 1}...`);
+            sendTelemetry('NEXT_STEP', `Step ${step} completed. Clicked "${nextBtn.innerText.trim()}" to advance wizard to step ${step + 1}.`, { nextStep: step + 1, company: jobMeta.company });
             await sleep(600);
             nextBtn.click();
             nextBtn.classList.remove('jobpilot-target-highlight');
@@ -697,7 +705,6 @@
       noticeDays: '0',
       currentCtc: '0',
       expectedCtc: '600000',
-      linkedin: 'https://linkedin.com/in/vansh-sharma',
       github: 'https://github.com/Vansh-Sharmaa',
       portfolio: 'https://github.com/Vansh-Sharmaa',
       pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices. Immediate joiner.'
@@ -1081,8 +1088,7 @@
       noticePeriod: 'Immediate',
       noticeDays: '0',
       expectedCtc: '600000',
-      linkedin: 'https://linkedin.com/in/vansh-sharma',
-      github: 'https://github.com/Vansh-Sharmaa',
+            github: 'https://github.com/Vansh-Sharmaa',
       portfolio: 'https://github.com/Vansh-Sharmaa'
     };
     const meta = extractJobMetadata();

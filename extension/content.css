@@ -331,10 +331,23 @@
 
 /* LIVE ELEMENT HIGHLIGHTER WHEN AGENT IS INTERACTING */
 .jobpilot-target-highlight {
-  outline: 2px solid #3b82f6 !important;
+  outline: 2px solid #00ffcc !important;
   outline-offset: 2px !important;
-  box-shadow: 0 0 14px rgba(59, 130, 246, 0.7) !important;
+  box-shadow: 0 0 18px rgba(0, 255, 204, 0.85) !important;
+  background-color: rgba(0, 255, 204, 0.08) !important;
   transition: all 0.2s ease !important;
+  animation: pulseTargetNeon 1.2s infinite ease-in-out !important;
+}
+
+@keyframes pulseTargetNeon {
+  0%, 100% {
+    outline-color: #00ffcc;
+    box-shadow: 0 0 12px rgba(0, 255, 204, 0.6);
+  }
+  50% {
+    outline-color: #38bdf8;
+    box-shadow: 0 0 24px rgba(56, 189, 248, 0.95);
+  }
 }
 
 /* REVIEW HIGHLIGHT: Clean visible indicator of fields filled by AI */

@@ -62,6 +62,10 @@
         <span class="oc-tab-badge">TG</span>
         <span class="oc-tab-title">Talent Graph</span>
       </div>
+      <div class="oc-tab" id="tab-live-agent" onclick="switchWorkspaceTab('live-agent')" title="OpenCode Live Autonomous Browser Agent Stream (Ctrl+8)">
+        <span class="oc-tab-badge">AG</span>
+        <span class="oc-tab-title">Live Agent</span>
+      </div>
       <button class="oc-tab-new-btn" onclick="startNewSession()" title="New Chat Session">+</button>
     </div>
 
@@ -348,6 +352,24 @@
       <section class="pane-workspace" id="pane-workspace">
 
         <!-- TAB 1: BROWSER VIEW (UNIFIED CLEAN OMNIBAR) -->
+        <!-- VIEW: OPENCODE LIVE AGENT STREAM (FULL WORKSPACE VIEW) -->
+        <div class="ws-view" id="ws-live-agent" style="display: none; flex-direction: column; height: 100%; overflow: hidden; background: #07080b;">
+          <div style="padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); background: #0b0c12; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="oc-mon-beacon"></span>
+              <span style="font-weight: 700; font-size: 13px; color: #fff; letter-spacing: 0.02em;">OPENCODE LIVE BROWSER AGENT</span>
+              <span class="oc-mon-portal-pill" id="ws-mon-portal">Brave Tab</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="oc-mon-counter" id="ws-mon-counter">Applied: 0 / 20</span>
+              <button class="oc-mon-stop-btn" onclick="abortActiveAgent()">🛑 Stop Agent</button>
+            </div>
+          </div>
+          <div class="ag-canvas-scroll" id="ws-live-agent-scroll" style="flex: 1; padding: 20px 24px; overflow-y: auto;">
+            <div class="oc-monitor-steps" id="ws-live-agent-steps"></div>
+          </div>
+        </div>
+
         <div class="ws-view active-ws" id="ws-browser">
           
           <!-- Unified Single Browser Bar -->
@@ -1589,6 +1611,7 @@
         'fleet': 'Autonomous Multi-Platform Fleet Autopilot',
         'resume': 'Candidate Profile & Dynamic ATS Studio',
         'graph': 'Company Talent Intelligence & Obsidian Connection Map',
+        'live-agent': 'OpenCode Autonomous Browser Tab Agent Live Stream',
         'settings': 'Model Gateway & System Settings'
       };
       const topicEl = document.getElementById('oc-current-topic');
@@ -1871,7 +1894,6 @@
             currentCtc: '0',
             expectedCtc: '600000',
             expectedCtcLabel: 'Negotiable (6 - 10 LPA)',
-            linkedin: 'https://linkedin.com/in/vansh-sharma',
             github: 'https://github.com/Vansh-Sharmaa',
             portfolio: 'https://github.com/Vansh-Sharmaa',
             pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience building LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices. Immediate joiner.'
@@ -1972,7 +1994,7 @@
               triggerEvents(el);
               filled++;
             } else if (identifier.includes('linkedin')) {
-              el.value = cand.linkedin;
+              el.value = cand.github || 'https://github.com/Vansh-Sharmaa';
               triggerEvents(el);
               filled++;
             } else if (identifier.includes('github') || identifier.includes('git profile')) {
@@ -3209,6 +3231,8 @@
       const quota = portal.quota || 20;
 
       showToast(`Launching external browser on ${portal.name} in Agentic Mode...`);
+      activateOpenCodeAgentView(portal.name, targetUrl, quota);
+      renderAgentTelemetryStep({ step: 'PERCEPTION', portal: portal.name, url: targetUrl, message: `Dispatched autonomous batch agent to external Brave browser on ${portal.name}. Initializing live tab bridge...` });
       logRadarTelemetry('RADAR', `⚡ Dispatching batch agent to external browser on ${portal.name} (Safe Quota: ${quota})...`);
       setPortalApplyingState(portal.id, true, { company: portal.name, role: 'AI Role' });
 
@@ -4359,9 +4383,210 @@
       });
     }
 
+    let currentAgentSession = {
+      active: false,
+      portal: 'Indeed',
+      url: 'https://in.indeed.com/jobs?q=AI+Engineer&l=India',
+      applied: 0,
+      quota: 20,
+      model: 'Local Fable5 (LLM Router :20128)',
+      candidate: 'Vansh Sharma (MCA AI 2026, Amity)'
+    };
+
+    function activateOpenCodeAgentView(portalName = 'Indeed', targetUrl = '', maxQuota = 20) {
+      currentAgentSession.active = true;
+      if (portalName) currentAgentSession.portal = portalName;
+      if (targetUrl) currentAgentSession.url = targetUrl;
+      if (maxQuota) currentAgentSession.quota = maxQuota;
+
+      const hero = document.getElementById('ag-hero-center');
+      if (hero) hero.style.display = 'none';
+
+      const agentStreamEl = document.getElementById('agent-stream');
+      if (agentStreamEl) agentStreamEl.style.display = 'flex';
+
+      let monitor = document.getElementById('opencode-agent-monitor');
+      if (!monitor && agentStreamEl) {
+        monitor = document.createElement('div');
+        monitor.id = 'opencode-agent-monitor';
+        monitor.className = 'opencode-agent-monitor';
+        agentStreamEl.appendChild(monitor);
+      }
+
+      if (monitor) {
+        monitor.innerHTML = `
+          <div class="oc-monitor-header">
+            <div class="oc-mon-top-row">
+              <div class="oc-mon-badge-group">
+                <span class="oc-mon-beacon"></span>
+                <span class="oc-mon-title">AUTONOMOUS BRAVE AGENT</span>
+                <span class="oc-mon-portal-pill" id="oc-mon-portal">${escapeHtml(currentAgentSession.portal)}</span>
+              </div>
+              <div class="oc-mon-controls">
+                <span class="oc-mon-counter" id="oc-mon-counter">Applied: ${currentAgentSession.applied} / ${currentAgentSession.quota}</span>
+                <button class="oc-mon-stop-btn" onclick="abortActiveAgent()">🛑 Stop Agent</button>
+              </div>
+            </div>
+            <div class="oc-mon-url-row" id="oc-mon-url">
+              <span class="oc-mon-url-icon">🌐</span>
+              <span class="oc-mon-url-text">${escapeHtml(currentAgentSession.url)}</span>
+            </div>
+            <div class="oc-mon-meta-row">
+              <div class="oc-mon-meta-chip">
+                <span class="meta-label">Model:</span>
+                <span class="meta-value">${escapeHtml(currentAgentSession.model)}</span>
+              </div>
+              <div class="oc-mon-meta-chip">
+                <span class="meta-label">Candidate:</span>
+                <span class="meta-value">${escapeHtml(currentAgentSession.candidate)}</span>
+              </div>
+              <div class="oc-mon-meta-chip status-chip" id="oc-mon-status-chip">
+                <span class="meta-label">Status:</span>
+                <span class="meta-value" id="oc-mon-status-val">Autonomous Loop Active</span>
+              </div>
+            </div>
+          </div>
+          <div class="oc-monitor-steps" id="oc-monitor-steps"></div>
+        `;
+      }
+
+      const wsPortal = document.getElementById('ws-mon-portal');
+      if (wsPortal) wsPortal.innerText = currentAgentSession.portal;
+      const wsCounter = document.getElementById('ws-mon-counter');
+      if (wsCounter) wsCounter.innerText = `Applied: ${currentAgentSession.applied} / ${currentAgentSession.quota}`;
+
+      const sbTask = document.getElementById('sb-task-status');
+      if (sbTask) {
+        sbTask.innerHTML = `<span class="ag-pill-dot" style="background: #10b981; box-shadow: 0 0 8px #10b981;"></span> <span style="color: #10b981;">Brave Agent: ${escapeHtml(currentAgentSession.portal)} (${currentAgentSession.applied}/${currentAgentSession.quota})</span>`;
+      }
+    }
+
+    function renderAgentTelemetryStep(t) {
+      if (!t) return;
+      const stepType = (t.step || 'INFO').toUpperCase();
+      const msg = t.message || '';
+      const portal = t.portal || currentAgentSession.portal;
+      const url = t.url || currentAgentSession.url;
+
+      if (portal) currentAgentSession.portal = portal;
+      if (url) currentAgentSession.url = url;
+
+      let stepsContainer = document.getElementById('oc-monitor-steps');
+      if (!stepsContainer) {
+        activateOpenCodeAgentView(portal, url, currentAgentSession.quota);
+        stepsContainer = document.getElementById('oc-monitor-steps');
+      }
+
+      let typeClass = 'step-info';
+      let badgeLabel = stepType;
+      let icon = 'ℹ️';
+
+      if (stepType.includes('PERCEPTION') || stepType === 'SCAN' || stepType === 'BATCH_CARDS') {
+        typeClass = 'step-perception';
+        badgeLabel = 'PERCEPTION';
+        icon = '👁️';
+      } else if (stepType.includes('REASONING') || stepType === 'EVAL') {
+        typeClass = 'step-reasoning';
+        badgeLabel = 'AI REASONING';
+        icon = '🧠';
+      } else if (stepType.includes('CLICK') || stepType === 'ACTION_CLICK') {
+        typeClass = 'step-click';
+        badgeLabel = 'ACTION: CLICK';
+        icon = '🖱️';
+      } else if (stepType.includes('AUTOFILL') || stepType === 'FILL_STEP') {
+        typeClass = 'step-autofill';
+        badgeLabel = 'ACTION: AUTOFILL';
+        icon = '✍️';
+      } else if (stepType.includes('AI_QA') || stepType === 'QUESTION') {
+        typeClass = 'step-ai-qa';
+        badgeLabel = 'AI Q&A (FABLE5)';
+        icon = '💡';
+      } else if (stepType.includes('NEXT_STEP')) {
+        typeClass = 'step-next';
+        badgeLabel = 'ADVANCE STEP';
+        icon = '⏩';
+      } else if (stepType.includes('SUBMIT')) {
+        typeClass = 'step-submit';
+        badgeLabel = 'ACTION: SUBMIT';
+        icon = '🚀';
+      } else if (stepType.includes('SUCCESS')) {
+        typeClass = 'step-success';
+        badgeLabel = 'APPLICATION VERIFIED';
+        icon = '✅';
+        currentAgentSession.applied++;
+        const cnt = document.getElementById('oc-mon-counter');
+        if (cnt) cnt.innerText = `Applied: ${currentAgentSession.applied} / ${currentAgentSession.quota}`;
+        const wsCnt = document.getElementById('ws-mon-counter');
+        if (wsCnt) wsCnt.innerText = `Applied: ${currentAgentSession.applied} / ${currentAgentSession.quota}`;
+      } else if (stepType.includes('ANTI_BAN') || stepType.includes('WAIT')) {
+        typeClass = 'step-antiban';
+        badgeLabel = 'ANTI-BAN JITTER';
+        icon = '🛡️';
+      } else if (stepType.includes('ABORT') || stepType.includes('HALT') || stepType.includes('SAFETY')) {
+        typeClass = 'step-halt';
+        badgeLabel = 'SAFEGUARD';
+        icon = '⚠️';
+      }
+
+      const statusVal = document.getElementById('oc-mon-status-val');
+      if (statusVal) statusVal.innerText = msg.slice(0, 48);
+
+      const portalPill = document.getElementById('oc-mon-portal');
+      if (portalPill && portal) portalPill.innerText = portal;
+
+      const urlText = document.querySelector('.oc-mon-url-text');
+      if (urlText && url) urlText.innerText = url;
+
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+
+      let detailsHtml = '';
+      if (t.details && Object.keys(t.details).length > 0) {
+        if (t.details.question && t.details.answer) {
+          detailsHtml = `
+            <div class="oc-step-qa-box">
+              <div class="oc-qa-q"><strong>Prompt:</strong> ${escapeHtml(t.details.question)}</div>
+              <div class="oc-qa-a"><strong>Local AI:</strong> ${escapeHtml(t.details.answer)}</div>
+            </div>
+          `;
+        } else if (t.details.field) {
+          detailsHtml = `<div class="oc-step-detail-tag">Field: <code>${escapeHtml(t.details.field)}</code></div>`;
+        }
+      }
+
+      const card = document.createElement('div');
+      card.className = `oc-step-card ${typeClass}`;
+      card.innerHTML = `
+        <div class="oc-step-top">
+          <div class="oc-step-badge">
+            <span class="oc-step-icon">${icon}</span>
+            <span class="oc-step-label">${badgeLabel}</span>
+          </div>
+          <span class="oc-step-time">${timeStr}</span>
+        </div>
+        <div class="oc-step-msg">${escapeHtml(msg)}</div>
+        ${detailsHtml}
+      `;
+
+      if (stepsContainer) {
+        stepsContainer.appendChild(card);
+        const scrollContainer = document.getElementById('ag-canvas-scroll');
+        if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+
+      const wsSteps = document.getElementById('ws-live-agent-steps');
+      if (wsSteps) {
+        const clone = card.cloneNode(true);
+        wsSteps.appendChild(clone);
+        const wsScroll = document.getElementById('ws-live-agent-scroll');
+        if (wsScroll) wsScroll.scrollTop = wsScroll.scrollHeight;
+      }
+    }
+
     if (window.jobPilotApi && window.jobPilotApi.onAgentTelemetry) {
       window.jobPilotApi.onAgentTelemetry((t) => {
         logRadarTelemetry('AGENT', `[${(t.portal || 'TAB').toUpperCase()}] ${t.message}`);
+        renderAgentTelemetryStep(t);
       });
     }
 
@@ -4376,6 +4601,8 @@
 
       if (!extStatus || !extStatus.connected) {
         showToast('Auto-launching browser with JobPilot Autonomous Agent...');
+        activateOpenCodeAgentView(lastActiveJob?.portal || 'Direct Job', targetUrl, 20);
+        renderAgentTelemetryStep({ step: 'PERCEPTION', portal: lastActiveJob?.portal || 'Direct Job', url: targetUrl, message: `Auto-launching browser with JobPilot autonomous agent loaded on ${targetUrl}...` });
         logRadarTelemetry('DISPATCH', `Auto-launching browser with JobPilot autonomous agent loaded on ${targetUrl}...`);
         if (window.jobPilotApi && window.jobPilotApi.launchChromeAgent) {
           await window.jobPilotApi.launchChromeAgent({ url: targetUrl, action: 'start_autonomous_apply' });

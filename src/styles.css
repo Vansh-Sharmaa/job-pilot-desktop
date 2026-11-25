@@ -4160,3 +4160,286 @@ body {
   border-color: #38bdf8;
 }
 
+
+/* =====================================================================
+   OPENCODE LIVE AGENT STREAM & BROWSER MONITOR
+   ===================================================================== */
+.opencode-agent-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  animation: fadeIn 0.2s ease;
+  margin-bottom: 20px;
+}
+
+.oc-monitor-header {
+  background: #0d0e15;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.oc-mon-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.oc-mon-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.oc-mon-beacon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: hudBlink 1.2s infinite ease-in-out;
+}
+
+.oc-mon-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #f8fafc;
+  text-transform: uppercase;
+}
+
+.oc-mon-portal-pill {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.oc-mon-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oc-mon-counter {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.oc-mon-stop-btn {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.oc-mon-stop-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+}
+
+.oc-mon-url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-mon-url-icon {
+  font-size: 12px;
+}
+
+.oc-mon-url-text {
+  color: #cbd5e1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-mon-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.oc-mon-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.oc-mon-meta-chip .meta-label {
+  color: #64748b;
+}
+.oc-mon-meta-chip .meta-value {
+  color: #e2e8f0;
+  font-weight: 500;
+}
+.oc-mon-meta-chip.status-chip {
+  border-color: rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.05);
+}
+.oc-mon-meta-chip.status-chip .meta-value {
+  color: #38bdf8;
+  font-family: var(--font-mono, monospace);
+}
+
+.oc-monitor-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.oc-step-card {
+  background: #101118;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 3px solid #64748b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: fadeIn 0.15s ease;
+}
+
+.oc-step-card.step-perception {
+  border-left-color: #38bdf8;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.05) 0%, #101118 60%);
+}
+.oc-step-card.step-reasoning {
+  border-left-color: #a855f7;
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.05) 0%, #101118 60%);
+}
+.oc-step-card.step-click {
+  border-left-color: #10b981;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, #101118 60%);
+}
+.oc-step-card.step-autofill {
+  border-left-color: #0284c7;
+  background: linear-gradient(90deg, rgba(2, 132, 199, 0.05) 0%, #101118 60%);
+}
+.oc-step-card.step-ai-qa {
+  border-left-color: #f59e0b;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.06) 0%, #101118 60%);
+}
+.oc-step-card.step-next {
+  border-left-color: #8b5cf6;
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.05) 0%, #101118 60%);
+}
+.oc-step-card.step-submit {
+  border-left-color: #f43f5e;
+  background: linear-gradient(90deg, rgba(244, 63, 94, 0.06) 0%, #101118 60%);
+}
+.oc-step-card.step-success {
+  border-left-color: #22c55e;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.08) 0%, #101118 60%);
+}
+.oc-step-card.step-antiban {
+  border-left-color: #eab308;
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.05) 0%, #101118 60%);
+}
+.oc-step-card.step-halt {
+  border-left-color: #ef4444;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, #101118 60%);
+}
+
+.oc-step-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.oc-step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-family: var(--font-mono, monospace);
+  color: #cbd5e1;
+}
+
+.oc-step-icon {
+  font-size: 11px;
+}
+
+.oc-step-time {
+  font-size: 9.5px;
+  font-family: var(--font-mono, monospace);
+  color: #64748b;
+}
+
+.oc-step-msg {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e2e8f0;
+}
+
+.oc-step-qa-box {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  margin-top: 4px;
+}
+
+.oc-step-qa-box .oc-qa-q {
+  color: #cbd5e1;
+}
+.oc-step-qa-box .oc-qa-a {
+  color: #fbbf24;
+  line-height: 1.4;
+}
+
+.oc-step-detail-tag {
+  font-size: 10.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.oc-step-detail-tag code {
+  color: #38bdf8;
+  font-family: var(--font-mono, monospace);
+  background: rgba(56, 189, 248, 0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
