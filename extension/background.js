@@ -88,6 +88,24 @@ async function executeCommandInActiveTab(cmd) {
     return;
   }
 
+  if (cmd.action === 'focus_tab') {
+    const tabId = Array.from(agentTabIds)[0];
+    if (tabId) {
+      chrome.tabs.update(tabId, { active: true }).then(t => {
+        if (t && t.windowId) chrome.windows.update(t.windowId, { focused: true });
+      }).catch(() => {});
+    }
+    return;
+  }
+
+  if (cmd.action === 'update_candidate') {
+    if (cmd.profile) {
+      candidateProfile = { ...candidateProfile, ...cmd.profile };
+      chrome.storage.local.set({ candidateProfile });
+    }
+    return;
+  }
+
   if (cmd.action === 'abort' || cmd.action === 'stop') {
     activeAgentCmd = null;
     for (const tabId of agentTabIds) {
@@ -471,6 +489,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'UPDATE_CANDIDATE_PROFILE') {
+    if (request.profile) {
+      candidateProfile = { ...candidateProfile, ...request.profile };
+      chrome.storage.local.set({ candidateProfile });
+      getBridgeToken().then(token => {
+        fetch(`${BRIDGE_URL}/api/candidate-profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-JobPilot-Token': token
+          },
+          body: JSON.stringify(candidateProfile)
+        })
+        .then(r => r.json())
+        .then(data => sendResponse({ ok: true, data }))
+        .catch(err => sendResponse({ ok: true, profile: candidateProfile }));
+      });
+      return true;
+    }
+  }
+
   if (request.type === 'INIT_BATCH_QUEUE') {
     activeBatchQueue = request.queue || [];
     batchAppliedCount = request.appliedCount || 0;
@@ -489,6 +528,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         url: targetUrl,
         meta: request.meta || {}
       };
+
+      const navListener = (tId, changeInfo) => {
+        if (tId === tabId && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(navListener);
+          setTimeout(() => {
+            dispatchCommandToTab(tabId, activeAgentCmd);
+          }, 1200);
+        }
+      };
+      chrome.tabs.onUpdated.addListener(navListener);
+
       chrome.tabs.update(tabId, { url: targetUrl, active: true }).then(() => {
         sendResponse({ ok: true });
       }).catch(err => sendResponse({ ok: false, error: err.message }));
@@ -513,9 +563,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           applied: batchAppliedCount,
           quota: batchMaxQuota
         });
+
+        const nextJobListener = (tId, changeInfo) => {
+          if (tId === tabId && changeInfo.status === 'complete') {
+            chrome.tabs.onUpdated.removeListener(nextJobListener);
+            setTimeout(() => {
+              dispatchCommandToTab(tabId, activeAgentCmd);
+            }, 1200);
+          }
+        };
+        chrome.tabs.onUpdated.addListener(nextJobListener);
+
         setTimeout(() => {
           chrome.tabs.update(tabId, { url: nextJob.url, active: true }).catch(() => {});
-        }, 3000);
+        }, 2000);
       }
     } else {
       sendTelemetry('QUEUE_COMPLETE', `Batch apply queue finished (${batchAppliedCount} jobs applied).`, { applied: batchAppliedCount });

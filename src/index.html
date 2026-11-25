@@ -354,15 +354,31 @@
         <!-- TAB 1: BROWSER VIEW (UNIFIED CLEAN OMNIBAR) -->
         <!-- VIEW: OPENCODE LIVE AGENT STREAM (FULL WORKSPACE VIEW) -->
         <div class="ws-view" id="ws-live-agent" style="display: none; flex-direction: column; height: 100%; overflow: hidden; background: #07080b;">
-          <div style="padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); background: #0b0c12; display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="oc-mon-beacon"></span>
-              <span style="font-weight: 700; font-size: 13px; color: #fff; letter-spacing: 0.02em;">OPENCODE LIVE BROWSER AGENT</span>
-              <span class="oc-mon-portal-pill" id="ws-mon-portal">Brave Tab</span>
+          <div style="padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); background: #0b0c12; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="oc-mon-beacon"></span>
+                <span style="font-weight: 700; font-size: 13px; color: #fff; letter-spacing: 0.02em;">OPENCODE LIVE BROWSER AGENT</span>
+                <span class="oc-mon-portal-pill" id="ws-mon-portal">Brave Tab</span>
+                <span style="font-size: 11px; color: #38bdf8; font-family: var(--font-mono); background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); padding: 2px 7px; border-radius: 4px;" id="ws-mon-agent-group">Agents : 1</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="oc-mon-counter" id="ws-mon-counter">Applied: 0 / 20</span>
+                <button class="browser-btn" onclick="openCandidateDrawerUI()" style="font-size: 11px; padding: 4px 8px;" title="Review or Edit Candidate Details">👤 Candidate</button>
+                <button class="oc-mon-stop-btn" onclick="abortActiveAgent()">🛑 Stop Agent</button>
+              </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="oc-mon-counter" id="ws-mon-counter">Applied: 0 / 20</span>
-              <button class="oc-mon-stop-btn" onclick="abortActiveAgent()">🛑 Stop Agent</button>
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px;">
+              <span style="color: #64748b; font-size: 12px;">🌐</span>
+              <span style="color: #cbd5e1; font-size: 12px; font-family: var(--font-mono); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="ws-live-url-text">https://in.indeed.com/viewjob?jk=91bca7289f012c44</span>
+              <button class="browser-btn" style="font-size: 10.5px; padding: 2px 8px;" onclick="bringBraveToFront()">Focus Brave</button>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-family: var(--font-mono); color: #94a3b8;">
+              <div style="display: flex; gap: 12px;">
+                <span>Candidate: <strong style="color: #fff;">Vansh Sharma</strong> (MCA AI 2026)</span>
+                <span>Mode: <strong style="color: #10b981;">Autonomous Direct Apply</strong></span>
+              </div>
+              <div id="ws-live-progress-badge" style="color: #38bdf8;">Progress: Form Evaluation</div>
             </div>
           </div>
           <div class="ag-canvas-scroll" id="ws-live-agent-scroll" style="flex: 1; padding: 20px 24px; overflow-y: auto;">
@@ -1445,6 +1461,83 @@
     </div>
   </div>
 
+  <!-- Candidate Profile Modal (Review & Edit Application Details) -->
+  <div id="candidate-profile-modal" class="email-modal-overlay" style="display: none;" onclick="if(event.target === this) closeCandidateModal()">
+    <div class="email-modal-box" style="max-width: 580px; width: 95%;">
+      <div class="email-modal-header">
+        <div class="email-modal-title">
+          <i data-lucide="user-check" class="lucide-icon-sm" style="color: #10b981;"></i>
+          <span>Candidate Profile & Form Autofill Details</span>
+        </div>
+        <button class="email-modal-close" onclick="closeCandidateModal()">✕</button>
+      </div>
+      <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5;">
+        Active details used by JobPilot autonomous browser agent when autofilling screening questions and application forms.
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Full Name</label>
+            <input type="text" id="ui-cand-name" class="browser-input" style="width: 100%; margin-top: 3px;" value="Vansh Sharma" />
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Email</label>
+            <input type="email" id="ui-cand-email" class="browser-input" style="width: 100%; margin-top: 3px;" value="engagevansh@gmail.com" />
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Phone</label>
+            <input type="text" id="ui-cand-phone" class="browser-input" style="width: 100%; margin-top: 3px;" value="+919368478556" />
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Degree & Specialization</label>
+            <input type="text" id="ui-cand-degree" class="browser-input" style="width: 100%; margin-top: 3px;" value="Master of Computer Applications (MCA) in AI & Data Science" />
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">University / College</label>
+            <input type="text" id="ui-cand-college" class="browser-input" style="width: 100%; margin-top: 3px;" value="Amity University" />
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Graduation Year</label>
+            <input type="text" id="ui-cand-gradyear" class="browser-input" style="width: 100%; margin-top: 3px;" value="2026" />
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Expected CTC</label>
+            <input type="text" id="ui-cand-ctc" class="browser-input" style="width: 100%; margin-top: 3px;" value="Negotiable (6 - 10 LPA)" />
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Notice Period</label>
+            <input type="text" id="ui-cand-notice" class="browser-input" style="width: 100%; margin-top: 3px;" value="Immediate" />
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Core Skills (Comma-separated)</label>
+          <input type="text" id="ui-cand-skills" class="browser-input" style="width: 100%; margin-top: 3px;" value="Python, PyTorch, LangChain, RAG Pipelines, FastAPI, Docker, SQL, Algorithms" />
+        </div>
+
+        <div>
+          <label style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">Candidate Pitch / Cover Bio</label>
+          <textarea id="ui-cand-pitch" class="browser-input" rows="3" style="width: 100%; margin-top: 3px; font-family: var(--font-sans); font-size: 11.5px; resize: vertical;">MCA in AI & Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and scaling Python FastAPI microservices. Immediate joiner.</textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px;">
+          <button class="browser-btn" onclick="closeCandidateModal()">Cancel</button>
+          <button class="browser-btn primary" onclick="saveCandidateModalUI()">💾 Save Profile Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Precision Utility Bottom Status Dock -->
     <!-- =====================================================================
        RIGHT-SIDE SLIDING EMAIL & JOB LEAD INSPECTION DRAWER
@@ -2423,6 +2516,10 @@
         // Switch to Live Tab Agent view to show OpenCode terminal logs in real time
         activateOpenCodeAgentView(portal.name, targetUrl, quota);
         switchWorkspaceTab('live-agent');
+        const urlEl = document.getElementById('ws-live-url-text');
+        if (urlEl) urlEl.innerText = targetUrl;
+        const progEl = document.getElementById('ws-live-progress-badge');
+        if (progEl) progEl.innerText = `Target: ${matchedLead?.company || portal.name} (${matchedLead?.role || 'AI Role'})`;
 
         if (!extStatus || !extStatus.connected) {
           showToast('Launching Chrome with JobPilot Autonomous Agent...');
@@ -3345,34 +3442,60 @@
     async function launchActivePortalInExternalAgent(portalId) {
       const id = portalId || activeRadarPortalId;
       const portal = RADAR_PORTALS.find(p => p.id === id) || { id: 'hirist', name: 'Hirist', url: 'https://www.hirist.tech/search/ai-engineer', quota: 20 };
-      const targetUrl = portal.url;
       const quota = portal.quota || 20;
 
-      showToast(`Launching external browser on ${portal.name} in Agentic Mode...`);
+      // Find top ATS matched job lead for this portal from Vansh's resume
+      const matchedLead = (typeof allJobLeads !== 'undefined' && Array.isArray(allJobLeads) && allJobLeads.length > 0)
+        ? allJobLeads.find(l => (l.platform || '').toLowerCase().includes(portal.id) || (l.platform || '').toLowerCase().includes(portal.name.toLowerCase()))
+        : null;
+
+      const targetUrl = (matchedLead && matchedLead.url) ? matchedLead.url : portal.url;
+      const action = (matchedLead && matchedLead.url) ? 'start_autonomous_apply' : 'start_batch_apply';
+      const companyName = matchedLead?.company || portal.name;
+      const roleName = matchedLead?.role || 'AI Engineer';
+
+      showToast(`Connecting autonomous agent to Brave for ${companyName}...`);
       activateOpenCodeAgentView(portal.name, targetUrl, quota);
-      renderAgentTelemetryStep({ step: 'PERCEPTION', portal: portal.name, url: targetUrl, message: `Dispatched autonomous batch agent to external Brave browser on ${portal.name}. Initializing live tab bridge...` });
-      logRadarTelemetry('RADAR', `⚡ Dispatching batch agent to external browser on ${portal.name} (Safe Quota: ${quota})...`);
-      setPortalApplyingState(portal.id, true, { company: portal.name, role: 'AI Role' });
+      switchWorkspaceTab('live-agent');
+
+      const urlEl = document.getElementById('ws-live-url-text');
+      if (urlEl) urlEl.innerText = targetUrl;
+      const progEl = document.getElementById('ws-live-progress-badge');
+      if (progEl) progEl.innerText = `Target: ${companyName} (${roleName})`;
+
+      renderAgentTelemetryStep({
+        step: 'DISPATCH',
+        portal: portal.name,
+        url: targetUrl,
+        message: `Dispatching autonomous apply agent to Brave for ${roleName} at ${companyName}...`,
+        details: {
+          url: targetUrl,
+          company: companyName,
+          role: roleName,
+          execCmd: `browse.navigate [tab=12438934, url=${targetUrl}]`,
+          execOutput: `browse.wait_for [tab=12438934, ms=1500, timeout=15000]`,
+          thoughtTxt: `Targeting highest-ATS matched opening for Vansh Sharma on ${portal.name}`
+        }
+      });
+
+      logRadarTelemetry('RADAR', `⚡ Dispatching agent to external browser on ${portal.name} -> ${companyName}...`);
+      setPortalApplyingState(portal.id, true, { company: companyName, role: roleName });
 
       const stopBtn = document.getElementById('ubb-btn-stop-agent');
       if (stopBtn) stopBtn.style.display = 'inline-flex';
 
       const cmd = {
-        action: 'start_batch_apply',
+        action: action,
         url: targetUrl,
         quota: quota,
-        meta: { portal: portal.name, quota: quota, url: targetUrl }
+        meta: { portal: portal.name, quota: quota, url: targetUrl, company: companyName, role: roleName }
       };
 
       try {
         if (window.jobPilotApi && window.jobPilotApi.launchChromeAgent) {
-          const res = await window.jobPilotApi.launchChromeAgent({
-            url: targetUrl,
-            action: 'start_batch_apply',
-            quota: quota
-          });
+          const res = await window.jobPilotApi.launchChromeAgent(cmd);
           if (res && res.ok) {
-            logRadarTelemetry('SUCCESS', `External browser launched with JobPilot agent on ${portal.name}. Agentic batch apply active.`);
+            logRadarTelemetry('SUCCESS', `Brave agent active on ${portal.name} for ${companyName}.`);
           }
         }
         if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
@@ -5045,43 +5168,110 @@
 
     let activeCardSelection = {};
 
-    function selectClarifyOption(cardId, optIdx, val) {
-      activeCardSelection[cardId] = { idx: optIdx, val: val };
+    function bringBraveToFront() {
+      if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
+        window.jobPilotApi.sendExtensionCommand({ action: 'focus_tab' });
+        showToast('Bringing Brave browser window to front...');
+      }
+    }
 
-      const card = document.getElementById(cardId);
-      if (card) {
+    function openCandidateModal() {
+      const modal = document.getElementById('candidate-profile-modal');
+      if (modal) modal.style.display = 'flex';
+      if (window.jobPilotApi && window.jobPilotApi.getCandidateProfile) {
+        window.jobPilotApi.getCandidateProfile().then(p => {
+          if (p) {
+            if (p.name) document.getElementById('ui-cand-name').value = p.name;
+            if (p.email) document.getElementById('ui-cand-email').value = p.email;
+            if (p.phone) document.getElementById('ui-cand-phone').value = p.phone;
+            if (p.degree || p.education) document.getElementById('ui-cand-degree').value = p.degree || p.education;
+            if (p.college) document.getElementById('ui-cand-college').value = p.college;
+            if (p.gradYear) document.getElementById('ui-cand-gradyear').value = p.gradYear;
+            if (p.expectedCtcLabel || p.expectedCtc) document.getElementById('ui-cand-ctc').value = p.expectedCtcLabel || p.expectedCtc;
+            if (p.noticePeriod) document.getElementById('ui-cand-notice').value = p.noticePeriod;
+            if (p.skills && Array.isArray(p.skills)) document.getElementById('ui-cand-skills').value = p.skills.join(', ');
+            if (p.pitch) document.getElementById('ui-cand-pitch').value = p.pitch;
+          }
+        });
+      }
+    }
+
+    function closeCandidateModal() {
+      const modal = document.getElementById('candidate-profile-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function saveCandidateModalUI() {
+      const updated = {
+        name: document.getElementById('ui-cand-name')?.value.trim() || 'Vansh Sharma',
+        email: document.getElementById('ui-cand-email')?.value.trim() || 'engagevansh@gmail.com',
+        phone: document.getElementById('ui-cand-phone')?.value.trim() || '+919368478556',
+        education: document.getElementById('ui-cand-degree')?.value.trim() || 'MCA in AI & Data Science',
+        degree: document.getElementById('ui-cand-degree')?.value.trim() || 'MCA in AI & Data Science',
+        college: document.getElementById('ui-cand-college')?.value.trim() || 'Amity University',
+        gradYear: document.getElementById('ui-cand-gradyear')?.value.trim() || '2026',
+        expectedCtc: document.getElementById('ui-cand-ctc')?.value.trim() || '600000',
+        expectedCtcLabel: document.getElementById('ui-cand-ctc')?.value.trim() || 'Negotiable (6 - 10 LPA)',
+        noticePeriod: document.getElementById('ui-cand-notice')?.value.trim() || 'Immediate',
+        pitch: document.getElementById('ui-cand-pitch')?.value.trim() || ''
+      };
+
+      const rawSkills = document.getElementById('ui-cand-skills')?.value.trim() || '';
+      if (rawSkills) {
+        updated.skills = rawSkills.split(',').map(s => s.trim()).filter(Boolean);
+      }
+
+      if (window.jobPilotApi && window.jobPilotApi.updateCandidateProfile) {
+        await window.jobPilotApi.updateCandidateProfile(updated);
+      }
+      if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
+        await window.jobPilotApi.sendExtensionCommand({ action: 'update_candidate', profile: updated });
+      }
+
+      showToast('Candidate profile updated and synced with browser extension!');
+      closeCandidateModal();
+    }
+
+    function selectClarifyOption(cardId, optIdx, val) {
+      const baseId = cardId.replace(/_ws$/, '');
+      activeCardSelection[baseId] = { idx: optIdx, val: val };
+
+      [document.getElementById(baseId), document.getElementById(baseId + '_ws')].forEach(card => {
+        if (!card) return;
         card.querySelectorAll('.oc-clarify-opt-item').forEach(el => el.classList.remove('selected'));
         const target = card.querySelector(`[data-opt-idx="${optIdx}"]`);
         if (target) target.classList.add('selected');
 
-        const customBox = document.getElementById(`${cardId}_custom_box`);
+        const customBox = card.querySelector('.oc-clarify-custom-box');
         if (customBox) {
           if (val === '__CUSTOM__') {
             customBox.classList.add('visible');
-            const inp = document.getElementById(`${cardId}_custom_input`);
+            const inp = customBox.querySelector('input');
             if (inp) inp.focus();
           } else {
             customBox.classList.remove('visible');
           }
         }
 
-        const nextBtn = document.getElementById(`${cardId}_next_btn`);
+        const nextBtn = card.querySelector('.oc-clarify-btn-next');
         if (nextBtn) {
           nextBtn.disabled = false;
           nextBtn.classList.add('enabled');
         }
-      }
+      });
     }
 
     function updateCustomInputVal(cardId) {
-      const inp = document.getElementById(`${cardId}_custom_input`);
-      if (inp && activeCardSelection[cardId]) {
-        activeCardSelection[cardId].customText = inp.value.trim();
+      const baseId = cardId.replace(/_ws$/, '');
+      const inp = document.getElementById(`${baseId}_custom_input`) || document.getElementById(`${baseId}_ws_custom_input`);
+      if (inp && activeCardSelection[baseId]) {
+        activeCardSelection[baseId].customText = inp.value.trim();
       }
     }
 
     async function submitClarificationChoice(cardId, reqId) {
-      const sel = activeCardSelection[cardId];
+      const baseId = cardId.replace(/_ws$/, '');
+      const sel = activeCardSelection[baseId];
       if (!sel) return;
 
       let answer = sel.val;
@@ -5099,25 +5289,26 @@
         await window.jobPilotApi.submitClarificationAnswer({ id: reqId, answer: answer, action: action });
       }
 
-      const card = document.getElementById(cardId);
-      if (card) {
-        const footer = document.getElementById(`${cardId}_footer`);
+      [document.getElementById(baseId), document.getElementById(baseId + '_ws')].forEach(card => {
+        if (!card) return;
+        const footer = card.querySelector('.oc-clarify-footer');
         if (footer) {
-          footer.innerHTML = `<span style="color: #10b981; font-weight: 600; font-size: 12px;">✓ Selected: "${escapeHtml(answer)}" - Sent to Brave browser.</span>`;
+          footer.innerHTML = `<span style="color: #10b981; font-weight: 600; font-size: 12px;">✓ Selected: "${escapeHtml(answer)}" : Sent to Brave browser.</span>`;
         }
-      }
+      });
     }
 
     async function dismissClarification(cardId, reqId) {
+      const baseId = cardId.replace(/_ws$/, '');
       if (window.jobPilotApi && window.jobPilotApi.submitClarificationAnswer) {
         await window.jobPilotApi.submitClarificationAnswer({ id: reqId, action: 'skip' });
       }
-      const card = document.getElementById(cardId);
-      if (card) {
+      [document.getElementById(baseId), document.getElementById(baseId + '_ws')].forEach(card => {
+        if (!card) return;
         card.style.opacity = '0.5';
-        const footer = document.getElementById(`${cardId}_footer`);
+        const footer = card.querySelector('.oc-clarify-footer');
         if (footer) footer.innerHTML = '<span style="color: #94a3b8; font-size: 11.5px;">Dismissed. Application skipped.</span>';
-      }
+      });
     }
 
     function displayClarificationCard(req) {

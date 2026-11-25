@@ -120,6 +120,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Candidate Edit Drawer Toggle and Save
+  const btnToggleEditCand = document.getElementById('btn-toggle-edit-cand');
+  const candEditDrawer = document.getElementById('pop-cand-edit-drawer');
+  const btnSaveCand = document.getElementById('pop-btn-save-cand');
+
+  if (btnToggleEditCand && candEditDrawer) {
+    btnToggleEditCand.addEventListener('click', () => {
+      const isHidden = candEditDrawer.style.display === 'none';
+      candEditDrawer.style.display = isHidden ? 'flex' : 'none';
+      btnToggleEditCand.querySelector('span:last-child').innerText = isHidden ? 'Close Candidate Editor' : 'Review & Edit Candidate Profile';
+    });
+  }
+
+  if (btnSaveCand) {
+    btnSaveCand.addEventListener('click', () => {
+      const updatedCand = {
+        name: document.getElementById('pop-input-name')?.value || 'Vansh Sharma',
+        email: document.getElementById('pop-input-email')?.value || 'engagevansh@gmail.com',
+        phone: document.getElementById('pop-input-phone')?.value || '+919368478556',
+        expectedCtc: document.getElementById('pop-input-ctc')?.value || 'Negotiable (6 - 10 LPA)',
+        noticePeriod: document.getElementById('pop-input-notice')?.value || 'Immediate',
+        pitch: document.getElementById('pop-input-pitch')?.value || ''
+      };
+
+      btnSaveCand.innerHTML = '<span>✓</span> <span>Saving to Bridge...</span>';
+
+      chrome.runtime.sendMessage({
+        type: 'UPDATE_CANDIDATE_PROFILE',
+        profile: updatedCand
+      }, (res) => {
+        btnSaveCand.innerHTML = '<span>✓</span> <span>Saved!</span>';
+        const candName = document.getElementById('cand-name');
+        if (candName) candName.innerText = updatedCand.name;
+        setTimeout(() => {
+          btnSaveCand.innerHTML = '<span>💾</span> <span>Save Candidate Details</span>';
+          if (candEditDrawer) candEditDrawer.style.display = 'none';
+          if (btnToggleEditCand) btnToggleEditCand.querySelector('span:last-child').innerText = 'Review & Edit Candidate Profile';
+        }, 1200);
+      });
+    });
+  }
+
   // Toggle Autonomous Apply Agent
   if (btnTabAgent) {
     btnTabAgent.addEventListener('click', async () => {

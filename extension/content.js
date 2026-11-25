@@ -393,6 +393,10 @@
         noticePeriod: document.getElementById('jp-input-notice')?.value || cand.noticePeriod
       };
       applyCandidateEditsToPageInputs(updated);
+      activeCandidate = { ...cand, ...updated };
+      try {
+        chrome.runtime.sendMessage({ type: 'UPDATE_CANDIDATE_PROFILE', profile: updated });
+      } catch (e) {}
       updateAgentHud('✓ Updated webpage fields with your candidate edits!', true);
       sendTelemetry('EDIT_APPLIED', `Candidate modified details manually before submission.`);
       const saveBtn = document.getElementById('jp-btn-apply-edits');
@@ -501,9 +505,43 @@
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   function triggerEvents(elem) {
+    if (!elem) return;
     elem.dispatchEvent(new Event('input', { bubbles: true }));
     elem.dispatchEvent(new Event('change', { bubbles: true }));
     elem.dispatchEvent(new Event('blur', { bubbles: true }));
+  }
+
+  function setReactInputValue(elem, value) {
+    if (!elem) return;
+    try {
+      const isTextArea = elem.tagName.toLowerCase() === 'textarea';
+      const proto = isTextArea ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (setter) {
+        setter.call(elem, value);
+      } else {
+        elem.value = value;
+      }
+    } catch (e) {
+      elem.value = value;
+    }
+    triggerEvents(elem);
+  }
+
+  function setReactCheckboxOrRadio(elem, checked = true) {
+    if (!elem) return;
+    try {
+      if (elem.type === 'radio') {
+        elem.click();
+        if (!elem.checked) elem.checked = true;
+      } else if (elem.type === 'checkbox') {
+        if (elem.checked !== checked) elem.click();
+        elem.checked = checked;
+      }
+    } catch (e) {
+      elem.checked = checked;
+    }
+    triggerEvents(elem);
   }
 
   // Anti-Ban & Bot Challenge Safeguards
@@ -1163,9 +1201,13 @@
     // 3. Question container in Indeed SmartApply, Google Forms, or standard ATS
     const group = el.closest('[data-testid*="question"], [class*="Questions"], fieldset, .ia-Questions-item, .form-group, .field, [role="group"]');
     if (group) {
-      const header = group.querySelector('[data-testid*="header"], [class*="header"], [class*="title"], [class*="legend"], legend, [role="heading"], h2, h3, h4, .ia-Questions-itemHeading, span, p');
+      const header = group.querySelector('legend, [class*="itemLabel"], [class*="itemHeading"], [class*="questionText"], [data-testid*="header"], [data-testid*="title"], [role="heading"], h2, h3, h4');
       if (header && header !== el && !header.contains(el) && header.innerText.trim().length > 3) {
         return header.innerText.trim();
+      }
+      const pOrSpan = group.querySelector('p, span');
+      if (pOrSpan && pOrSpan !== el && !pOrSpan.contains(el) && pOrSpan.innerText.trim().length > 20 && !pOrSpan.closest('label')) {
+        return pOrSpan.innerText.trim();
       }
     }
 
@@ -1286,51 +1328,51 @@
 
         if (labelText.includes('gender') || labelText.includes('sex') || identifier.includes('gender')) {
           if ((labelText.includes('male') && !labelText.includes('female')) || el.value.toLowerCase() === 'male') {
-            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+            setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (labelText.includes('master') && (labelText.includes('degree') || type === 'checkbox' || labelText.includes('mca') || labelText.includes('or higher'))) {
           // Candidate possesses MCA (Master of Computer Applications)
-          el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+          setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           continue;
         } else if (labelText.includes('training development') || labelText.includes('instructional') || labelText.includes('facilitation')) {
           if (optVal.includes('yes') || optVal === 'yes') {
-            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+            setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (labelText.includes('spanish') && (labelText.includes('bilingual') || labelText.includes('fluent'))) {
           // English and Hindi speaker, not bilingual in Spanish
           if (optVal.includes('no') || optVal === 'no') {
-            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+            setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (labelText.includes('internet') || labelText.includes('power solution') || labelText.includes('power outage') || labelText.includes('quiet') || labelText.includes('workspace')) {
           if (optVal.includes('yes') || optVal === 'yes' || type === 'checkbox') {
-            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+            setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if ((labelText.includes('authorized') || labelText.includes('legally authorized') || labelText.includes('eligible to work')) && !labelText.includes('sponsorship') && !labelText.includes('u.s.') && !labelText.includes('us citizen')) {
           if (optVal.includes('yes') || optVal === 'yes') {
-            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+            setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (labelText.includes('sponsorship') || labelText.includes('require visa')) {
           if (optVal.includes('no') || optVal === 'no') {
-            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+            setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (labelText.includes('relocate') || labelText.includes('comfortable working') || labelText.includes('willing to travel')) {
           if (optVal.includes('yes') || optVal === 'yes') {
-            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+            setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (labelText.includes('immediate') || labelText.includes('join immediately')) {
           if (optVal.includes('yes') || optVal === 'yes' || type === 'checkbox') {
-            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+            setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (type === 'checkbox' && (labelText.includes('agree') || labelText.includes('certify') || labelText.includes('consent') || labelText.includes('acknowledge') || labelText.includes('terms'))) {
-          el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+          setReactCheckboxOrRadio(el, true); el.classList.add('jobpilot-filled-review'); filledCount++;
           continue;
         }
 
@@ -1383,13 +1425,14 @@
             }) || groupRadios[0];
 
             if (targetRadio) {
-              targetRadio.checked = true;
-              triggerEvents(targetRadio);
+              setReactCheckboxOrRadio(targetRadio, true);
               targetRadio.classList.add('jobpilot-filled-review');
               filledCount++;
               sendTelemetry('ACTION_CLICK', `Selected option "${choiceRes.answer}" on question: "${qText}".`, {
                 question: qText,
-                answer: choiceRes.answer
+                answer: choiceRes.answer,
+                execCmd: `browse.eval [tab=12438934, expression="document.querySelector('input[type=\\"radio\\"][value=\\"${escapeHtml(choiceRes.answer)}\\"]').click()"]`,
+                thoughtTxt: `Selected "${choiceRes.answer}" for screening question: "${qText}"`
               });
             }
           }
@@ -1514,8 +1557,7 @@
       }
 
       if (valToSet) {
-        el.value = valToSet;
-        triggerEvents(el);
+        setReactInputValue(el, valToSet);
         el.classList.add('jobpilot-filled-review');
         filledCount++;
         await sleep(80);

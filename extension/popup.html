@@ -309,13 +309,51 @@
     </button>
   </div>
 
-  <!-- Candidate Profile Badge -->
-  <div class="card">
+  <!-- Candidate Profile Badge & Edit Section -->
+  <div class="card" id="card-candidate-profile">
     <div class="cand-row">
       <span class="cand-name" id="cand-name">Vansh Sharma</span>
       <span class="cand-tier">MCA 2026 | Immediate</span>
     </div>
     <div class="cand-sub" id="cand-edu">Amity University : CGPA 8.5 : AI & Data Science</div>
+    <div style="margin-top: 6px;">
+      <button class="btn-sync-secondary" id="btn-toggle-edit-cand" style="font-size: 10.5px; padding: 4px 8px;">
+        <span>✏️</span> <span>Review & Edit Candidate Profile</span>
+      </button>
+    </div>
+    <div id="pop-cand-edit-drawer" style="display: none; flex-direction: column; gap: 6px; margin-top: 8px; border-top: 1px solid var(--border-hairline); padding-top: 8px;">
+      <div>
+        <label style="font-size: 9.5px; color: var(--text-dim); text-transform: uppercase;">Full Name</label>
+        <input type="text" id="pop-input-name" style="width: 100%; background: #000; border: 1px solid var(--border-subtle); color: #fff; padding: 4px 6px; border-radius: 4px; font-size: 11px;" value="Vansh Sharma" />
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <div style="flex: 1;">
+          <label style="font-size: 9.5px; color: var(--text-dim); text-transform: uppercase;">Email</label>
+          <input type="email" id="pop-input-email" style="width: 100%; background: #000; border: 1px solid var(--border-subtle); color: #fff; padding: 4px 6px; border-radius: 4px; font-size: 11px;" value="engagevansh@gmail.com" />
+        </div>
+        <div style="flex: 1;">
+          <label style="font-size: 9.5px; color: var(--text-dim); text-transform: uppercase;">Phone</label>
+          <input type="text" id="pop-input-phone" style="width: 100%; background: #000; border: 1px solid var(--border-subtle); color: #fff; padding: 4px 6px; border-radius: 4px; font-size: 11px;" value="+919368478556" />
+        </div>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <div style="flex: 1;">
+          <label style="font-size: 9.5px; color: var(--text-dim); text-transform: uppercase;">Expected CTC</label>
+          <input type="text" id="pop-input-ctc" style="width: 100%; background: #000; border: 1px solid var(--border-subtle); color: #fff; padding: 4px 6px; border-radius: 4px; font-size: 11px;" value="Negotiable (6 - 10 LPA)" />
+        </div>
+        <div style="flex: 1;">
+          <label style="font-size: 9.5px; color: var(--text-dim); text-transform: uppercase;">Notice Period</label>
+          <input type="text" id="pop-input-notice" style="width: 100%; background: #000; border: 1px solid var(--border-subtle); color: #fff; padding: 4px 6px; border-radius: 4px; font-size: 11px;" value="Immediate" />
+        </div>
+      </div>
+      <div>
+        <label style="font-size: 9.5px; color: var(--text-dim); text-transform: uppercase;">Pitch / AI Bio</label>
+        <textarea id="pop-input-pitch" rows="2" style="width: 100%; background: #000; border: 1px solid var(--border-subtle); color: #fff; padding: 4px 6px; border-radius: 4px; font-size: 10.5px;">MCA in AI & Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and scaling FastAPI microservices. Immediate joiner.</textarea>
+      </div>
+      <button class="btn-apply-primary" id="pop-btn-save-cand" style="padding: 6px 10px; font-size: 11px; margin-top: 4px;">
+        <span>💾</span> <span>Save Candidate Details</span>
+      </button>
+    </div>
   </div>
 
   <!-- Live Status Footer -->
