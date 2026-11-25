@@ -544,6 +544,24 @@ function startExtensionBridgeServer() {
     }
 
     if (parsedUrl.pathname === '/api/candidate-profile') {
+      if (req.method === 'POST') {
+        let body = '';
+        req.on('data', c => body += c);
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            if (data && typeof data === 'object') {
+              Object.assign(CANDIDATE_PROFILE, data);
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, candidate: CANDIDATE_PROFILE }));
+          } catch (e) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: e.message }));
+          }
+        });
+        return;
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true, candidate: CANDIDATE_PROFILE }));
       return;
