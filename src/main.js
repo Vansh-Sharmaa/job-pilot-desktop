@@ -569,6 +569,37 @@ function startExtensionBridgeServer() {
       return;
     }
 
+    if (parsedUrl.pathname === '/api/clarification-request' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          const reqId = payload.id || `clarify_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+          payload.id = reqId;
+
+          mainWindow?.webContents.send('agent-clarification-request', payload);
+
+          const timeoutTimer = setTimeout(() => {
+            if (pendingClarifications.has(reqId)) {
+              const entry = pendingClarifications.get(reqId);
+              pendingClarifications.delete(reqId);
+              try {
+                entry.res.writeHead(200, { 'Content-Type': 'application/json' });
+                entry.res.end(JSON.stringify({ ok: false, timedOut: true, action: 'skip' }));
+              } catch (e) {}
+            }
+          }, 120000);
+
+          pendingClarifications.set(reqId, { res, timeoutTimer });
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      });
+      return;
+    }
+
     if (parsedUrl.pathname === '/api/answer-question' && req.method === 'POST') {
       let body = '';
       req.on('data', c => body += c);
@@ -2454,6 +2485,22 @@ ipcMain.handle('send-extension-command', async (event, cmd) => {
 ipcMain.handle('trigger-tab-agent', async () => {
   pendingExtensionCommands.push({ action: 'start_autonomous_apply' });
   return { ok: true };
+});
+
+ipcMain.handle('submit-clarification-answer', async (event, { id, answer, action }) => {
+  if (pendingClarifications.has(id)) {
+    const entry = pendingClarifications.get(id);
+    clearTimeout(entry.timeoutTimer);
+    pendingClarifications.delete(id);
+    try {
+      entry.res.writeHead(200, { 'Content-Type': 'application/json' });
+      entry.res.end(JSON.stringify({ ok: true, answer: answer || '', action: action || 'fill' }));
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+  return { ok: false, error: 'Clarification request not found or expired.' };
 });
 
 ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_autonomous_apply', quota = 20 } = {}) => {

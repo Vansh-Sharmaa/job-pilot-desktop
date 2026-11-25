@@ -113,6 +113,12 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
     ipcRenderer.on('extension-active-job', handler);
     return () => ipcRenderer.removeListener('extension-active-job', handler);
   },
+  onClarificationRequest: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('agent-clarification-request', handler);
+    return () => ipcRenderer.removeListener('agent-clarification-request', handler);
+  },
+  submitClarificationAnswer: (payload) => ipcRenderer.invoke('submit-clarification-answer', payload),
   onAgentTelemetry: (callback) => {
     const handler = (event, data) => callback(data);
     ipcRenderer.on('agent-telemetry', handler);

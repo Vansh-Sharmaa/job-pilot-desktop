@@ -4443,3 +4443,267 @@ body {
   padding: 1px 4px;
   border-radius: 3px;
 }
+
+/* =====================================================================
+   OPENCODE EXECUTE TERMINAL CODE BLOCKS & ACTIONS
+   ===================================================================== */
+.opencode-exec-group {
+  background: #090a0f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+}
+
+.opencode-exec-summary {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  color: #94a3b8;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.opencode-exec-summary:hover {
+  color: #f1f5f9;
+}
+
+.opencode-exec-body {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.opencode-exec-line {
+  color: #38bdf8;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.opencode-exec-output {
+  color: #64748b;
+  font-size: 11px;
+}
+.opencode-exec-thought {
+  color: #a855f7;
+  font-size: 11px;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+/* =====================================================================
+   OPENCODE INTERACTIVE HUMAN CLARIFICATION CARD (PHOTO 3)
+   ===================================================================== */
+.oc-clarification-card {
+  background: #0d0e15;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.08);
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: 12px 0;
+  max-width: 680px;
+}
+
+.oc-clarify-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.oc-clarify-progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.oc-clarify-ticks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oc-clarify-tick {
+  width: 14px;
+  height: 2px;
+  background: #27272a;
+  border-radius: 2px;
+}
+.oc-clarify-tick.active {
+  background: #38bdf8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+}
+
+.oc-clarify-q-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.45;
+}
+
+.oc-clarify-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: -6px;
+}
+
+.oc-clarify-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.oc-clarify-opt-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.oc-clarify-opt-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.oc-clarify-opt-item.selected {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+}
+
+.oc-clarify-opt-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.oc-clarify-opt-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #64748b;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.oc-clarify-opt-item.selected .oc-clarify-opt-circle {
+  border-color: #38bdf8;
+}
+.oc-clarify-opt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  display: none;
+}
+.oc-clarify-opt-item.selected .oc-clarify-opt-dot {
+  display: block;
+}
+
+.oc-clarify-opt-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.oc-clarify-opt-main {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+.oc-clarify-opt-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.oc-clarify-opt-num {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.oc-clarify-custom-box {
+  margin-top: 4px;
+  display: none;
+}
+.oc-clarify-custom-box.visible {
+  display: block;
+}
+.oc-clarify-custom-input {
+  width: 100%;
+  background: #090a0f;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.oc-clarify-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.oc-clarify-btn-dismiss {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+.oc-clarify-btn-dismiss:hover {
+  color: #f1f5f9;
+}
+
+.oc-clarify-btn-next {
+  background: #27272a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.oc-clarify-btn-next.enabled {
+  background: #38bdf8;
+  border-color: #38bdf8;
+  color: #0b0d12;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+}
+.oc-clarify-btn-next:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

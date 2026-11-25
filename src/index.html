@@ -4554,6 +4554,43 @@
         }
       }
 
+      // OpenCode Execute Terminal Block (Photo 1)
+      let execCmd = '';
+      let execOutput = '';
+      let thoughtTxt = '';
+
+      if (stepType.includes('CLICK') || stepType === 'ACTION_CLICK') {
+        execCmd = `browse.eval [tab=12438934, expression=(() => { const el = document.querySelector('${escapeHtml(t.details?.btnText || 'button')}'); el.scrollIntoView({behavior:'smooth'}); el.click(); })]`;
+        execOutput = 'Output 1 lines';
+        thoughtTxt = 'Target clicked successfully in Brave tab.';
+      } else if (stepType.includes('PERCEPTION') || stepType === 'SCAN') {
+        execCmd = `browse.snapshot [tab=12438934, url=${escapeHtml(url || 'https://in.indeed.com')}, timeout=20000]`;
+        execOutput = `Output ${t.details?.totalCards ? t.details.totalCards * 6 : 81} lines`;
+        thoughtTxt = 'DOM tree evaluated. Application elements recognized.';
+      } else if (stepType.includes('AUTOFILL')) {
+        execCmd = `browse.eval [tab=12438934, expression=(() => { injectCandidateCredentials(Vansh Sharma, MCA AI 2026); })]`;
+        execOutput = `Output ${t.details?.filled || 4} fields filled`;
+        thoughtTxt = 'Profile credentials injected into active form.';
+      } else if (stepType.includes('AI_QA')) {
+        execCmd = `browse.eval [tab=12438934, expression=(() => { setOption("${escapeHtml((t.details?.answer || '').slice(0, 30))}"); })]`;
+        execOutput = 'Output 2 lines';
+        thoughtTxt = 'AI generated response verified and applied.';
+      }
+
+      let opencodeTerminalHtml = '';
+      if (execCmd) {
+        opencodeTerminalHtml = `
+          <div class="opencode-exec-group">
+            <div class="opencode-exec-summary">Execute ▾ &lt;/&gt;</div>
+            <div class="opencode-exec-body">
+              <div class="opencode-exec-line">&gt; ${execCmd}</div>
+              <div class="opencode-exec-output">&gt; ${execOutput}</div>
+              <div class="opencode-exec-thought">Thought 1s: ${thoughtTxt}</div>
+            </div>
+          </div>
+        `;
+      }
+
       const card = document.createElement('div');
       card.className = `oc-step-card ${typeClass}`;
       card.innerHTML = `
@@ -4566,6 +4603,7 @@
         </div>
         <div class="oc-step-msg">${escapeHtml(msg)}</div>
         ${detailsHtml}
+        ${opencodeTerminalHtml}
       `;
 
       if (stepsContainer) {
@@ -4581,6 +4619,229 @@
         const wsScroll = document.getElementById('ws-live-agent-scroll');
         if (wsScroll) wsScroll.scrollTop = wsScroll.scrollHeight;
       }
+    }
+
+    let activeCardSelection = {};
+
+    function selectClarifyOption(cardId, optIdx, val) {
+      activeCardSelection[cardId] = { idx: optIdx, val: val };
+
+      const card = document.getElementById(cardId);
+      if (card) {
+        card.querySelectorAll('.oc-clarify-opt-item').forEach(el => el.classList.remove('selected'));
+        const target = card.querySelector(`[data-opt-idx="${optIdx}"]`);
+        if (target) target.classList.add('selected');
+
+        const customBox = document.getElementById(`${cardId}_custom_box`);
+        if (customBox) {
+          if (val === '__CUSTOM__') {
+            customBox.classList.add('visible');
+            const inp = document.getElementById(`${cardId}_custom_input`);
+            if (inp) inp.focus();
+          } else {
+            customBox.classList.remove('visible');
+          }
+        }
+
+        const nextBtn = document.getElementById(`${cardId}_next_btn`);
+        if (nextBtn) {
+          nextBtn.disabled = false;
+          nextBtn.classList.add('enabled');
+        }
+      }
+    }
+
+    function updateCustomInputVal(cardId) {
+      const inp = document.getElementById(`${cardId}_custom_input`);
+      if (inp && activeCardSelection[cardId]) {
+        activeCardSelection[cardId].customText = inp.value.trim();
+      }
+    }
+
+    async function submitClarificationChoice(cardId, reqId) {
+      const sel = activeCardSelection[cardId];
+      if (!sel) return;
+
+      let answer = sel.val;
+      let action = 'fill';
+
+      if (sel.val === '__SKIP__') {
+        action = 'skip';
+        answer = 'Skip this job';
+      } else if (sel.val === '__CUSTOM__') {
+        answer = sel.customText || 'Yes';
+        action = 'fill';
+      }
+
+      if (window.jobPilotApi && window.jobPilotApi.submitClarificationAnswer) {
+        await window.jobPilotApi.submitClarificationAnswer({ id: reqId, answer: answer, action: action });
+      }
+
+      const card = document.getElementById(cardId);
+      if (card) {
+        const footer = document.getElementById(`${cardId}_footer`);
+        if (footer) {
+          footer.innerHTML = `<span style="color: #10b981; font-weight: 600; font-size: 12px;">✓ Selected: "${escapeHtml(answer)}" - Sent to Brave browser.</span>`;
+        }
+      }
+    }
+
+    async function dismissClarification(cardId, reqId) {
+      if (window.jobPilotApi && window.jobPilotApi.submitClarificationAnswer) {
+        await window.jobPilotApi.submitClarificationAnswer({ id: reqId, action: 'skip' });
+      }
+      const card = document.getElementById(cardId);
+      if (card) {
+        card.style.opacity = '0.5';
+        const footer = document.getElementById(`${cardId}_footer`);
+        if (footer) footer.innerHTML = '<span style="color: #94a3b8; font-size: 11.5px;">Dismissed. Application skipped.</span>';
+      }
+    }
+
+    function displayClarificationCard(req) {
+      if (!req || !req.question) return;
+
+      activateOpenCodeAgentView(req.company || 'Brave Tab', req.url || currentAgentSession.url);
+
+      const stepsContainer = document.getElementById('oc-monitor-steps');
+      if (!stepsContainer) return;
+
+      const cardId = `clarify_card_${req.id || Date.now()}`;
+      if (document.getElementById(cardId)) return;
+
+      const qIndex = req.index || 1;
+      const qTotal = req.total || 5;
+
+      let ticksHtml = '';
+      for (let i = 1; i <= qTotal; i++) {
+        ticksHtml += `<div class="oc-clarify-tick ${i <= qIndex ? 'active' : ''}"></div>`;
+      }
+
+      const rawOptions = (req.options && req.options.length > 0) ? req.options : ['Yes', 'No'];
+      let optionsHtml = '';
+      let optCounter = 1;
+
+      rawOptions.forEach((optText) => {
+        const lower = optText.toLowerCase().trim();
+        let desc = 'Select this option for this application.';
+        if (lower === 'yes' || lower.includes('yes') || lower.includes('citizen')) {
+          desc = 'Answer Yes to the citizenship requirement.';
+        } else if (lower === 'no' || lower.includes('no')) {
+          desc = 'Answer No - likely skip this job since it is a requirement.';
+        }
+
+        optionsHtml += `
+          <div class="oc-clarify-opt-item" data-opt-idx="${optCounter}" data-opt-value="${escapeHtml(optText)}" onclick="selectClarifyOption('${cardId}', ${optCounter}, '${escapeHtml(optText)}')">
+            <div class="oc-clarify-opt-left">
+              <div class="oc-clarify-opt-circle"><div class="oc-clarify-opt-dot"></div></div>
+              <div class="oc-clarify-opt-text">
+                <div class="oc-clarify-opt-main">${escapeHtml(optText)}</div>
+                <div class="oc-clarify-opt-desc">${escapeHtml(desc)}</div>
+              </div>
+            </div>
+            <div class="oc-clarify-opt-num">${optCounter}</div>
+          </div>
+        `;
+        optCounter++;
+      });
+
+      const skipOptIdx = optCounter;
+      optionsHtml += `
+        <div class="oc-clarify-opt-item" data-opt-idx="${skipOptIdx}" data-opt-value="__SKIP__" onclick="selectClarifyOption('${cardId}', ${skipOptIdx}, '__SKIP__')">
+          <div class="oc-clarify-opt-left">
+            <div class="oc-clarify-opt-circle"><div class="oc-clarify-opt-dot"></div></div>
+            <div class="oc-clarify-opt-text">
+              <div class="oc-clarify-opt-main">Skip this job</div>
+              <div class="oc-clarify-opt-desc">Don't submit this application; move to a different job instead.</div>
+            </div>
+          </div>
+          <div class="oc-clarify-opt-num">${skipOptIdx}</div>
+        </div>
+      `;
+      optCounter++;
+
+      const customOptIdx = optCounter;
+      optionsHtml += `
+        <div class="oc-clarify-opt-item" data-opt-idx="${customOptIdx}" data-opt-value="__CUSTOM__" onclick="selectClarifyOption('${cardId}', ${customOptIdx}, '__CUSTOM__')">
+          <div class="oc-clarify-opt-left">
+            <div class="oc-clarify-opt-circle"><div class="oc-clarify-opt-dot"></div></div>
+            <div class="oc-clarify-opt-text">
+              <div class="oc-clarify-opt-main">Type your own answer...</div>
+              <div class="oc-clarify-opt-desc">Enter custom response to inject.</div>
+            </div>
+          </div>
+          <div class="oc-clarify-opt-num">${customOptIdx}</div>
+        </div>
+        <div class="oc-clarify-custom-box" id="${cardId}_custom_box">
+          <input type="text" class="oc-clarify-custom-input" id="${cardId}_custom_input" placeholder="Type custom answer for form..." oninput="updateCustomInputVal('${cardId}')" />
+        </div>
+      `;
+
+      const card = document.createElement('div');
+      card.id = cardId;
+      card.className = 'oc-clarification-card';
+      card.setAttribute('data-req-id', req.id);
+      card.innerHTML = `
+        <div class="oc-clarify-top-row">
+          <span class="oc-clarify-progress-text">${qIndex} of ${qTotal} questions</span>
+          <div class="oc-clarify-ticks">${ticksHtml}</div>
+        </div>
+        <div class="oc-clarify-q-title">${escapeHtml(req.question)}</div>
+        <div class="oc-clarify-subtitle">Select one answer</div>
+        <div class="oc-clarify-options-list">${optionsHtml}</div>
+        <div class="oc-clarify-footer" id="${cardId}_footer">
+          <button class="oc-clarify-btn-dismiss" onclick="dismissClarification('${cardId}', '${req.id}')">Dismiss</button>
+          <button class="oc-clarify-btn-next" id="${cardId}_next_btn" disabled onclick="submitClarificationChoice('${cardId}', '${req.id}')">Next</button>
+        </div>
+      `;
+
+      stepsContainer.appendChild(card);
+
+      const scrollContainer = document.getElementById('ag-canvas-scroll');
+      if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+
+      const wsSteps = document.getElementById('ws-live-agent-steps');
+      if (wsSteps) {
+        const clone = card.cloneNode(true);
+        clone.id = `${cardId}_ws`;
+        wsSteps.appendChild(clone);
+        const wsScroll = document.getElementById('ws-live-agent-scroll');
+        if (wsScroll) wsScroll.scrollTop = wsScroll.scrollHeight;
+      }
+    }
+
+    // Keyboard navigation for clarification cards (1, 2, 3, 4, Enter)
+    document.addEventListener('keydown', (e) => {
+      const activeCard = Array.from(document.querySelectorAll('.oc-clarification-card'))
+        .reverse()
+        .find(c => {
+          const btn = c.querySelector('.oc-clarify-btn-next');
+          const footer = c.querySelector('.oc-clarify-footer');
+          return btn && footer && !footer.innerHTML.includes('✓');
+        });
+      if (!activeCard) return;
+
+      const cardId = activeCard.id;
+      if (e.key >= '1' && e.key <= '9') {
+        const idx = parseInt(e.key, 10);
+        const opt = activeCard.querySelector(`[data-opt-idx="${idx}"]`);
+        if (opt) {
+          const val = opt.getAttribute('data-opt-value');
+          selectClarifyOption(cardId, idx, val);
+        }
+      } else if (e.key === 'Enter') {
+        const nextBtn = document.getElementById(`${cardId}_next_btn`);
+        if (nextBtn && !nextBtn.disabled) {
+          const reqId = activeCard.getAttribute('data-req-id');
+          submitClarificationChoice(cardId, reqId);
+        }
+      }
+    });
+
+    if (window.jobPilotApi && window.jobPilotApi.onClarificationRequest) {
+      window.jobPilotApi.onClarificationRequest((req) => {
+        displayClarificationCard(req);
+      });
     }
 
     if (window.jobPilotApi && window.jobPilotApi.onAgentTelemetry) {

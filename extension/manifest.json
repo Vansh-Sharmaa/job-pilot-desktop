@@ -7,7 +7,8 @@
     "activeTab",
     "tabs",
     "storage",
-    "scripting"
+    "scripting",
+    "tabGroups"
   ],
   "host_permissions": [
     "http://127.0.0.1:5056/*",
@@ -37,15 +38,23 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["bridge-token.json"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "bridge-token.json"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

@@ -159,6 +159,14 @@ async function executeCommandInActiveTab(cmd) {
     activeTab = await chrome.tabs.create({ url: targetUrl, active: true });
   }
 
+  // Create or add to Agents · 1 tab group (as in OpenCode agent mode)
+  try {
+    if (activeTab && activeTab.id && chrome.tabs.group && chrome.tabGroups) {
+      const groupId = await chrome.tabs.group({ tabIds: [activeTab.id] });
+      await chrome.tabGroups.update(groupId, { title: 'Agents · 1', color: 'grey' });
+    }
+  } catch (e) {}
+
   // Bring browser window to front so the user sees the page open
   try {
     if (activeTab && activeTab.windowId) {
@@ -324,6 +332,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       })
       .then(r => r.json())
       .then(data => sendResponse({ ok: true, data }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    });
+    return true;
+  }
+
+  if (request.type === 'REQUEST_CLARIFICATION') {
+    getBridgeToken().then(token => {
+      fetch(`${BRIDGE_URL}/api/clarification-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-JobPilot-Token': token
+        },
+        body: JSON.stringify(request.payload)
+      })
+      .then(r => r.json())
+      .then(data => sendResponse(data))
       .catch(err => sendResponse({ ok: false, error: err.message }));
     });
     return true;

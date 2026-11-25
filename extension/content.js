@@ -610,7 +610,14 @@
         while (step < 4 && isAgentRunning && !agentAbortRequested) {
           step++;
           updateAgentHud(`Filling application step ${step} for ${jobMeta.company}...`);
-          await executeSmartFormFillingWithAI(cand, jobMeta);
+          const fillRes = await executeSmartFormFillingWithAI(cand, jobMeta);
+          if (fillRes && fillRes.skipped) {
+            sendTelemetry('SKIP', `Candidate opted to skip application for ${jobMeta.company}.`);
+            const dismissBtn = document.querySelector('button[aria-label*="close" i], button[aria-label*="dismiss" i], .ia-BasePage-dismiss, [data-testid="modal-close"]');
+            if (dismissBtn) { try { dismissBtn.click(); } catch(e){} }
+            await sleep(1000);
+            break;
+          }
           await sleep(600 + Math.random() * 400);
           if (!isAgentRunning || agentAbortRequested) break;
 
@@ -874,6 +881,37 @@
     return (el.name || el.id || '').replace(/[_-]+/g, ' ').trim();
   }
 
+  function askHumanClarification(question, options = [], qIndex = 1, totalQ = 1, meta = {}) {
+    return new Promise((resolve) => {
+      try {
+        const qId = `clarify_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        chrome.runtime.sendMessage({
+          type: 'REQUEST_CLARIFICATION',
+          payload: {
+            id: qId,
+            question: question,
+            options: options,
+            index: qIndex,
+            total: totalQ,
+            company: (meta && meta.company) || 'Target Company',
+            role: (meta && meta.title) || 'AI Role',
+            url: window.location.href
+          }
+        }, (res) => {
+          if (res && res.ok) {
+            resolve(res);
+          } else if (res && res.action === 'skip') {
+            resolve({ action: 'skip' });
+          } else {
+            resolve({ action: 'fallback', answer: '' });
+          }
+        });
+      } catch (e) {
+        resolve({ action: 'fallback', answer: '' });
+      }
+    });
+  }
+
   function askDesktopAI(question, fieldType = 'text', options = [], meta = {}) {
     return new Promise((resolve) => {
       try {
@@ -903,6 +941,14 @@
   async function executeSmartFormFillingWithAI(cand, meta = {}) {
     const inputs = Array.from(document.querySelectorAll('input, textarea, select'));
     let filledCount = 0;
+    const handledRadioNames = new Set();
+    const radioNamesOnPage = new Set(
+      Array.from(document.querySelectorAll('input[type="radio"]:not([type="hidden"])'))
+        .filter(r => r.offsetParent !== null && r.name)
+        .map(r => r.name)
+    );
+    const totalQCount = Math.max(1, radioNamesOnPage.size);
+    let qStepIndex = 0;
 
     for (const el of inputs) {
       if (!isAgentRunning || agentAbortRequested) return filledCount;
@@ -922,24 +968,92 @@
           if ((labelText.includes('male') && !labelText.includes('female')) || el.value.toLowerCase() === 'male') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
-        } else if ((labelText.includes('authorized') || labelText.includes('legally authorized') || labelText.includes('eligible to work')) && !labelText.includes('sponsorship')) {
+          continue;
+        } else if ((labelText.includes('authorized') || labelText.includes('legally authorized') || labelText.includes('eligible to work')) && !labelText.includes('sponsorship') && !labelText.includes('u.s.') && !labelText.includes('us citizen')) {
           if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
+          continue;
         } else if (labelText.includes('sponsorship') || labelText.includes('require visa')) {
           if (labelText.includes('no') || el.value.toLowerCase() === 'no') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
+          continue;
         } else if (labelText.includes('relocate') || labelText.includes('comfortable working') || labelText.includes('willing to travel')) {
           if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
+          continue;
         } else if (labelText.includes('immediate') || labelText.includes('join immediately')) {
           if (labelText.includes('yes') || el.value.toLowerCase() === 'yes' || type === 'checkbox') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
+          continue;
         } else if (type === 'checkbox' && (labelText.includes('agree') || labelText.includes('certify') || labelText.includes('consent') || labelText.includes('acknowledge') || labelText.includes('terms'))) {
           el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+          continue;
+        }
+
+        // Unmatched Radio Question: requires candidate clarification (as seen in OpenCode agent mode)
+        if (type === 'radio') {
+          const radioName = el.name;
+          if (radioName && handledRadioNames.has(radioName)) continue;
+          if (radioName) handledRadioNames.add(radioName);
+
+          const groupRadios = radioName ? Array.from(document.querySelectorAll(`input[type="radio"][name="${CSS.escape(radioName)}"]`)) : [el];
+          const qText = extractFieldQuestion(el) || (labelEl ? labelEl.innerText.trim() : identifier);
+          const optTexts = groupRadios.map(r => {
+            const l = r.closest('label') || (r.id ? document.querySelector(`label[for="${CSS.escape(r.id)}"]`) : null);
+            return (l ? l.innerText.trim() : r.value).replace(/\s+/g, ' ');
+          }).filter(Boolean);
+
+          qStepIndex++;
+          updateAgentHud(`Question ${qStepIndex}/${totalQCount}: Awaiting choice in JobPilot...`);
+
+          const qContainer = el.closest('fieldset, [data-testid*="question"], .ia-Questions-item, .form-group') || el.closest('div');
+          if (qContainer) {
+            qContainer.classList.add('jobpilot-target-highlight');
+            qContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+
+          sendTelemetry('PERCEPTION', `Screening question (${qStepIndex}/${totalQCount}): "${qText}". Requesting candidate clarification.`, {
+            question: qText,
+            options: optTexts,
+            index: qStepIndex,
+            total: totalQCount,
+            company: meta.company,
+            role: meta.title
+          });
+
+          const choiceRes = await askHumanClarification(qText, optTexts, qStepIndex, totalQCount, meta);
+
+          if (qContainer) qContainer.classList.remove('jobpilot-target-highlight');
+
+          if (choiceRes && choiceRes.action === 'skip') {
+            sendTelemetry('SKIP', `Candidate chose to skip application based on question: "${qText}".`);
+            return { filled: filledCount, skipped: true };
+          }
+
+          if (choiceRes && choiceRes.answer) {
+            const chosenAnswer = choiceRes.answer.toLowerCase().trim();
+            const targetRadio = groupRadios.find(r => {
+              const l = r.closest('label') || (r.id ? document.querySelector(`label[for="${CSS.escape(r.id)}"]`) : null);
+              const t = (l ? l.innerText.trim() : r.value).toLowerCase().trim();
+              return t === chosenAnswer || t.startsWith(chosenAnswer) || chosenAnswer.startsWith(t);
+            }) || groupRadios[0];
+
+            if (targetRadio) {
+              targetRadio.checked = true;
+              triggerEvents(targetRadio);
+              targetRadio.classList.add('jobpilot-filled-review');
+              filledCount++;
+              sendTelemetry('ACTION_CLICK', `Selected option "${choiceRes.answer}" on question: "${qText}".`, {
+                question: qText,
+                answer: choiceRes.answer
+              });
+            }
+          }
+          continue;
         }
         continue;
       }
