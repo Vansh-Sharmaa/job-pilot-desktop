@@ -615,6 +615,10 @@
                 </div>
               </div>
               <div class="interview-action-btns">
+                                <button class="chat-toggle-pill" id="btn-toggle-chat-iv" onclick="toggleChatPaneSplit()" title="Toggle full-width workspace mode without horizontal scrolling">
+                  <i data-lucide="maximize-2" class="lucide-icon-sm"></i>
+                  <span class="chat-toggle-label">Full Width Mode</span>
+                </button>
                 <button class="browser-btn primary" id="btn-sync-gmail" onclick="syncGmailEmails()" title="Scan all enabled Gmail accounts for recruitment messages and interview schedules">
                   <i data-lucide="refresh-cw" class="lucide-icon-sm"></i>
                   <span id="btn-sync-gmail-label">Sync All Inboxes</span>
@@ -723,14 +727,12 @@
               <table>
                 <thead>
                   <tr>
-                    <th style="width: 80px;">Date</th>
-                    <th style="width: 130px;">Account</th>
-                    <th style="width: 140px;">Company</th>
-                    <th style="width: 120px;">Role</th>
-                    <th style="width: 100px;">Stage</th>
+                    <th style="width: 75px;">Date</th>
+                    <th style="width: 90px;">Account</th>
+                    <th style="width: 170px;">Role & Company</th>
                     <th>Subject & Recruiter Message</th>
-                    <th style="width: 100px;">Meeting Link</th>
-                    <th style="width: 75px;">Action</th>
+                    <th style="width: 95px;">Stage</th>
+                    <th style="width: 140px; text-align: center;">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="interview-tbody">
@@ -759,6 +761,10 @@
                 </div>
               </div>
               <div class="interview-action-btns">
+                                <button class="chat-toggle-pill" id="btn-toggle-chat-leads" onclick="toggleChatPaneSplit()" title="Toggle full-width workspace mode without horizontal scrolling">
+                  <i data-lucide="maximize-2" class="lucide-icon-sm"></i>
+                  <span class="chat-toggle-label">Full Width Mode</span>
+                </button>
                 <button class="browser-btn primary" id="btn-sync-leads" onclick="syncJobLeadsNow()" title="Scan inboxes for fresh job alert emails and recommendation digests">
                   <i data-lucide="refresh-cw" class="lucide-icon-sm"></i>
                   <span id="btn-sync-leads-label">Sync Alert Emails</span>
@@ -827,13 +833,12 @@
               <table class="interview-table">
                 <thead>
                   <tr>
-                    <th style="width: 100px;">DATE</th>
-                    <th style="width: 130px;">INBOX ACCOUNT</th>
-                    <th style="width: 180px;">COMPANY & LOCATION</th>
-                    <th>ROLE & HIGHLIGHTS</th>
-                    <th style="width: 140px;">PLATFORM</th>
-                    <th style="width: 140px;">FIT BADGE</th>
-                    <th style="width: 130px; text-align: center;">ACTION</th>
+                    <th style="width: 75px;">Date</th>
+                    <th style="width: 90px;">Account</th>
+                    <th style="width: 180px;">Role & Company</th>
+                    <th>Highlight & Overview</th>
+                    <th style="width: 135px;">Platform & Fit</th>
+                    <th style="width: 160px; text-align: center;">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="leads-tbody">
@@ -1437,7 +1442,93 @@
   </div>
 
   <!-- Precision Utility Bottom Status Dock -->
-  <footer class="ag-statusbar" id="ag-statusbar">
+    <!-- =====================================================================
+       RIGHT-SIDE SLIDING EMAIL & JOB LEAD INSPECTION DRAWER
+       ===================================================================== -->
+  <div class="drawer-backdrop" id="email-drawer-backdrop" onclick="closeEmailDrawer()"></div>
+  <aside class="sliding-email-drawer" id="email-inspection-drawer" aria-label="Email and Lead Details Drawer">
+    <!-- Topbar -->
+    <div class="drawer-topbar">
+      <div class="drawer-topbar-left">
+        <span class="drawer-topbar-title">
+          <i data-lucide="mail-search" class="lucide-icon-sm text-cyan"></i>
+          <span id="drawer-title-text">Email Intelligence Inspector</span>
+        </span>
+        <span class="stage-pill stage-interview" id="drawer-stage-badge">INTERVIEW</span>
+        <span class="account-tag-cell" id="drawer-account-badge" style="font-size: 10px;">engagevansh</span>
+      </div>
+      <button class="drawer-close-btn" onclick="closeEmailDrawer()" title="Close Inspector (Esc)">✕</button>
+    </div>
+
+    <!-- Scrollable Body -->
+    <div class="drawer-scroll-body">
+      <!-- Header Card -->
+      <div class="drawer-header-card">
+        <div class="drawer-subject" id="drawer-subject">Application Update</div>
+        <div class="drawer-meta-grid">
+          <div class="drawer-meta-item">
+            <span class="drawer-meta-label">Company</span>
+            <span class="drawer-meta-val" id="drawer-company" style="color: #fff; font-weight: 700;">-</span>
+          </div>
+          <div class="drawer-meta-item">
+            <span class="drawer-meta-label">Role Target</span>
+            <span class="drawer-meta-val" id="drawer-role" style="color: #38bdf8;">-</span>
+          </div>
+          <div class="drawer-meta-item">
+            <span class="drawer-meta-label">From / Recruiter</span>
+            <span class="drawer-meta-val" id="drawer-sender">-</span>
+          </div>
+          <div class="drawer-meta-item">
+            <span class="drawer-meta-label">Received Date</span>
+            <span class="drawer-meta-val" id="drawer-date">-</span>
+          </div>
+        </div>
+
+        <!-- Quick Action Buttons Strip -->
+        <div class="drawer-actions-strip">
+          <button class="drawer-btn-primary" id="drawer-btn-apply" onclick="drawerActionApply()" title="Launch in Brave browser and auto-fill application">
+            <i data-lucide="zap" class="lucide-icon-sm"></i>
+            <span>Apply in Browser</span>
+          </button>
+          <button class="drawer-btn-meet" id="drawer-btn-meet" onclick="drawerActionJoinMeet()" style="display: none;">
+            <i data-lucide="video" class="lucide-icon-sm"></i>
+            <span>Join Meeting</span>
+          </button>
+          <button class="drawer-btn-secondary" id="drawer-btn-prep" onclick="drawerActionPrepAI()" title="Open AI Chat for interview question preparation">
+            <i data-lucide="sparkles" class="lucide-icon-sm"></i>
+            <span>AI Prep</span>
+          </button>
+          <button class="drawer-btn-secondary" onclick="drawerActionCopyEmail()" title="Copy email text to clipboard">
+            <i data-lucide="copy" class="lucide-icon-sm"></i>
+            <span>Copy Text</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Full Email Body Card -->
+      <div class="drawer-email-body-box">
+        <div class="drawer-body-header">
+          <span class="drawer-body-title">Full Email Content & Recruiter Message</span>
+          <span style="font-size: 10px; color: var(--text-muted);">Verified Parse</span>
+        </div>
+        <div class="drawer-email-text" id="drawer-email-body"></div>
+      </div>
+    </div>
+
+    <!-- Sticky Bottom Bar -->
+    <div class="drawer-footer-actions">
+      <span style="font-size: 11px; color: var(--text-muted);" id="drawer-footer-status">Ready to inspect, apply or prep</span>
+      <div style="display: flex; gap: 8px;">
+        <button class="drawer-btn-secondary" onclick="closeEmailDrawer()">Dismiss</button>
+        <button class="drawer-btn-primary" id="drawer-footer-apply" onclick="drawerActionApply()">
+          <i data-lucide="external-link" class="lucide-icon-sm"></i>
+          <span>Apply in Browser</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+<footer class="ag-statusbar" id="ag-statusbar">
     <div class="sb-group">
       <div class="sb-item">
         <i data-lucide="git-branch" class="lucide-icon-sm"></i>
@@ -3486,12 +3577,19 @@
       tbody.innerHTML = '';
 
       if (!records || records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">No recruitment emails match this filter.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 25px;">No recruitment emails match this filter.</td></tr>';
         return;
       }
 
       records.forEach(r => {
         const tr = document.createElement('tr');
+        tr.className = 'interactive-row';
+        tr.title = 'Click anywhere to slide open full email & recruiter intelligence';
+        tr.onclick = (e) => {
+          if (!e.target.closest('button') && !e.target.closest('a')) {
+            openEmailDrawer(r, 'interview');
+          }
+        };
 
         // Category Tag
         let stageClass = 'stage-applied';
@@ -3506,32 +3604,41 @@
         const col = getAccountColor(accEmail);
         const accBadge = `<span class="account-tag-cell" style="border-color: ${col.border}; color: ${col.text}; background: ${col.bg};">${escapeHtml(accEmail.split('@')[0])}</span>`;
 
-        // Meeting Link
-        let meetingHtml = '<span style="color: var(--text-muted); font-size: 11px;">-</span>';
-        if (r.meetingLink && (r.meetingLink.startsWith('http://') || r.meetingLink.startsWith('https://'))) {
-          meetingHtml = `<button class="btn-table-join" onclick="window.jobPilotApi.openExternal('${escapeHtml(r.meetingLink)}')"><i data-lucide="video" style="width: 11px; height: 11px;"></i> Join Meet</button>`;
-        }
-
         const safeCompany = escapeHtml(r.company || 'Unknown');
         const safeRole = escapeHtml(r.role || 'Candidate');
         const safeSubject = escapeHtml(r.subject || '');
         const safeSender = escapeHtml(r.sender || '');
         const safeDate = escapeHtml(r.date || '');
+        const recId = escapeHtml(r.id || '');
+
+        let actionHtml = '';
+        if (r.meetingLink && (r.meetingLink.startsWith('http://') || r.meetingLink.startsWith('https://'))) {
+          actionHtml = `
+            <div style="display: flex; gap: 5px; align-items: center; justify-content: flex-end;">
+              <button class="btn-inspect-pill" onclick="openEmailDrawerById('interview', '${recId}')" title="Inspect full email"><i data-lucide="mail-search" style="width: 11px; height: 11px;"></i> View</button>
+              <button class="btn-table-join" onclick="window.jobPilotApi.openExternal('${escapeHtml(r.meetingLink)}')"><i data-lucide="video" style="width: 11px; height: 11px;"></i> Meet</button>
+            </div>`;
+        } else {
+          actionHtml = `
+            <div style="display: flex; gap: 5px; align-items: center; justify-content: flex-end;">
+              <button class="btn-inspect-pill" onclick="openEmailDrawerById('interview', '${recId}')" title="Inspect full email"><i data-lucide="mail-search" style="width: 11px; height: 11px;"></i> View</button>
+              <button class="btn-table-prep" onclick="prepInterviewWithAI('${safeCompany}', '${safeRole}')" title="Generate Technical Prep in AI Chat">Prep AI</button>
+            </div>`;
+        }
 
         tr.innerHTML = `
-          <td style="color: #94a3b8; font-family: var(--font-mono); font-size: 11px;">${safeDate}</td>
+          <td style="color: #94a3b8; font-family: var(--font-mono); font-size: 11px; white-space: nowrap;">${safeDate}</td>
           <td>${accBadge}</td>
-          <td style="font-weight: 700; color: #fff;">${safeCompany}</td>
-          <td style="color: #cbd5e1;">${safeRole}</td>
-          <td><span class="stage-pill ${stageClass}">${cat || 'APPLIED'}</span></td>
+          <td>
+            <div style="font-weight: 700; color: #fff; font-size: 12px;">${safeCompany}</div>
+            <div style="font-size: 11px; color: #38bdf8; margin-top: 2px;">${safeRole}</div>
+          </td>
           <td>
             <div style="font-weight: 500; color: #e2e8f0; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${safeSubject}</div>
             <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">From: ${safeSender}</div>
           </td>
-          <td>${meetingHtml}</td>
-          <td>
-            <button class="btn-table-prep" onclick="prepInterviewWithAI('${safeCompany}', '${safeRole}')" title="Generate Technical Prep in AI Chat">Prep AI</button>
-          </td>
+          <td><span class="stage-pill ${stageClass}">${cat || 'APPLIED'}</span></td>
+          <td>${actionHtml}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -3864,12 +3971,20 @@
       tbody.innerHTML = '';
 
       if (!leads || leads.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No job recommendation leads found matching filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No job recommendation leads found matching filters.</td></tr>';
         return;
       }
 
       leads.forEach(lead => {
         const tr = document.createElement('tr');
+        tr.className = 'interactive-row';
+        tr.title = 'Click anywhere to slide open full job alert email & details';
+        tr.onclick = (e) => {
+          if (!e.target.closest('button') && !e.target.closest('a')) {
+            openEmailDrawer(lead, 'lead');
+          }
+        };
+
         const accEmail = lead.account || 'engagevansh@gmail.com';
         const col = getAccountColor(accEmail);
         const accBadge = `<span class="account-tag-cell" style="border-color: ${col.border}; color: ${col.text}; background: ${col.bg};">${escapeHtml(accEmail.split('@')[0])}</span>`;
@@ -3882,27 +3997,33 @@
         const safeSnippet = escapeHtml(lead.snippet || '');
         const safeDate = escapeHtml(lead.date || '');
         const rawUrl = lead.url || '';
+        const leadId = escapeHtml(lead.id || '');
 
         tr.innerHTML = `
-          <td style="color: #94a3b8; font-family: var(--font-mono); font-size: 11px;">${safeDate}</td>
+          <td style="color: #94a3b8; font-family: var(--font-mono); font-size: 11px; white-space: nowrap;">${safeDate}</td>
           <td>${accBadge}</td>
           <td>
-            <div style="font-weight: 700; color: #fff;">${safeCompany}</div>
-            <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 2px;">📍 ${safeLoc}</div>
+            <div style="font-weight: 700; color: #38bdf8; font-size: 12px;">${safeRole}</div>
+            <div style="font-size: 11px; color: #fff; margin-top: 2px;">${safeCompany} <span style="font-size: 10px; color: var(--text-dim);">&bull; 📍 ${safeLoc}</span></div>
           </td>
           <td>
-            <div style="font-weight: 600; color: #38bdf8;">${safeRole}</div>
-            <div style="font-size: 11px; color: #cbd5e1; margin-top: 3px; max-width: 360px; line-height: 1.4;">${safeSnippet}</div>
+            <div style="font-size: 11px; color: #cbd5e1; line-height: 1.4; max-width: 320px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${safeSnippet}</div>
           </td>
-          <td><span class="p-tag">${safePlatform}</span></td>
           <td>
-            <span class="stage-pill stage-shortlisted" style="font-size: 10px; padding: 2px 8px;">${safeBadge}</span>
+            <div><span class="p-tag" style="font-size: 9.5px;">${safePlatform}</span></div>
+            <div style="margin-top: 3px;"><span class="stage-pill stage-shortlisted" style="font-size: 9px; padding: 1px 6px;">${safeBadge}</span></div>
           </td>
-          <td style="text-align: center;">
-            <button class="browser-btn primary" style="font-size: 11px; padding: 4px 10px; width: 100%; justify-content: center;" onclick="applyJobLeadInBrowser('${escapeHtml(rawUrl)}', '${safeCompany}', '${safeRole}')">
-              <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
-              <span>Apply in Browser</span>
-            </button>
+          <td>
+            <div style="display: flex; gap: 5px; align-items: center; justify-content: flex-end;">
+              <button class="browser-btn primary" style="font-size: 10.5px; padding: 4px 8px; white-space: nowrap; font-weight: 700;" onclick="applyJobLeadInBrowser('${escapeHtml(rawUrl)}', '${safeCompany}', '${safeRole}')" title="Apply in external Browser with login preserved">
+                <i data-lucide="zap" style="width: 11px; height: 11px;"></i>
+                <span>Apply</span>
+              </button>
+              <button class="btn-inspect-pill" onclick="openEmailDrawerById('lead', '${leadId}')" title="Inspect full email message">
+                <i data-lucide="mail-search" style="width: 11px; height: 11px;"></i>
+                <span>Email</span>
+              </button>
+            </div>
           </td>
         `;
         tbody.appendChild(tr);
