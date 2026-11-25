@@ -2750,11 +2750,188 @@
       }
     }
 
+    let currentChatSessionId = null;
+    let currentChatTurnId = null;
+    let activeStreamingElement = null;
+    let activeAccumulatedText = '';
+    let activeReasoningDetails = null;
+    let activeReasoningText = '';
+    let activeTurnContainer = null;
+    let lastSubmittedTask = '';
+
+    function initChatEventListeners() {
+      if (!window.jobPilotApi) return;
+
+      if (window.jobPilotApi.onChatDelta) {
+        window.jobPilotApi.onChatDelta((data) => {
+          if (data.turnId !== currentChatTurnId) return;
+          if (activeStreamingElement) {
+            activeAccumulatedText += data.text;
+            const textNode = activeStreamingElement.querySelector('.chat-stream-text') || activeStreamingElement;
+            if (textNode) {
+              textNode.innerText = activeAccumulatedText;
+            }
+            const caret = activeStreamingElement.querySelector('.chat-caret');
+            if (caret && !activeStreamingElement.contains(caret)) {
+              activeStreamingElement.appendChild(caret);
+            }
+            const scrollContainer = document.getElementById('ag-canvas-scroll');
+            if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+          }
+        });
+      }
+
+      if (window.jobPilotApi.onChatReasoning) {
+        window.jobPilotApi.onChatReasoning((data) => {
+          if (data.turnId !== currentChatTurnId) return;
+          if (!activeReasoningDetails && activeTurnContainer) {
+            activeReasoningDetails = document.createElement('details');
+            activeReasoningDetails.className = 'agent-thought-card';
+            activeReasoningDetails.open = false;
+            activeReasoningDetails.innerHTML = '<summary style="cursor: pointer; font-size: 11px; color: #94a3b8;">⚙ Reasoning Process</summary><div class="reasoning-body" style="margin-top: 6px; font-size: 11px; color: var(--text-dim); white-space: pre-wrap;"></div>';
+            activeTurnContainer.insertBefore(activeReasoningDetails, activeStreamingElement);
+          }
+          if (activeReasoningDetails) {
+            activeReasoningText += data.text;
+            const body = activeReasoningDetails.querySelector('.reasoning-body');
+            if (body) body.innerText = activeReasoningText;
+          }
+        });
+      }
+
+      if (window.jobPilotApi.onChatTool) {
+        window.jobPilotApi.onChatTool((data) => {
+          if (data.turnId !== currentChatTurnId || !activeTurnContainer) return;
+          if (data.phase === 'start') {
+            const toolCard = document.createElement('div');
+            toolCard.className = 'agent-thought-card tool-execution-card';
+            toolCard.id = `tool_card_${data.id}`;
+            toolCard.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+            toolCard.innerHTML = `
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span class="ag-pill-dot" style="background: #38bdf8; width: 6px; height: 6px;"></span>
+                  <strong style="color: #38bdf8; font-size: 11px;">Tool: ${escapeHtml(data.name)}</strong>
+                </div>
+                <span style="font-size: 10px; color: var(--text-dim);">Running...</span>
+              </div>
+            `;
+            activeTurnContainer.insertBefore(toolCard, activeStreamingElement);
+          } else if (data.phase === 'end') {
+            const card = document.getElementById(`tool_card_${data.id}`);
+            if (card) {
+              card.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+              card.innerHTML = `
+                <details style="font-size: 11px;">
+                  <summary style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #10b981;">✅ Tool: ${escapeHtml(data.name)} completed</span>
+                    <span style="font-size: 10px; color: var(--text-dim);">Details ⌄</span>
+                  </summary>
+                  <div style="margin-top: 6px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow-x: auto; font-family: var(--font-mono); font-size: 10.5px; color: #94a3b8;">
+                    <pre style="margin: 0;">${escapeHtml(JSON.stringify(data.result || {}, null, 2))}</pre>
+                  </div>
+                </details>
+              `;
+            }
+          }
+        });
+      }
+
+      if (window.jobPilotApi.onChatDone) {
+        window.jobPilotApi.onChatDone((data) => {
+          if (data.turnId !== currentChatTurnId) return;
+          if (activeStreamingElement) {
+            const caret = activeStreamingElement.querySelector('.chat-caret');
+            if (caret) caret.remove();
+            activeStreamingElement.innerHTML = formatMarkdown(activeAccumulatedText);
+          }
+          finalizeChatTurnUI();
+        });
+      }
+
+      if (window.jobPilotApi.onChatError) {
+        window.jobPilotApi.onChatError((data) => {
+          if (data.turnId !== currentChatTurnId) return;
+          if (activeStreamingElement) {
+            const caret = activeStreamingElement.querySelector('.chat-caret');
+            if (caret) caret.remove();
+            if (activeAccumulatedText) {
+              activeStreamingElement.innerHTML = formatMarkdown(activeAccumulatedText);
+            }
+          }
+          if (activeTurnContainer) {
+            const errCard = document.createElement('div');
+            errCard.className = 'agent-thought-card';
+            errCard.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+            errCard.innerHTML = `
+              <div style="color: #ef4444; font-weight: 600; margin-bottom: 4px;">⚡ Error: ${escapeHtml(data.message || 'Execution failed')}</div>
+              <div style="display: flex; gap: 6px; margin-top: 6px;">
+                ${data.retryable ? '<button class="browser-btn primary" onclick="retryLastChatTurn()" style="font-size: 10.5px; padding: 3px 8px;">🔄 Retry</button>' : ''}
+                <button class="browser-btn" onclick="switchWorkspaceTab(\'settings\')" style="font-size: 10.5px; padding: 3px 8px;">Settings</button>
+              </div>
+            `;
+            activeTurnContainer.appendChild(errCard);
+          }
+          finalizeChatTurnUI();
+        });
+      }
+
+      // Also listen to Agent Tool events from browser operator
+      if (window.jobPilotApi.onAgentToolEvent) {
+        window.jobPilotApi.onAgentToolEvent((ev) => {
+          if (!activeTurnContainer) return;
+          if (ev.type === 'start') {
+            const opCard = document.createElement('div');
+            opCard.className = 'agent-thought-card tool-execution-card';
+            opCard.id = `op_tool_${ev.id}`;
+            opCard.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+            opCard.innerHTML = `<span style="color: #38bdf8;">🌐 Operator: executing ${escapeHtml(ev.name)}...</span>`;
+            activeTurnContainer.insertBefore(opCard, activeStreamingElement);
+          } else if (ev.type === 'end') {
+            const card = document.getElementById(`op_tool_${ev.id}`);
+            if (card) {
+              card.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+              card.innerHTML = `<span style="color: #10b981;">✅ Operator: ${escapeHtml(ev.name)} succeeded</span>`;
+            }
+          }
+        });
+      }
+    }
+
+    function finalizeChatTurnUI() {
+      const runBtn = document.getElementById('btn-run-agent');
+      const abortBtn = document.getElementById('btn-abort-agent');
+      const sbTask = document.getElementById('sb-task-status');
+      if (runBtn) runBtn.disabled = false;
+      if (abortBtn) abortBtn.style.display = 'none';
+      if (sbTask) sbTask.innerHTML = '<span class="ag-pill-dot" style="width: 5px; height: 5px;"></span> <span>Idle</span>';
+      const scrollContainer = document.getElementById('ag-canvas-scroll');
+      if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
+
+    function retryLastChatTurn() {
+      if (lastSubmittedTask) {
+        document.getElementById('agent-prompt-input').value = lastSubmittedTask;
+        submitAgentTask();
+      }
+    }
+
     function stopActiveAgentExecution() {
+      if (currentChatTurnId && window.jobPilotApi && window.jobPilotApi.chatAbort) {
+        window.jobPilotApi.chatAbort(currentChatTurnId);
+      }
       if (window.jobPilotApi && window.jobPilotApi.abortAgent) {
         window.jobPilotApi.abortAgent();
       }
-      showToast('Stop command dispatched. Agent halted immediately.');
+      if (activeStreamingElement) {
+        const caret = activeStreamingElement.querySelector('.chat-caret');
+        if (caret) caret.remove();
+        if (activeAccumulatedText) {
+          activeStreamingElement.innerHTML = formatMarkdown(activeAccumulatedText);
+        }
+      }
+      finalizeChatTurnUI();
+      showToast('Stop command dispatched. Execution halted.');
       logRadarTelemetry('ABORT', 'Candidate triggered immediate stop signal.');
       const stopBtn = document.getElementById('ubb-btn-stop-agent');
       if (stopBtn) stopBtn.style.display = 'none';
@@ -2769,12 +2946,46 @@
 
     async function submitAgentTask() {
       const input = document.getElementById('agent-prompt-input');
-      const task = input.value.trim();
-      if (!task) return;
-      lastSubmittedTask = task;
-
+      const rawTask = input.value.trim();
+      if (!rawTask) return;
+      lastSubmittedTask = rawTask;
       input.value = '';
+
+      // Handle Slash Commands
+      if (rawTask === '/clear') {
+        agentStream.innerHTML = '';
+        conversationHistory = [];
+        if (window.jobPilotApi && window.jobPilotApi.chatSessionsCreate) {
+          window.jobPilotApi.chatSessionsCreate('New Conversation').then(res => {
+            if (res.ok) currentChatSessionId = res.session.id;
+          });
+        }
+        showToast('Conversation cleared. Fresh session started.');
+        return;
+      }
+
+      let task = rawTask;
+      let mode = 'chat';
+
+      if (rawTask === '/apply' || rawTask.toLowerCase().includes('apply to this job') || rawTask.toLowerCase().includes('auto apply')) {
+        task = 'Please autonomously inspect the active job application on the live browser tab and proceed to fill candidate qualifications with review gate.';
+        mode = 'agent';
+      } else if (rawTask === '/scan') {
+        task = 'Analyze the current job on the active browser tab, extract requirements, and compare fit against my master resume.';
+      } else if (rawTask === '/tailor') {
+        task = 'Tailor my master resume for the current active job description and generate the tailored 1-page PDF.';
+      } else if (rawTask === '/contacts') {
+        task = 'Extract recruiter and hiring team contacts from the active browser page.';
+      } else if (rawTask === '/ledger') {
+        task = 'Summarize my verified application records from the tracker ledger.';
+      } else if (rawTask === '/prep') {
+        task = 'Provide technical interview screening questions and key talking points for this role based on my background.';
+      } else if (rawTask.toLowerCase().startsWith('apply') || rawTask.toLowerCase().startsWith('fill')) {
+        mode = 'agent';
+      }
+
       const runBtn = document.getElementById('btn-run-agent');
+      const abortBtn = document.getElementById('btn-abort-agent');
       const sbTask = document.getElementById('sb-task-status');
 
       // Hide hero screen and show messages
@@ -2784,74 +2995,59 @@
 
       runBtn.disabled = true;
       abortBtn.style.display = 'inline-block';
-      sbTask.innerHTML = '<span class="ag-pill-dot" style="background: #f59e0b; box-shadow: 0 0 6px #f59e0b; width: 5px; height: 5px;"></span> <span style="color: #f59e0b;">Agent Executing...</span>';
+      sbTask.innerHTML = '<span class="ag-pill-dot" style="background: #f59e0b; box-shadow: 0 0 6px #f59e0b; width: 5px; height: 5px;"></span> <span style="color: #f59e0b;">Agent Streaming...</span>';
 
       // 1. Render User Command
       const userEl = document.createElement('div');
       userEl.className = 'agent-user-command';
-      userEl.innerText = task;
+      userEl.innerText = rawTask;
       agentStream.appendChild(userEl);
 
       const scrollContainer = document.getElementById('ag-canvas-scroll');
       scrollContainer.scrollTop = scrollContainer.scrollHeight;
 
       // 2. Container for Turn
-      const turnContainer = document.createElement('div');
-      turnContainer.style.display = 'flex';
-      turnContainer.style.flexDirection = 'column';
-      turnContainer.style.gap = '8px';
-      agentStream.appendChild(turnContainer);
+      activeTurnContainer = document.createElement('div');
+      activeTurnContainer.style.display = 'flex';
+      activeTurnContainer.style.flexDirection = 'column';
+      activeTurnContainer.style.gap = '8px';
+      agentStream.appendChild(activeTurnContainer);
+
+      activeStreamingElement = document.createElement('div');
+      activeStreamingElement.className = 'agent-output-block';
+      activeStreamingElement.innerHTML = '<span class="chat-stream-text"></span><span class="chat-caret"></span>';
+      activeTurnContainer.appendChild(activeStreamingElement);
+
+      activeAccumulatedText = '';
+      activeReasoningText = '';
+      activeReasoningDetails = null;
 
       try {
-        if (window.jobPilotApi && window.jobPilotApi.runAgentLoop) {
+        if (window.jobPilotApi && window.jobPilotApi.chatSend) {
+          const res = await window.jobPilotApi.chatSend({
+            sessionId: currentChatSessionId,
+            text: task,
+            mode
+          });
+          if (res.ok) {
+            currentChatTurnId = res.turnId;
+            if (res.sessionId) currentChatSessionId = res.sessionId;
+          } else {
+            finalizeChatTurnUI();
+          }
+        } else if (window.jobPilotApi && window.jobPilotApi.runAgentLoop) {
+          // Fallback to legacy non-streaming loop if needed
           const res = await window.jobPilotApi.runAgentLoop(task, conversationHistory);
           if (res.ok) {
-            if (res.reasoning) {
-              const thEl = document.createElement('details');
-              thEl.className = 'agent-thought-card';
-              thEl.open = false;
-              thEl.innerHTML = `<summary>⚙ Reasoning Process</summary><div style="margin-top: 6px;">${escapeHtml(res.reasoning)}</div>`;
-              turnContainer.appendChild(thEl);
-            }
-
-            const outEl = document.createElement('div');
-            outEl.className = 'agent-output-block';
-            outEl.innerHTML = formatMarkdown(res.reply);
-            turnContainer.appendChild(outEl);
-
-            conversationHistory.push({ role: 'user', content: task });
-            conversationHistory.push({ role: 'assistant', content: res.reply });
-          } else if (res.isGatewayOffline || (res.error && res.error.includes('ECONNREFUSED'))) {
-            const cardEl = document.createElement('div');
-            cardEl.className = 'agent-thought-card';
-            cardEl.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-            cardEl.innerHTML = `
-              <div style="color: #f59e0b; font-weight: 600; margin-bottom: 4px;">⚡ Gateway Unreachable: ${escapeHtml(res.endpoint || '127.0.0.1:20128')}</div>
-              <div style="color: var(--text-muted); font-size: 11.5px; margin-bottom: 8px;">The local model router is offline. Click Auto-Start below to boot the gateway and retry.</div>
-              <div style="display: flex; gap: 6px;">
-                <button class="browser-btn primary" onclick="autoRepairAndRetry()">⚡ Auto-Start Gateway & Retry</button>
-                <button class="browser-btn" onclick="switchWorkspaceTab('settings')">Open Config</button>
-              </div>
-            `;
-            turnContainer.appendChild(cardEl);
+            activeStreamingElement.innerHTML = formatMarkdown(res.reply);
           } else {
-            const errEl = document.createElement('div');
-            errEl.className = 'agent-thought-card';
-            errEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-            errEl.innerHTML = `<span style="color: #ef4444; font-weight: 600;">[Agent Error]:</span> ${escapeHtml(res.error)}`;
-            turnContainer.appendChild(errEl);
+            activeStreamingElement.innerHTML = `<span style="color: #ef4444;">Error: ${escapeHtml(res.error || 'Execution failed')}</span>`;
           }
+          finalizeChatTurnUI();
         }
       } catch (e) {
-        const errEl = document.createElement('div');
-        errEl.className = 'agent-thought-card';
-        errEl.innerHTML = `<span style="color: #ef4444;">[Execution Exception]: ${escapeHtml(e.message)}</span>`;
-        turnContainer.appendChild(errEl);
-      } finally {
-        runBtn.disabled = false;
-        abortBtn.style.display = 'none';
-        sbTask.innerHTML = '<span class="ag-pill-dot" style="width: 5px; height: 5px;"></span> <span>Idle</span>';
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        activeStreamingElement.innerHTML = `<span style="color: #ef4444;">[Execution Exception]: ${escapeHtml(e.message)}</span>`;
+        finalizeChatTurnUI();
       }
     }
 
@@ -6520,6 +6716,7 @@
     loadStats();
     loadSettingsToUI();
     initPortalDropdown();
+    initChatEventListeners();
 
     if (webview) {
       webview.addEventListener('did-navigate', (e) => {

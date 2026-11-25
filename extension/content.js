@@ -1886,9 +1886,334 @@
     }
   }
 
+  // =====================================================================
+  // PAGE ADAPTER (GENERIC SEMANTIC OPERATOR ENGINE)
+  // =====================================================================
+  let pageDomRevision = 1;
+  const elementRefMap = new Map();
+
+  const pageMutationObserver = new MutationObserver(() => {
+    pageDomRevision++;
+  });
+  try {
+    pageMutationObserver.observe(document.documentElement || document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden', 'disabled']
+    });
+  } catch (e) {}
+
+  function getElementLabel(el) {
+    if (el.getAttribute('aria-label')) return el.getAttribute('aria-label').trim();
+    if (el.getAttribute('placeholder')) return el.getAttribute('placeholder').trim();
+    if (el.labels && el.labels.length > 0) {
+      const txt = Array.from(el.labels).map(l => l.innerText.trim()).filter(Boolean).join(' ');
+      if (txt) return txt;
+    }
+    if (el.id) {
+      const lbl = document.querySelector(`label[for="${el.id}"]`);
+      if (lbl && lbl.innerText.trim()) return lbl.innerText.trim();
+    }
+    const parentLabel = el.closest('label');
+    if (parentLabel && parentLabel.innerText.trim()) {
+      return parentLabel.innerText.trim();
+    }
+    const prev = el.previousElementSibling;
+    if (prev && (prev.tagName === 'LABEL' || prev.tagName === 'SPAN' || prev.tagName === 'P')) {
+      const pTxt = prev.innerText.trim();
+      if (pTxt && pTxt.length < 60) return pTxt;
+    }
+    if (el.getAttribute('name')) return el.getAttribute('name');
+    if (el.getAttribute('title')) return el.getAttribute('title');
+    return el.innerText ? el.innerText.trim().slice(0, 40) : '';
+  }
+
+  function isElementVisible(el) {
+    if (!el || !el.isConnected) return false;
+    if (el.hasAttribute('aria-hidden') && el.getAttribute('aria-hidden') === 'true') return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0 && el.tagName !== 'INPUT') return false;
+    return true;
+  }
+
+  function detectCaptchaOnPage() {
+    const selectors = [
+      '.g-recaptcha',
+      '.h-captcha',
+      '.cf-turnstile',
+      'iframe[src*="recaptcha"]',
+      'iframe[src*="hcaptcha"]',
+      'iframe[src*="challenges.cloudflare.com"]',
+      '[data-sitekey]'
+    ];
+    for (const sel of selectors) {
+      const found = document.querySelector(sel);
+      if (found && isElementVisible(found)) {
+        return sel.replace(/[.\[\]]/g, '');
+      }
+    }
+    return null;
+  }
+
+  function detectLoginWallOnPage() {
+    const pw = document.querySelector('input[type="password"]');
+    if (pw && isElementVisible(pw)) {
+      const text = document.body.innerText.toLowerCase();
+      if (text.includes('sign in') || text.includes('log in') || text.includes('create account') || text.includes('welcome back')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function getPageAlerts() {
+    const alertEls = document.querySelectorAll('[role="alert"], .alert, .error-message, .invalid-feedback');
+    const alerts = [];
+    alertEls.forEach(a => {
+      if (isElementVisible(a)) {
+        const txt = a.innerText.trim();
+        if (txt && txt.length < 150) alerts.push(txt);
+      }
+    });
+    return alerts;
+  }
+
+  function executePageObserve(maxElements = 200) {
+    elementRefMap.clear();
+    let refIndex = 1;
+
+    const interactiveSelectors = [
+      'input:not([type="hidden"])',
+      'select',
+      'textarea',
+      'button',
+      'a[role="button"]',
+      '[role="checkbox"]',
+      '[role="radio"]',
+      '[role="button"]'
+    ];
+
+    const elements = Array.from(document.querySelectorAll(interactiveSelectors.join(',')))
+      .filter(isElementVisible)
+      .slice(0, maxElements);
+
+    const lines = [];
+    lines.push(`URL: ${window.location.href}`);
+    lines.push(`TITLE: ${document.title}`);
+
+    const meta = extractJobMetadata();
+    if (meta.company || meta.role) {
+      lines.push(`CONTEXT: ${meta.company || 'Unknown Company'} | ${meta.role || 'Job'}`);
+    }
+
+    const captcha = detectCaptchaOnPage();
+    lines.push(`CAPTCHA: ${captcha ? 'detected (' + captcha + ')' : 'none'}`);
+
+    const loginWall = detectLoginWallOnPage();
+    lines.push(`LOGIN: ${loginWall ? 'detected (sign in required)' : 'none'}`);
+
+    const alerts = getPageAlerts();
+    if (alerts.length > 0) {
+      lines.push(`ALERTS: "${alerts.join('; ')}"`);
+    }
+
+    lines.push('');
+    lines.push('INTERACTIVE FORM ELEMENTS:');
+
+    elements.forEach(el => {
+      const ref = `e${refIndex++}`;
+      el.setAttribute('data-jp-ref', ref);
+      elementRefMap.set(ref, el);
+
+      const tag = el.tagName.toLowerCase();
+      const type = (el.type || '').toLowerCase();
+      const label = getElementLabel(el).replace(/[\r\n\t]+/g, ' ').slice(0, 60);
+      const isReq = el.required || el.getAttribute('aria-required') === 'true' || label.includes('*');
+      const isDisabled = el.disabled || el.getAttribute('aria-disabled') === 'true';
+
+      let details = `[${ref}] `;
+      if (tag === 'input') {
+        if (type === 'checkbox' || type === 'radio') {
+          details += `${type} "${label}" ${el.checked ? 'checked' : 'unchecked'}`;
+        } else if (type === 'file') {
+          details += `file "${label}" (upload)`;
+        } else {
+          const val = el.value ? ` val="${el.value.slice(0, 40)}"` : '';
+          details += `${type || 'text'} "${label}"${val}`;
+        }
+      } else if (tag === 'select') {
+        const selectedOpt = el.options[el.selectedIndex]?.text || '';
+        const val = selectedOpt ? ` val="${selectedOpt.slice(0, 30)}"` : '';
+        details += `select "${label}"${val}`;
+      } else if (tag === 'textarea') {
+        const val = el.value ? ` val="${el.value.slice(0, 40)}"` : '';
+        details += `textarea "${label}"${val}`;
+      } else if (tag === 'button' || el.getAttribute('role') === 'button') {
+        details += `button "${(el.innerText || el.value || label).slice(0, 40)}"`;
+      } else {
+        details += `${tag} "${label}"`;
+      }
+
+      if (isReq) details += ' req';
+      if (isDisabled) details += ' disabled';
+      lines.push('  ' + details);
+    });
+
+    const snapshot = lines.join('\n');
+    return {
+      ok: true,
+      snapshot,
+      revision: pageDomRevision,
+      captchaDetected: !!captcha,
+      captchaProvider: captcha,
+      loginWall,
+      alerts,
+      fieldCount: elements.length,
+      url: window.location.href,
+      title: document.title
+    };
+  }
+
+  function simulateRealisticClick(el) {
+    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  }
+
+  function simulateRealisticType(el, text) {
+    el.focus();
+    el.value = text;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.blur();
+  }
+
+  function executePageAct(params = {}) {
+    const ref = params.ref;
+    const op = params.op || 'click';
+    const value = params.value || '';
+
+    if (!ref) return { ok: false, error: 'ref is required' };
+    const el = elementRefMap.get(ref);
+    if (!el || !el.isConnected) {
+      return { ok: false, error: 'stale_ref', message: 'Element not found or detached from DOM' };
+    }
+
+    try {
+      el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    } catch (e) {}
+
+    const tag = el.tagName.toLowerCase();
+    const type = (el.type || '').toLowerCase();
+
+    if (tag === 'input' && type === 'file') {
+      let selector = el.id ? `#${el.id}` : (el.name ? `input[name="${el.name}"]` : 'input[type="file"]');
+      return { ok: true, needsDebugger: true, selector, filePath: value };
+    }
+
+    if (op === 'click') {
+      simulateRealisticClick(el);
+      return { ok: true, changed: true, op: 'click', ref };
+    }
+
+    if (op === 'type') {
+      simulateRealisticType(el, value);
+      return { ok: true, changed: true, op: 'type', ref, value };
+    }
+
+    if (op === 'clear') {
+      simulateRealisticType(el, '');
+      return { ok: true, changed: true, op: 'clear', ref };
+    }
+
+    if (op === 'check') {
+      if (!el.checked) {
+        simulateRealisticClick(el);
+        el.checked = true;
+      }
+      return { ok: true, changed: true, checked: true, ref };
+    }
+
+    if (op === 'uncheck') {
+      if (el.checked) {
+        simulateRealisticClick(el);
+        el.checked = false;
+      }
+      return { ok: true, changed: true, checked: false, ref };
+    }
+
+    if (op === 'select') {
+      if (tag === 'select') {
+        const valStr = String(value || '').toLowerCase().trim();
+        let matchedIndex = -1;
+        for (let i = 0; i < el.options.length; i++) {
+          const opt = el.options[i];
+          if (opt.text.toLowerCase().includes(valStr) || opt.value.toLowerCase().includes(valStr)) {
+            matchedIndex = i;
+            break;
+          }
+        }
+        if (matchedIndex !== -1) {
+          el.selectedIndex = matchedIndex;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          return { ok: true, changed: true, selectedIndex: matchedIndex, text: el.options[matchedIndex].text };
+        }
+      }
+      return { ok: false, error: 'Option matching value not found in select element' };
+    }
+
+    if (op === 'scroll_into_view') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return { ok: true, ref };
+    }
+
+    if (op === 'submit') {
+      simulateRealisticClick(el);
+      setTimeout(syncJobToDesktop, 1500);
+      return { ok: true, submitted: true };
+    }
+
+    return { ok: false, error: `Unknown op: ${op}` };
+  }
+
   // Listen for commands dispatched from desktop agent via background worker
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'abort' || request.action === 'stop') {
+    if (request.action === 'observe') {
+      const obs = executePageObserve(request.params?.maxElements || 200);
+      sendResponse(obs);
+      return true;
+    } else if (request.action === 'act') {
+      const actRes = executePageAct(request.params || {});
+      sendResponse(actRes);
+      return true;
+    } else if (request.action === 'wait_for') {
+      const cond = request.params?.condition || '';
+      const timeoutMs = request.params?.timeoutMs || 5000;
+      const start = Date.now();
+      const interval = setInterval(() => {
+        const found = document.querySelector(cond) || (document.body.innerText.includes(cond) ? document.body : null);
+        if (found || Date.now() - start > timeoutMs) {
+          clearInterval(interval);
+          sendResponse({ ok: !!found, matched: !!found, elapsedMs: Date.now() - start });
+        }
+      }, 200);
+      return true;
+    } else if (request.action === 'extract') {
+      const meta = extractJobMetadata();
+      sendResponse({ ok: true, data: meta });
+      return true;
+    } else if (request.action === 'read_dom') {
+      const sel = request.params?.query || 'body';
+      const el = document.querySelector(sel);
+      sendResponse({ ok: true, text: el ? el.innerText.slice(0, 5000) : '' });
+      return true;
+    } else if (request.action === 'abort' || request.action === 'stop') {
       stopAgent('Remote abort command from desktop');
       sendResponse({ status: 'aborted' });
       return true;

@@ -134,5 +134,41 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
     const handler = (event, data) => callback(data);
     ipcRenderer.on('open-company-talent-graph', handler);
     return () => ipcRenderer.removeListener('open-company-talent-graph', handler);
+  },
+
+  // Copilot Streaming Chat APIs
+  chatSend: (payload) => ipcRenderer.invoke('chat:send', payload),
+  chatAbort: (turnId) => ipcRenderer.invoke('chat:abort', { turnId }),
+  chatSessionsList: () => ipcRenderer.invoke('chat:sessions:list'),
+  chatSessionsCreate: (title) => ipcRenderer.invoke('chat:sessions:create', { title }),
+  chatSessionsLoad: (sessionId) => ipcRenderer.invoke('chat:sessions:load', { sessionId }),
+  chatSessionsRename: (sessionId, title) => ipcRenderer.invoke('chat:sessions:rename', { sessionId, title }),
+  chatSessionsDelete: (sessionId) => ipcRenderer.invoke('chat:sessions:delete', { sessionId }),
+  chatModels: () => ipcRenderer.invoke('chat:models'),
+
+  onChatDelta: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('chat:delta', handler);
+    return () => ipcRenderer.removeListener('chat:delta', handler);
+  },
+  onChatReasoning: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('chat:reasoning', handler);
+    return () => ipcRenderer.removeListener('chat:reasoning', handler);
+  },
+  onChatTool: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('chat:tool', handler);
+    return () => ipcRenderer.removeListener('chat:tool', handler);
+  },
+  onChatDone: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('chat:done', handler);
+    return () => ipcRenderer.removeListener('chat:done', handler);
+  },
+  onChatError: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('chat:error', handler);
+    return () => ipcRenderer.removeListener('chat:error', handler);
   }
 });

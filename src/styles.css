@@ -5028,3 +5028,26 @@ body {
   border-color: #38bdf8;
   color: #fff;
 }
+
+/* Copilot Streaming Caret & Tool Cards */
+.chat-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background-color: var(--accent, #38bdf8);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink-caret 1s steps(1) infinite;
+}
+
+@keyframes blink-caret {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.tool-execution-card {
+  transition: all 0.2s ease;
+  background: #0d0e15;
+  border-radius: 6px;
+  padding: 8px 10px;
+}

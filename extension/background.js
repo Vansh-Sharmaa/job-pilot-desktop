@@ -57,17 +57,21 @@ function setDisconnectedState() {
   chrome.action.setBadgeBackgroundColor({ color: '#64748b' });
 }
 
+let isSessionActive = false;
+
 // Check if desktop agent dispatched a command to the browser
 async function pollPendingCommands() {
   try {
     const token = await getBridgeToken();
-    const res = await fetch(`${BRIDGE_URL}/api/pending-command`, {
+    const waitParam = isSessionActive ? '?wait=1' : '';
+    const res = await fetch(`${BRIDGE_URL}/api/pending-command${waitParam}`, {
       headers: { 'X-JobPilot-Token': token },
       cache: 'no-store'
     });
     if (res.ok) {
       const data = await res.json();
       if (data.command) {
+        isSessionActive = true;
         executeCommandInActiveTab(data.command);
       }
     }
@@ -123,9 +127,15 @@ async function executeCommandInActiveTab(cmd) {
   const targetUrl = cmd.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
 
   if (targetUrl.toLowerCase().includes('linkedin.com')) {
-    console.warn('[JOBPILOT SAFETY] LinkedIn automation permanently blocked to protect user account from bans.');
-    sendTelemetry('SAFETY', 'LinkedIn automation blocked to protect user account from bans.');
-    return;
+    const readOnlyActions = ['observe', 'extract', 'get_contacts', 'screenshot', 'read_dom'];
+    if (!readOnlyActions.includes(cmd.action)) {
+      console.warn('[JOBPILOT SAFETY] LinkedIn write automation blocked to protect user account from bans.');
+      sendTelemetry('SAFETY', 'LinkedIn write automation blocked to protect user account from bans.');
+      if (cmd.id) {
+        reportCommandResult(cmd.action, { ok: false, error: 'LinkedIn write automation permanently blocked for account safety.' }, cmd.id, 0);
+      }
+      return;
+    }
   }
 
   activeAgentCmd = cmd;
@@ -304,13 +314,37 @@ async function dispatchCommandToTab(tabOrId, cmd) {
 
   agentTabIds.add(tabId);
   activeAgentCmd = cmd;
+  const startTime = Date.now();
+
+  if (cmd.action === 'screenshot') {
+    chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+      const err = chrome.runtime.lastError;
+      const elapsed = Date.now() - startTime;
+      if (err || !dataUrl) {
+        reportCommandResult(cmd.action, { ok: false, error: err?.message || 'Screenshot failed' }, cmd.id, elapsed);
+      } else {
+        reportCommandResult(cmd.action, { ok: true, dataUrl }, cmd.id, elapsed);
+      }
+    });
+    return;
+  }
+
+  if (cmd.action === 'upload') {
+    uploadFileViaDebugger(tabId, cmd.params?.selector || 'input[type="file"]', cmd.params?.filePath).then(upRes => {
+      reportCommandResult(cmd.action, upRes, cmd.id, Date.now() - startTime);
+    });
+    return;
+  }
 
   const sendMsg = () => {
     chrome.tabs.sendMessage(tabId, {
+      id: cmd.id,
       action: cmd.action,
+      params: cmd.params || {},
       candidate: candidateProfile,
       meta: cmd.meta || {}
     }, async (response) => {
+      const elapsed = Date.now() - startTime;
       if (chrome.runtime.lastError) {
         // Tab might not have content script loaded. Inject dynamically only on non-internal URLs
         try {
@@ -326,19 +360,33 @@ async function dispatchCommandToTab(tabOrId, cmd) {
             });
             setTimeout(() => {
               chrome.tabs.sendMessage(tabId, {
+                id: cmd.id,
                 action: cmd.action,
+                params: cmd.params || {},
                 candidate: candidateProfile,
                 meta: cmd.meta || {}
-              }, (retryRes) => {
-                reportCommandResult(cmd.action, retryRes);
+              }, async (retryRes) => {
+                if (retryRes && retryRes.needsDebugger) {
+                  const upRes = await uploadFileViaDebugger(tabId, retryRes.selector, retryRes.filePath);
+                  reportCommandResult(cmd.action, upRes, cmd.id, Date.now() - startTime);
+                } else {
+                  reportCommandResult(cmd.action, retryRes, cmd.id, Date.now() - startTime);
+                }
               });
             }, 500);
+          } else {
+            reportCommandResult(cmd.action, { ok: false, error: 'Internal browser page' }, cmd.id, elapsed);
           }
         } catch (injectErr) {
-          reportCommandResult(cmd.action, { status: 'error', error: injectErr.message });
+          reportCommandResult(cmd.action, { ok: false, error: injectErr.message }, cmd.id, elapsed);
         }
       } else {
-        reportCommandResult(cmd.action, response);
+        if (response && response.needsDebugger) {
+          const upRes = await uploadFileViaDebugger(tabId, response.selector, response.filePath);
+          reportCommandResult(cmd.action, upRes, cmd.id, Date.now() - startTime);
+        } else {
+          reportCommandResult(cmd.action, response, cmd.id, elapsed);
+        }
       }
     });
   };
@@ -346,16 +394,56 @@ async function dispatchCommandToTab(tabOrId, cmd) {
   sendMsg();
 }
 
-async function reportCommandResult(action, response) {
+async function uploadFileViaDebugger(tabId, selector, filePath) {
+  return new Promise((resolve) => {
+    if (!chrome.debugger) {
+      resolve({ ok: false, error: 'Debugger permission not available' });
+      return;
+    }
+    chrome.debugger.attach({ tabId }, '1.3', async () => {
+      if (chrome.runtime.lastError) {
+        resolve({ ok: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      try {
+        await chrome.debugger.sendCommand({ tabId }, 'DOM.enable');
+        const doc = await chrome.debugger.sendCommand({ tabId }, 'DOM.getDocument');
+        const node = await chrome.debugger.sendCommand({ tabId }, 'DOM.querySelector', {
+          nodeId: doc.root.nodeId,
+          selector: selector || 'input[type="file"]'
+        });
+        if (node && node.nodeId) {
+          await chrome.debugger.sendCommand({ tabId }, 'DOM.setFileInputFiles', {
+            files: [filePath || 'Vansh_Sharma_Resume.pdf'],
+            nodeId: node.nodeId
+          });
+          chrome.debugger.detach({ tabId }).catch(() => {});
+          resolve({ ok: true, uploaded: true, files: [filePath] });
+        } else {
+          chrome.debugger.detach({ tabId }).catch(() => {});
+          resolve({ ok: false, error: 'File input element not found in DOM' });
+        }
+      } catch (e) {
+        chrome.debugger.detach({ tabId }).catch(() => {});
+        resolve({ ok: false, error: e.message });
+      }
+    });
+  });
+}
+
+async function reportCommandResult(action, response, id = null, elapsedMs = 0) {
   try {
     const token = await getBridgeToken();
+    const ok = response ? (response.ok !== false && response.status !== 'error') : false;
+    const error = response?.error || (response?.status === 'error' ? response.message : null);
+    const data = response?.data !== undefined ? response.data : response;
     await fetch(`${BRIDGE_URL}/api/command-result`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-JobPilot-Token': token
       },
-      body: JSON.stringify({ action, response })
+      body: JSON.stringify({ id, action, ok, data, error, elapsedMs, response })
     });
   } catch (e) {}
 }
