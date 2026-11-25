@@ -2407,16 +2407,29 @@
         const isRadarTab = document.getElementById('ws-radar')?.classList.contains('active-ws');
         const webviewEl = document.getElementById('workspace-webview');
         const currentWebviewUrl = (webviewEl && typeof webviewEl.getURL === 'function') ? webviewEl.getURL() : '';
-        const targetUrl = isRadarTab ? (portal.url || 'https://www.hirist.tech/search/ai-engineer') : ((currentWebviewUrl && currentWebviewUrl.startsWith('http')) ? currentWebviewUrl : (portal.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India'));
-        const action = 'start_batch_apply';
+        let targetUrl = isRadarTab ? (portal.url || 'https://www.hirist.tech/search/ai-engineer') : ((currentWebviewUrl && currentWebviewUrl.startsWith('http')) ? currentWebviewUrl : (portal.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India'));
+        let action = 'start_batch_apply';
         const quota = portal.quota || 20;
+
+        // Prefer direct high ATS match job if available for this portal
+        const matchedLead = (typeof allJobLeads !== 'undefined' && Array.isArray(allJobLeads))
+          ? allJobLeads.find(l => (l.platform || '').toLowerCase().includes(portal.id) || (l.platform || '').toLowerCase().includes(portal.name.toLowerCase()))
+          : null;
+        if (matchedLead && matchedLead.url) {
+          targetUrl = matchedLead.url;
+          action = 'start_autonomous_apply';
+        }
+
+        // Switch to Live Tab Agent view to show OpenCode terminal logs in real time
+        activateOpenCodeAgentView(portal.name, targetUrl, quota);
+        switchWorkspaceTab('live-agent');
 
         if (!extStatus || !extStatus.connected) {
           showToast('Launching Chrome with JobPilot Autonomous Agent...');
           logRadarTelemetry('ENGINE:CHROME', `Auto-launching Chrome with JobPilot autonomous agent loaded on ${portal.name}...`);
 
           if (window.jobPilotApi && window.jobPilotApi.launchChromeAgent) {
-            await window.jobPilotApi.launchChromeAgent({ url: targetUrl, action: action, quota: quota });
+            await window.jobPilotApi.launchChromeAgent({ url: targetUrl, action: action, quota: quota, meta: { portal: portal.name, quota: quota, url: targetUrl, company: matchedLead?.company, role: matchedLead?.role } });
             logRadarTelemetry('SUCCESS', `Chrome window launched with JobPilot agent. Autonomous apply queued.`);
           }
 
@@ -2425,15 +2438,15 @@
           return;
         }
 
-        showToast('Initiating Autonomous Auto-Apply in personal Chrome browser...');
-        logRadarTelemetry('ENGINE:CHROME', `Dispatching autonomous tab agent to active Chrome tab on ${portal.name}...`);
+        showToast('Initiating Autonomous Auto-Apply in personal Brave browser...');
+        logRadarTelemetry('ENGINE:CHROME', `Dispatching autonomous tab agent to active Brave tab on ${portal.name}...`);
 
         setPortalApplyingState(activeRadarPortalId, true, { company: portal.name, role: 'AI Role' });
 
         try {
           if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
-            await window.jobPilotApi.sendExtensionCommand({ action: action, url: targetUrl, quota: quota, meta: { portal: portal.name, quota: quota, url: targetUrl } });
-            logRadarTelemetry('AGENT', 'Autonomous agent taking over Chrome tab: Vansh Sharma (MCA AI 2026).');
+            await window.jobPilotApi.sendExtensionCommand({ action: action, url: targetUrl, quota: quota, meta: { portal: portal.name, quota: quota, url: targetUrl, company: matchedLead?.company, role: matchedLead?.role } });
+            logRadarTelemetry('AGENT', 'Autonomous agent taking over Brave tab: Vansh Sharma (MCA AI 2026).');
             logRadarTelemetry('AGENT', 'Scanning DOM for Easy Apply triggers and form fields.');
             logRadarTelemetry('SUCCESS', `Autonomous apply dispatched to active ${portal.name} tab.`);
 

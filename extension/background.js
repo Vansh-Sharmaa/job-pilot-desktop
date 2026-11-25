@@ -266,37 +266,56 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   agentTabIds.delete(tabId);
 });
 
-async function dispatchCommandToTab(tab, cmd) {
-  if (!tab || !tab.id) return;
-  agentTabIds.add(tab.id);
+async function dispatchCommandToTab(tabOrId, cmd) {
+  const tabId = (typeof tabOrId === 'object') ? tabOrId.id : tabOrId;
+  if (!tabId) return;
+
+  let freshTab = null;
+  try {
+    freshTab = await chrome.tabs.get(tabId);
+  } catch (e) {
+    return;
+  }
+
+  if (!freshTab || !freshTab.url || isInternalBrowserUrl(freshTab.url)) {
+    if (cmd && cmd.url && !isInternalBrowserUrl(cmd.url)) {
+      chrome.tabs.update(tabId, { url: cmd.url, active: true });
+    }
+    return;
+  }
+
+  agentTabIds.add(tabId);
   activeAgentCmd = cmd;
 
   const sendMsg = () => {
-    chrome.tabs.sendMessage(tab.id, {
+    chrome.tabs.sendMessage(tabId, {
       action: cmd.action,
       candidate: candidateProfile,
       meta: cmd.meta || {}
     }, async (response) => {
       if (chrome.runtime.lastError) {
-        // Tab might not have content script loaded. Inject dynamically
+        // Tab might not have content script loaded. Inject dynamically only on non-internal URLs
         try {
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id, allFrames: true },
-            files: ['content.js']
-          });
-          await chrome.scripting.insertCSS({
-            target: { tabId: tab.id },
-            files: ['content.css']
-          });
-          setTimeout(() => {
-            chrome.tabs.sendMessage(tab.id, {
-              action: cmd.action,
-              candidate: candidateProfile,
-              meta: cmd.meta || {}
-            }, (retryRes) => {
-              reportCommandResult(cmd.action, retryRes);
+          const verifyTab = await chrome.tabs.get(tabId);
+          if (verifyTab && verifyTab.url && !isInternalBrowserUrl(verifyTab.url)) {
+            await chrome.scripting.executeScript({
+              target: { tabId: tabId, allFrames: true },
+              files: ['content.js']
             });
-          }, 500);
+            await chrome.scripting.insertCSS({
+              target: { tabId: tabId },
+              files: ['content.css']
+            });
+            setTimeout(() => {
+              chrome.tabs.sendMessage(tabId, {
+                action: cmd.action,
+                candidate: candidateProfile,
+                meta: cmd.meta || {}
+              }, (retryRes) => {
+                reportCommandResult(cmd.action, retryRes);
+              });
+            }, 500);
+          }
         } catch (injectErr) {
           reportCommandResult(cmd.action, { status: 'error', error: injectErr.message });
         }

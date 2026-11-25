@@ -568,6 +568,17 @@
         'div.jobsearch-SerpJobCard',
         'a[id^="job_"]'
       ];
+    } else if (host.includes('foundit')) {
+      selectors = [
+        '[class*="srpResultCard"]',
+        '[class*="cardContainer"]',
+        '[class*="cardWrapper"]',
+        '[class*="jobTuple"]',
+        '[class*="job-card"]',
+        '[class*="jobCard"]',
+        'a[href*="/job/"]',
+        'a[href*="/seeker/job-details"]'
+      ];
     } else if (host.includes('internshala')) {
       selectors = [
         '.individual_internship',
@@ -617,9 +628,62 @@
           cards.push(card);
         }
       }
-      if (cards.length >= 3) break;
+      if (cards.length >= 25) break;
     }
     return cards;
+  }
+
+  function isApplicationFormInput(el) {
+    if (!el || el.offsetParent === null) return false;
+    const type = (el.type || '').toLowerCase();
+    if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'reset') return false;
+
+    // Reject search inputs, omnibars, and portal filter inputs
+    const iden = (el.name + ' ' + el.id + ' ' + el.placeholder + ' ' + (el.getAttribute('aria-label') || '') + ' ' + el.className).toLowerCase();
+    if (
+      type === 'search' ||
+      iden.includes('search') ||
+      iden.includes('query') ||
+      iden.includes('keyword') ||
+      iden.includes('location') ||
+      iden.includes('filter') ||
+      iden.includes('navbar') ||
+      iden.includes('header')
+    ) {
+      return false;
+    }
+
+    // Accept if inside question container or application form
+    const container = el.closest('fieldset, [data-testid*="question"], .ia-Questions-item, form[class*="apply" i], [class*="application" i], .smartapply, [class*="modal" i]');
+    if (container) return true;
+
+    // Accept recognized candidate form fields
+    if (
+      type === 'radio' ||
+      type === 'checkbox' ||
+      iden.includes('email') ||
+      iden.includes('phone') ||
+      iden.includes('first') ||
+      iden.includes('last') ||
+      iden.includes('full name') ||
+      iden.includes('resume') ||
+      iden.includes('cover') ||
+      iden.includes('pitch') ||
+      iden.includes('degree') ||
+      iden.includes('college') ||
+      iden.includes('university') ||
+      iden.includes('experience') ||
+      iden.includes('citizen') ||
+      iden.includes('authorized') ||
+      iden.includes('sponsorship') ||
+      iden.includes('notice') ||
+      iden.includes('salary') ||
+      iden.includes('ctc')
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   function findApplyButtonInCurrentContext() {
@@ -702,14 +766,20 @@
   // Wait up to timeoutMs for interactive application form fields, an Apply trigger button, or cards to mount
   async function waitForApplicationElements(timeoutMs = 12000) {
     const startTime = Date.now();
+    const url = window.location.href.toLowerCase();
+    const isSearchFeed = url.includes('/srp/') || url.includes('/search') || url.includes('?q=') || url.includes('&q=') || url.includes('query=');
+
     while (Date.now() - startTime < timeoutMs) {
       if (!isAgentRunning || agentAbortRequested) return { status: 'aborted' };
 
-      // 1. Check if application form fields are visible and ready
-      const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea, [role="radiogroup"], fieldset input'))
-        .filter(el => el.offsetParent !== null);
-      if (inputs.length >= 2) {
-        return { status: 'form_ready', inputs };
+      // 1. If URL or DOM indicates search feed: prioritize feed detection and do NOT treat search boxes as forms
+      const cards = findJobCardsOnPage();
+      if (isSearchFeed || (cards && cards.length >= 2)) {
+        if (cards && cards.length >= 1) {
+          return { status: 'feed_ready', cards };
+        }
+        await sleep(400);
+        continue;
       }
 
       // 2. Check if an Apply trigger button is visible
@@ -718,10 +788,11 @@
         return { status: 'apply_ready', button: applyBtn };
       }
 
-      // 3. Check if we are on a feed of job cards
-      const cards = findJobCardsOnPage();
-      if (cards && cards.length >= 2) {
-        return { status: 'feed_ready', cards };
+      // 3. Check if real candidate application form fields are visible and ready
+      const appInputs = Array.from(document.querySelectorAll('input, select, textarea, [role="radiogroup"], fieldset input'))
+        .filter(isApplicationFormInput);
+      if (appInputs.length >= 1) {
+        return { status: 'form_ready', inputs: appInputs };
       }
 
       // 4. Check if a loading spinner is active
@@ -734,15 +805,15 @@
     }
 
     // Fallback: check one last time
-    const finalInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea'))
-      .filter(el => el.offsetParent !== null);
-    if (finalInputs.length > 0) return { status: 'form_ready', inputs: finalInputs };
+    const finalCards = findJobCardsOnPage();
+    if (finalCards && finalCards.length > 0) return { status: 'feed_ready', cards: finalCards };
 
     const finalApplyBtn = findApplyButtonInCurrentContext();
     if (finalApplyBtn) return { status: 'apply_ready', button: finalApplyBtn };
 
-    const finalCards = findJobCardsOnPage();
-    if (finalCards && finalCards.length > 0) return { status: 'feed_ready', cards: finalCards };
+    const finalInputs = Array.from(document.querySelectorAll('input, select, textarea'))
+      .filter(isApplicationFormInput);
+    if (finalInputs.length > 0) return { status: 'form_ready', inputs: finalInputs };
 
     return { status: 'timeout' };
   }
@@ -767,7 +838,7 @@
 
       // Foundit
       if (!directUrl && host.includes('foundit')) {
-        const fLink = card.querySelector('a[href*="/job/"]');
+        const fLink = card.querySelector('a[href*="/job/"], a[href*="/seeker/job-details"], a[href*="foundit.in"]');
         if (fLink && fLink.href) directUrl = fLink.href;
       }
 
@@ -795,10 +866,23 @@
         if (uLink && uLink.href) directUrl = uLink.href;
       }
 
-      if (directUrl && !seen.has(directUrl)) {
-        seen.add(directUrl);
-        const cardMeta = extractActiveJobDetails(card);
-        directList.push({ url: directUrl, meta: cardMeta });
+      // Fallback: any valid anchor inside card
+      if (!directUrl) {
+        const anyA = card.querySelector('a[href]');
+        if (anyA && anyA.href && anyA.href.startsWith('http') && !anyA.href.includes('login') && !anyA.href.includes('signin') && !anyA.href.includes('/search')) {
+          directUrl = anyA.href;
+        }
+      }
+
+      if (directUrl) {
+        if (directUrl.startsWith('/')) {
+          directUrl = `https://${window.location.host}${directUrl}`;
+        }
+        if (!seen.has(directUrl)) {
+          seen.add(directUrl);
+          const cardMeta = extractActiveJobDetails(card);
+          directList.push({ url: directUrl, meta: cardMeta });
+        }
       }
     }
     return directList;
@@ -870,10 +954,19 @@
       return;
     }
 
-    const cards = findJobCardsOnPage();
+    updateAgentHud(`Waiting for ${meta.portal || 'portal'} listings to render...`);
+    let cards = [];
+    const waitStart = Date.now();
+    while (Date.now() - waitStart < 10000) {
+      if (!isAgentRunning || agentAbortRequested) return;
+      cards = findJobCardsOnPage();
+      if (cards && cards.length >= 1) break;
+      await sleep(400);
+    }
+
     if (!cards || cards.length === 0) {
       updateAgentHud('No listing cards detected on current view. Scanning for single application...');
-      sendTelemetry('INFO', 'No listing cards found. Falling back to single-page apply.');
+      sendTelemetry('INFO', 'No listing cards found on feed. Falling back to single-page apply.');
       isAgentRunning = false;
       return runAutonomousApplyAgent();
     }
