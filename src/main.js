@@ -2215,8 +2215,12 @@ ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_
       pendingExtensionCommands.push({ action, url: targetUrl, quota });
     }
 
+    const profileDir = path.join(process.env.TEMP || process.env.TMP || 'C:\\Windows\\Temp', 'jobpilot-browser-profile');
     const args = [
       `--load-extension=${extPath}`,
+      `--user-data-dir=${profileDir}`,
+      '--no-first-run',
+      '--no-default-browser-check',
       targetUrl
     ];
 
