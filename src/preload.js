@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
   // Job Leads & Recommendation Engine
   getJobLeads: () => ipcRenderer.invoke('get-job-leads'),
   syncJobLeads: () => ipcRenderer.invoke('sync-job-leads'),
+  searchResumeJobs: () => ipcRenderer.invoke('search-resume-jobs'),
   parseJobLeadEmail: (text, account) => ipcRenderer.invoke('parse-job-lead-email', { text, account }),
 
   // Window Frame Controls

@@ -761,7 +761,11 @@
                 </div>
               </div>
               <div class="interview-action-btns">
-                                <button class="chat-toggle-pill" id="btn-toggle-chat-leads" onclick="toggleChatPaneSplit()" title="Toggle full-width workspace mode without horizontal scrolling">
+                <button class="browser-btn primary" id="btn-search-matching-jobs" onclick="searchResumeMatchingJobs()" style="background: linear-gradient(135deg, #2563eb, #7c3aed); border-color: #8b5cf6; color: #fff; font-weight: 700;" title="Analyze Vansh Sharma resume, search fresher openings on portals, and rank by highest ATS fit">
+                  <i data-lucide="zap" class="lucide-icon-sm"></i>
+                  <span id="btn-search-matching-jobs-label">🎯 Search Jobs Matching Resume (ATS)</span>
+                </button>
+                <button class="chat-toggle-pill" id="btn-toggle-chat-leads" onclick="toggleChatPaneSplit()" title="Toggle full-width workspace mode without horizontal scrolling">
                   <i data-lucide="maximize-2" class="lucide-icon-sm"></i>
                   <span class="chat-toggle-label">Full Width Mode</span>
                 </button>
@@ -4011,7 +4015,12 @@
           </td>
           <td>
             <div><span class="p-tag" style="font-size: 9.5px;">${safePlatform}</span></div>
-            <div style="margin-top: 3px;"><span class="stage-pill stage-shortlisted" style="font-size: 9px; padding: 1px 6px;">${safeBadge}</span></div>
+            <div style="margin-top: 3px;">
+              ${lead.atsScore ? `<span class="stage-pill" style="font-size: 9px; padding: 2px 7px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 700;">🎯 ${lead.atsScore}% ATS FIT</span>` : `<span class="stage-pill stage-shortlisted" style="font-size: 9px; padding: 1px 6px;">${safeBadge}</span>`}
+            </div>
+            ${lead.matchedKeywords && lead.matchedKeywords.length > 0 ? `
+              <div style="font-size: 9px; color: #94a3b8; margin-top: 3px; font-family: var(--font-mono);">${escapeHtml(lead.matchedKeywords.slice(0, 3).join(', '))}</div>
+            ` : ''}
           </td>
           <td>
             <div style="display: flex; gap: 5px; align-items: center; justify-content: flex-end;">
@@ -4072,6 +4081,33 @@
         });
       } catch (err) {
         showToast('Agent connection notice: ' + err.message);
+      }
+    }
+
+    async function searchResumeMatchingJobs() {
+      const btn = document.getElementById('btn-search-matching-jobs');
+      const label = document.getElementById('btn-search-matching-jobs-label');
+      if (btn) btn.disabled = true;
+      if (label) label.innerText = 'Analyzing Resume & ATS Matching...';
+      showToast('Analyzing Vansh Sharma resume & searching matching fresher jobs across portals...');
+
+      try {
+        if (window.jobPilotApi && window.jobPilotApi.searchResumeJobs) {
+          const res = await window.jobPilotApi.searchResumeJobs();
+          if (res && res.ok) {
+            allJobLeads = res.leads || [];
+            renderJobLeadsUI(allJobLeads);
+            showToast(`Found ${allJobLeads.length} jobs ranked by highest ATS resume fit!`);
+          } else {
+            showToast('Resume ATS search completed.');
+          }
+        }
+      } catch (e) {
+        showToast('Search error: ' + e.message);
+      } finally {
+        if (btn) btn.disabled = false;
+        if (label) label.innerText = '🎯 Search Jobs Matching Resume (ATS)';
+        if (window.lucide) window.lucide.createIcons();
       }
     }
 

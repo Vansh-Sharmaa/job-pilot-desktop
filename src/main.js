@@ -1406,6 +1406,39 @@ ipcMain.handle('sync-job-leads', async () => {
   });
 });
 
+ipcMain.handle('search-resume-jobs', async () => {
+  return new Promise((resolve) => {
+    const pyScript = path.join(JOBS_DIR, 'search_resume_jobs.py');
+    mainWindow?.webContents.send('task-log', '[RESUME ATS ENGINE] Analyzing Vansh Sharma resume & searching matched fresher jobs across portals...');
+
+    const proc = spawn('python', [pyScript], { cwd: JOBS_DIR });
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', d => {
+      const txt = d.toString();
+      stdout += txt;
+      mainWindow?.webContents.send('task-log', txt.trim().split('\n')[0]);
+    });
+    proc.stderr.on('data', d => stderr += d.toString());
+
+    proc.on('close', () => {
+      try {
+        if (fs.existsSync(JOB_LEADS_TRACKER_PATH)) {
+          const raw = fs.readFileSync(JOB_LEADS_TRACKER_PATH, 'utf-8');
+          const leads = JSON.parse(raw);
+          mainWindow?.webContents.send('task-log', `[RESUME ATS ENGINE] Scored and ranked ${leads.length} job openings by ATS fit.`);
+          resolve({ ok: true, leads, output: stdout });
+          return;
+        }
+      } catch (e) {}
+      resolve({ ok: true, leads: [], output: stdout });
+    });
+
+    proc.on('error', err => resolve({ ok: false, error: err.message }));
+  });
+});
+
 ipcMain.handle('parse-job-lead-email', async (event, payload) => {
   return new Promise((resolve) => {
     const pyScript = path.join(JOBS_DIR, 'email_job_leads.py');

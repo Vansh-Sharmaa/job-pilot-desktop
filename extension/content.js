@@ -217,6 +217,222 @@
     }, delayMs);
   }
 
+  // Apply User-Modified Candidate Fields into Active Form Inputs
+  function applyCandidateEditsToPageInputs(updated) {
+    if (!updated) return;
+    const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea'))
+      .filter(el => el.offsetParent !== null);
+
+    inputs.forEach(el => {
+      const type = (el.type || '').toLowerCase();
+      const iden = (el.name + ' ' + el.id + ' ' + el.placeholder + ' ' + (el.getAttribute('aria-label') || '')).toLowerCase();
+      const tag = el.tagName.toLowerCase();
+
+      if (type === 'button' || type === 'submit') return;
+
+      if (tag === 'textarea' || type === 'text') {
+        if (iden.includes('pitch') || iden.includes('cover') || iden.includes('about') || iden.includes('summary')) {
+          if (updated.pitch) { el.value = updated.pitch; triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+        }
+      }
+
+      if (iden.includes('first') && !iden.includes('last')) {
+        const parts = (updated.name || '').split(' ');
+        if (parts[0]) { el.value = parts[0]; triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+      } else if (iden.includes('last') && !iden.includes('first')) {
+        const parts = (updated.name || '').split(' ');
+        if (parts.length > 1) { el.value = parts.slice(1).join(' '); triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+      } else if (iden.includes('full name') || (iden.includes('name') && !iden.includes('company') && !iden.includes('file') && !iden.includes('user'))) {
+        if (updated.name) { el.value = updated.name; triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+      }
+
+      if (iden.includes('email')) {
+        if (updated.email) { el.value = updated.email; triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+      }
+
+      if (iden.includes('phone') || iden.includes('mobile') || iden.includes('contact')) {
+        if (updated.phone) { el.value = updated.phone; triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+      }
+
+      if (iden.includes('degree') || iden.includes('education') || iden.includes('qualification')) {
+        if (updated.degree) { el.value = updated.degree; triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+      }
+
+      if (iden.includes('college') || iden.includes('university') || iden.includes('institute') || iden.includes('school')) {
+        if (updated.college) { el.value = updated.college; triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+      }
+
+      if (iden.includes('github') || iden.includes('portfolio') || iden.includes('website') || iden.includes('link')) {
+        if (updated.github) { el.value = updated.github; triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+      }
+
+      if (iden.includes('notice')) {
+        if (updated.noticePeriod) { el.value = updated.noticePeriod; triggerEvents(el); el.classList.add('jobpilot-filled-review'); }
+      }
+    });
+  }
+
+  // Interactive Human Candidate Review & Edit Drawer
+  function openHumanCandidateReviewDrawer(totalFilled, submitBtn, meta) {
+    let drawer = document.getElementById('jp-human-review-drawer');
+    if (!drawer) {
+      drawer = document.createElement('div');
+      drawer.id = 'jp-human-review-drawer';
+      drawer.className = 'jp-review-drawer';
+      document.body.appendChild(drawer);
+    }
+
+    const cand = activeCandidate || {
+      name: 'Vansh Sharma',
+      email: 'engagevansh@gmail.com',
+      phone: '+919368478556',
+      education: 'Master of Computer Applications (MCA) in AI & Data Science',
+      college: 'Graphic Era Hill University',
+      gradYear: '2026',
+      cgpa: '8.0',
+      experienceYears: '0',
+      noticePeriod: 'Immediate',
+      github: 'https://github.com/Vansh-Sharmaa',
+      pitch: 'MCA in AI & Data Science (Class of 2026). Hands-on experience developing LangChain RAG pipelines, fine-tuning PyTorch models, and deploying FastAPI microservices. Immediate joiner.'
+    };
+
+    drawer.innerHTML = `
+      <div class="jp-drawer-header">
+        <div class="jp-drawer-title-group">
+          <div class="jp-drawer-badge">HUMAN REVIEW CANDIDATE</div>
+          <div class="jp-drawer-title">Review & Edit Form Details</div>
+        </div>
+        <button class="jp-drawer-close-btn" id="jp-drawer-close">✕</button>
+      </div>
+
+      <div class="jp-drawer-meta-banner">
+        <div><strong>Job:</strong> ${(meta && meta.title) || 'AI Engineer'} at ${(meta && meta.company) || 'Target Company'}</div>
+        <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+          ${totalFilled} fields filled. You can edit any details below before applying.
+        </div>
+      </div>
+
+      <div class="jp-drawer-body">
+        <div class="jp-input-row">
+          <div class="jp-input-col">
+            <label class="jp-drawer-label">Full Name</label>
+            <input type="text" id="jp-input-name" class="jp-drawer-input" value="${escapeHtml(cand.name || 'Vansh Sharma')}" />
+          </div>
+          <div class="jp-input-col">
+            <label class="jp-drawer-label">Email</label>
+            <input type="email" id="jp-input-email" class="jp-drawer-input" value="${escapeHtml(cand.email || 'engagevansh@gmail.com')}" />
+          </div>
+        </div>
+
+        <div class="jp-input-row">
+          <div class="jp-input-col">
+            <label class="jp-drawer-label">Phone</label>
+            <input type="text" id="jp-input-phone" class="jp-drawer-input" value="${escapeHtml(cand.phone || '+919368478556')}" />
+          </div>
+          <div class="jp-input-col">
+            <label class="jp-drawer-label">Experience</label>
+            <input type="text" id="jp-input-exp" class="jp-drawer-input" value="0 - 1 YOE (Fresher)" />
+          </div>
+        </div>
+
+        <div class="jp-input-row">
+          <div class="jp-input-col">
+            <label class="jp-drawer-label">Degree</label>
+            <input type="text" id="jp-input-degree" class="jp-drawer-input" value="${escapeHtml(cand.education || 'MCA in AI & Data Science')}" />
+          </div>
+          <div class="jp-input-col">
+            <label class="jp-drawer-label">University / College</label>
+            <input type="text" id="jp-input-college" class="jp-drawer-input" value="${escapeHtml(cand.college || 'Graphic Era Hill University')}" />
+          </div>
+        </div>
+
+        <div class="jp-input-row">
+          <div class="jp-input-col">
+            <label class="jp-drawer-label">GitHub / Portfolio</label>
+            <input type="text" id="jp-input-github" class="jp-drawer-input" value="${escapeHtml(cand.github || 'https://github.com/Vansh-Sharmaa')}" />
+          </div>
+          <div class="jp-input-col">
+            <label class="jp-drawer-label">Notice Period</label>
+            <input type="text" id="jp-input-notice" class="jp-drawer-input" value="${escapeHtml(cand.noticePeriod || 'Immediate')}" />
+          </div>
+        </div>
+
+        <div class="jp-input-group">
+          <label class="jp-drawer-label">Cover Note / Pitch (Tailored to Job)</label>
+          <textarea id="jp-input-pitch" class="jp-drawer-textarea" rows="3">${escapeHtml(cand.pitch || '')}</textarea>
+        </div>
+      </div>
+
+      <div class="jp-drawer-footer">
+        <button class="jp-drawer-btn sync" id="jp-btn-apply-edits">
+          <span>💾</span> <span>Apply Edits to Webpage</span>
+        </button>
+        ${submitBtn ? `
+          <button class="jp-drawer-btn submit" id="jp-btn-final-submit">
+            <span>🚀</span> <span>Submit Application</span>
+          </button>
+        ` : ''}
+      </div>
+    `;
+
+    drawer.style.display = 'flex';
+
+    document.getElementById('jp-drawer-close')?.addEventListener('click', () => {
+      drawer.style.display = 'none';
+    });
+
+    document.getElementById('jp-btn-apply-edits')?.addEventListener('click', () => {
+      const updated = {
+        name: document.getElementById('jp-input-name')?.value || cand.name,
+        email: document.getElementById('jp-input-email')?.value || cand.email,
+        phone: document.getElementById('jp-input-phone')?.value || cand.phone,
+        degree: document.getElementById('jp-input-degree')?.value || cand.education,
+        college: document.getElementById('jp-input-college')?.value || cand.college,
+        github: document.getElementById('jp-input-github')?.value || cand.github,
+        pitch: document.getElementById('jp-input-pitch')?.value || cand.pitch,
+        noticePeriod: document.getElementById('jp-input-notice')?.value || cand.noticePeriod
+      };
+      applyCandidateEditsToPageInputs(updated);
+      updateAgentHud('✓ Updated webpage fields with your candidate edits!', true);
+      sendTelemetry('EDIT_APPLIED', `Candidate modified details manually before submission.`);
+      const saveBtn = document.getElementById('jp-btn-apply-edits');
+      if (saveBtn) {
+        saveBtn.innerHTML = '<span>✓</span> <span>Edits Injected!</span>';
+        setTimeout(() => {
+          if (saveBtn) saveBtn.innerHTML = '<span>💾</span> <span>Apply Edits to Webpage</span>';
+        }, 1800);
+      }
+    });
+
+    if (submitBtn) {
+      document.getElementById('jp-btn-final-submit')?.addEventListener('click', async () => {
+        const updated = {
+          name: document.getElementById('jp-input-name')?.value || cand.name,
+          email: document.getElementById('jp-input-email')?.value || cand.email,
+          phone: document.getElementById('jp-input-phone')?.value || cand.phone,
+          degree: document.getElementById('jp-input-degree')?.value || cand.education,
+          college: document.getElementById('jp-input-college')?.value || cand.college,
+          github: document.getElementById('jp-input-github')?.value || cand.github,
+          pitch: document.getElementById('jp-input-pitch')?.value || cand.pitch,
+          noticePeriod: document.getElementById('jp-input-notice')?.value || cand.noticePeriod
+        };
+        applyCandidateEditsToPageInputs(updated);
+        drawer.style.display = 'none';
+        updateAgentHud('Submitting application...', false);
+        sendTelemetry('SUBMIT', `Candidate approved submission for ${(meta && meta.company) || 'Job'}.`);
+        submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await sleep(400);
+        submitBtn.click();
+        submitBtn.classList.remove('jobpilot-target-highlight');
+        await sleep(1200);
+        syncJobToDesktop();
+        updateAgentHud(`✓ Application Submitted! (${(meta && meta.company) || 'Job'})`, true);
+        hideAgentHud(4000);
+        isAgentRunning = false;
+      });
+    }
+  }
+
   // Human-in-the-Loop Review Gate (Presents filled fields for user verification before submission)
   function presentHumanReviewGate(totalFilled, submitBtn, meta) {
     if (agentAbortRequested) return;
@@ -237,7 +453,7 @@
       <div class="jp-hud-step" id="jp-hud-step-text">Verify details. Ready to submit?</div>
       <div class="jp-hud-review-actions">
         ${submitBtn ? '<button class="jp-hud-btn confirm" id="jp-hud-confirm-submit">🚀 Submit Now</button>' : ''}
-        <button class="jp-hud-btn edit" id="jp-hud-manual-edit">✏️ Edit Manually</button>
+        <button class="jp-hud-btn edit" id="jp-hud-manual-edit">✏️ Review & Edit Candidate</button>
         <button class="jp-hud-btn cancel" id="jp-hud-abort-review" title="Cancel Application">✕</button>
       </div>
     `;
@@ -264,11 +480,8 @@
     }
 
     document.getElementById('jp-hud-manual-edit')?.addEventListener('click', () => {
-      sendTelemetry('REVIEW', 'Candidate chose to review and edit fields manually.');
-      updateAgentHud('✓ Fields preserved. Edit directly and submit whenever ready.', true);
-      if (submitBtn) submitBtn.classList.remove('jobpilot-target-highlight');
-      hideAgentHud(3000);
-      isAgentRunning = false;
+      sendTelemetry('REVIEW', 'Candidate opened Human Review Candidate drawer.');
+      openHumanCandidateReviewDrawer(totalFilled, submitBtn, meta);
     });
 
     document.getElementById('jp-hud-abort-review')?.addEventListener('click', () => {
