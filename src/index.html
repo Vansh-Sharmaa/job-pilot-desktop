@@ -5123,11 +5123,15 @@
         const extText = document.getElementById('sb-ext-text');
         const topExt = document.getElementById('ext-status-text');
         if (connected) {
-          extDot.style.background = '#10b981';
-          extDot.style.boxShadow = '0 0 6px #10b981';
-          extText.innerText = 'Extension Online';
-          topExt.innerText = 'Extension Online';
-          topExt.style.color = '#10b981';
+          if (extDot) {
+            extDot.style.background = '#10b981';
+            extDot.style.boxShadow = '0 0 6px #10b981';
+          }
+          if (extText) extText.innerText = 'Extension Online';
+          if (topExt) {
+            topExt.innerText = 'Extension Online';
+            topExt.style.color = '#10b981';
+          }
         }
       });
     }
@@ -5137,10 +5141,14 @@
         lastActiveJob = jobMeta;
         const banner = document.getElementById('chrome-active-banner');
         if (banner) {
-          document.getElementById('active-banner-company').innerText = jobMeta.company || 'Unknown';
-          document.getElementById('active-banner-role').innerText = jobMeta.title || 'Tech Role';
-          document.getElementById('active-banner-portal').innerText = jobMeta.portal || 'Web';
-          document.getElementById('dock-active-target').innerText = `🌐 ${jobMeta.company || 'Job'}: ${jobMeta.title || ''}`;
+          const compEl = document.getElementById('active-banner-company');
+          const roleEl = document.getElementById('active-banner-role');
+          const portalEl = document.getElementById('active-banner-portal');
+          const dockEl = document.getElementById('dock-active-target');
+          if (compEl) compEl.innerText = jobMeta.company || 'Unknown';
+          if (roleEl) roleEl.innerText = jobMeta.title || 'Tech Role';
+          if (portalEl) portalEl.innerText = jobMeta.portal || 'Web';
+          if (dockEl) dockEl.innerText = `🌐 ${jobMeta.company || 'Job'}: ${jobMeta.title || ''}`;
           banner.style.display = 'flex';
         }
         if (jobMeta && jobMeta.url) {
@@ -5713,10 +5721,14 @@
       currentApprovalId = data.id;
       const modal = document.getElementById('human-approval-modal');
       if (modal) {
-        document.getElementById('approval-modal-title').innerText = data.title || 'Human Approval Required';
-        document.getElementById('approval-company').innerText = data.preview?.company || 'Target Company';
-        document.getElementById('approval-role').innerText = data.preview?.role || 'Position';
-        document.getElementById('approval-url').innerText = data.preview?.url || 'Active Tab';
+        const tEl = document.getElementById('approval-modal-title');
+        const cEl = document.getElementById('approval-company');
+        const rEl = document.getElementById('approval-role');
+        const uEl = document.getElementById('approval-url');
+        if (tEl) tEl.innerText = data.title || 'Human Approval Required';
+        if (cEl) cEl.innerText = data.preview?.company || 'Target Company';
+        if (rEl) rEl.innerText = data.preview?.role || 'Position';
+        if (uEl) uEl.innerText = data.preview?.url || 'Active Tab';
         
         const fieldsEl = document.getElementById('approval-fields-list');
         if (fieldsEl) {
@@ -5855,11 +5867,16 @@
       if (window.jobPilotApi && window.jobPilotApi.getModelConfig) {
         const cfg = await window.jobPilotApi.getModelConfig();
         if (cfg) {
-          document.getElementById('cfg-provider-preset').value = cfg.provider || '9router';
-          document.getElementById('cfg-router-url').value = cfg.routerUrl || 'http://127.0.0.1:20128/v1';
-          document.getElementById('cfg-router-token').value = cfg.routerToken || '';
-          document.getElementById('cfg-model-name').value = cfg.model || 'Fable5';
-          document.getElementById('dock-model-label').innerText = `${cfg.model || 'Fable5'} (${cfg.provider || '9Router'})`;
+          const pEl = document.getElementById('cfg-provider-preset');
+          const uEl = document.getElementById('cfg-router-url');
+          const tEl = document.getElementById('cfg-router-token');
+          const mEl = document.getElementById('cfg-model-name');
+          const dEl = document.getElementById('dock-model-label');
+          if (pEl) pEl.value = cfg.provider || '9router';
+          if (uEl) uEl.value = cfg.routerUrl || 'http://127.0.0.1:20128/v1';
+          if (tEl) tEl.value = cfg.routerToken || '';
+          if (mEl) mEl.value = cfg.model || 'Fable5';
+          if (dEl) dEl.innerText = `${cfg.model || 'Fable5'} (${cfg.provider || '9Router'})`;
         }
       }
       await loadCandidateProfileToUI();

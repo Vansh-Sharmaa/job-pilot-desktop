@@ -1,7 +1,30 @@
-const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
+let electronModule = null;
+try {
+  electronModule = require('electron');
+} catch (e) {}
 
-// Friendly startup check for direct node invocation
+const app = electronModule && electronModule.app;
+const BrowserWindow = electronModule && electronModule.BrowserWindow;
+const ipcMain = electronModule && electronModule.ipcMain;
+const shell = electronModule && electronModule.shell;
+const Menu = electronModule && electronModule.Menu;
+
+// Friendly startup check for direct node invocation or ELECTRON_RUN_AS_NODE
 if (!app || typeof app.requestSingleInstanceLock !== 'function') {
+  if (process.env.ELECTRON_RUN_AS_NODE) {
+    const { spawn } = require('child_process');
+    const path = require('path');
+    const electronExe = typeof electronModule === 'string' ? electronModule : process.execPath;
+    const cleanEnv = Object.assign({}, process.env);
+    delete cleanEnv.ELECTRON_RUN_AS_NODE;
+    const child = spawn(electronExe, [path.join(__dirname, '..')], {
+      detached: true,
+      stdio: 'ignore',
+      env: cleanEnv
+    });
+    child.unref();
+    process.exit(0);
+  }
   console.error("JobPilot must be launched via 'npm start' or 'electron .' (not node).");
   process.exit(1);
 }
