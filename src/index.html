@@ -1710,6 +1710,13 @@
   <div id="toast-container"></div>
 
   <script>
+    window.addEventListener('error', (e) => {
+      console.error('[RENDERER ERROR]', e.message, e.filename, e.lineno);
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      console.error('[RENDERER UNHANDLED]', e.reason);
+    });
+
     let conversationHistory = [];
     let allLedgerRows = [];
     let currentPortalFilter = 'ALL';
@@ -3094,8 +3101,6 @@
         finalizeChatTurnUI();
       }
     }
-
-    let lastSubmittedTask = '';
 
     async function autoRepairAndRetry() {
       showToast('Launching local model gateway...');
@@ -5856,6 +5861,28 @@
           document.getElementById('cfg-model-name').value = cfg.model || 'Fable5';
           document.getElementById('dock-model-label').innerText = `${cfg.model || 'Fable5'} (${cfg.provider || '9Router'})`;
         }
+      }
+      await loadCandidateProfileToUI();
+    }
+
+    async function loadCandidateProfileToUI() {
+      if (window.jobPilotApi && window.jobPilotApi.getCandidateProfile) {
+        try {
+          const p = await window.jobPilotApi.getCandidateProfile();
+          if (p) {
+            const el = (id) => document.getElementById(id);
+            if (el('prof-name')) el('prof-name').value = p.name || 'Vansh Sharma';
+            if (el('prof-email')) el('prof-email').value = p.email || 'engagevansh@gmail.com';
+            if (el('prof-phone')) el('prof-phone').value = p.phone || '+919368478556';
+            if (el('prof-location')) el('prof-location').value = p.location || 'Gurgaon / Delhi NCR / Remote';
+            if (el('prof-degree')) el('prof-degree').value = p.degree || p.education || 'Master of Computer Applications (MCA) in AI & Data Science';
+            if (el('prof-college')) el('prof-college').value = p.college || 'Graphic Era Hill University';
+            if (el('prof-grad')) el('prof-grad').value = `${p.gradYear || 2026} (CGPA: ${p.cgpa || '8.0'} / 10)`;
+            if (el('prof-exp')) el('prof-exp').value = p.experienceLabel || 'Fresher (0 YOE : Immediate Joiner)';
+            if (el('prof-skills') && p.skills) el('prof-skills').value = Array.isArray(p.skills) ? p.skills.join(', ') : p.skills;
+            if (el('prof-pitch')) el('prof-pitch').value = p.pitch || '';
+          }
+        } catch (err) {}
       }
     }
 

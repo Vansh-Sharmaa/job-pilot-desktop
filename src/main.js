@@ -1219,6 +1219,10 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    debugLog(`[RENDERER] ${message} (line ${line})`);
+  });
+
   mainWindow.webContents.on('did-finish-load', () => {
     debugLog('mainWindow finished loading index.html');
     if (mainWindow && !mainWindow.isDestroyed()) {
