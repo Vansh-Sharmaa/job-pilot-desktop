@@ -14,10 +14,14 @@ if (!app || typeof app.requestSingleInstanceLock !== 'function') {
   const fs = require('fs');
   const path = require('path');
   const localElectron = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron.exe');
-  if ('ELECTRON_RUN_AS_NODE' in process.env && fs.existsSync(localElectron)) {
+  if (process.env.ELECTRON_RUN_AS_NODE && fs.existsSync(localElectron)) {
     const { spawn } = require('child_process');
-    const cleanEnv = Object.assign({}, process.env);
-    delete cleanEnv.ELECTRON_RUN_AS_NODE;
+    const cleanEnv = {};
+    for (const [k, v] of Object.entries(process.env)) {
+      if (k.toLowerCase() !== 'electron_run_as_node') {
+        cleanEnv[k] = v;
+      }
+    }
     const child = spawn(localElectron, [path.join(__dirname, '..')], {
       detached: true,
       stdio: 'ignore',
