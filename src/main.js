@@ -2505,7 +2505,21 @@ ipcMain.handle('submit-clarification-answer', async (event, { id, answer, action
 
 ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_autonomous_apply', quota = 20 } = {}) => {
   try {
-    const extPath = path.join(__dirname, '..', 'extension');
+    const targetUrl = url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
+    if (action) {
+      pendingExtensionCommands.push({ action, url: targetUrl, quota });
+    }
+
+    // 1. If companion extension in user's running Brave browser is active, route directly without new window
+    const isExtAlive = (Date.now() - lastExtensionPing) < 8000;
+    if (isExtAlive) {
+      // The user's personal Brave browser is already running with JobPilot extension active.
+      // Route command directly into active session. Existing logins and cookies are 100% preserved.
+      mainWindow?.webContents.send('task-log', `[BRAVE AGENT] Routed command to active Brave browser session (logins preserved): ${targetUrl}`);
+      return { ok: true, mode: 'existing_session', url: targetUrl };
+    }
+
+    // 2. If browser is not yet running, open in user's default browser profile (never an isolated temp profile)
     const browserCandidates = [
       'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
       path.join(process.env.LOCALAPPDATA || '', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
@@ -2515,35 +2529,19 @@ ipcMain.handle('launch-chrome-agent', async (event, { url = '', action = 'start_
     ];
 
     let browserExe = browserCandidates.find(p => fs.existsSync(p));
-    if (!browserExe) {
-      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-        shell.openExternal(url);
-      }
-      return { ok: false, error: 'Browser executable not found.' };
+    if (browserExe) {
+      // Launch standard personal profile without --user-data-dir or unsupported command line flags
+      const proc = spawn(browserExe, [targetUrl], {
+        detached: true,
+        stdio: 'ignore'
+      });
+      proc.unref();
+      mainWindow?.webContents.send('task-log', `[BRAVE AGENT] Opened in user default Brave browser (all logins preserved): ${targetUrl}`);
+      return { ok: true, browser: browserExe, url: targetUrl };
+    } else {
+      shell.openExternal(targetUrl);
+      return { ok: true, browser: 'default', url: targetUrl };
     }
-
-    const targetUrl = url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
-    if (action) {
-      pendingExtensionCommands.push({ action, url: targetUrl, quota });
-    }
-
-    const profileDir = path.join(process.env.TEMP || process.env.TMP || 'C:\\Windows\\Temp', 'jobpilot-browser-profile');
-    const args = [
-      `--load-extension=${extPath}`,
-      `--user-data-dir=${profileDir}`,
-      '--no-first-run',
-      '--no-default-browser-check',
-      targetUrl
-    ];
-
-    const proc = spawn(browserExe, args, {
-      detached: true,
-      stdio: 'ignore'
-    });
-    proc.unref();
-
-    mainWindow?.webContents.send('task-log', `[CHROME AGENT] Automatically launched browser with JobPilot extension loaded on: ${targetUrl}`);
-    return { ok: true, browser: browserExe, url: targetUrl };
   } catch (err) {
     return { ok: false, error: err.message };
   }

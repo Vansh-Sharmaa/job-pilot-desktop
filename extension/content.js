@@ -883,6 +883,14 @@
 
   function askHumanClarification(question, options = [], qIndex = 1, totalQ = 1, meta = {}) {
     return new Promise((resolve) => {
+      let resolved = false;
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve({ action: 'fallback', answer: '' });
+        }
+      }, 125000);
+
       try {
         const qId = `clarify_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         chrome.runtime.sendMessage({
@@ -898,16 +906,24 @@
             url: window.location.href
           }
         }, (res) => {
-          if (res && res.ok) {
-            resolve(res);
-          } else if (res && res.action === 'skip') {
-            resolve({ action: 'skip' });
-          } else {
-            resolve({ action: 'fallback', answer: '' });
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timer);
+            if (res && res.ok) {
+              resolve(res);
+            } else if (res && res.action === 'skip') {
+              resolve({ action: 'skip' });
+            } else {
+              resolve({ action: 'fallback', answer: '' });
+            }
           }
         });
       } catch (e) {
-        resolve({ action: 'fallback', answer: '' });
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          resolve({ action: 'fallback', answer: '' });
+        }
       }
     });
   }
