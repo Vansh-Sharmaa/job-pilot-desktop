@@ -732,7 +732,7 @@
                   <span>Inbox Recommended Job Leads & Alerts</span>
                 </div>
                 <div class="interview-sub-title">
-                  <span>Curated fresher and entry-level job alerts extracted from Indeed, LinkedIn, and Naukri across all 4 Gmail inboxes</span>
+                  <span>Curated fresher and entry-level job alerts extracted from Indeed, Naukri, and Hirist across all 4 Gmail inboxes</span>
                   <span class="interview-sync-status" id="leads-sync-status">10 leads available</span>
                 </div>
               </div>
@@ -792,7 +792,7 @@
               <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;" id="leads-platform-filters">
                 <button class="stage-pill active" onclick="filterLeadsByPlatform('ALL', this)">All Platforms</button>
                 <button class="stage-pill" onclick="filterLeadsByPlatform('Indeed Alerts', this)">Indeed Alerts</button>
-                <button class="stage-pill" onclick="filterLeadsByPlatform('LinkedIn Matches', this)">LinkedIn Matches</button>
+                <button class="stage-pill" onclick="filterLeadsByPlatform('Hirist Matches', this)">Hirist Matches</button>
                 <button class="stage-pill" onclick="filterLeadsByPlatform('Naukri Recommendations', this)">Naukri Recommendations</button>
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
@@ -845,7 +845,7 @@
             <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 10px 14px; margin-top: 10px; display: flex; align-items: flex-start; gap: 10px;">
               <span style="font-size: 16px; line-height: 1;">🛡️</span>
               <div style="font-size: 11px; line-height: 1.5; color: #cbd5e1;">
-                <strong style="color: #f59e0b;">Account Safety and ToS Compliance Notice:</strong> Excessive or non-stop automated form submission triggers bot defenses and risks account suspension on LinkedIn, Naukri, and Indeed. Daily limits of 20 to 30 submissions and randomized human intervals (8 to 15 seconds) are strictly enforced to protect your career accounts.
+                <strong style="color: #f59e0b;">Account Safety and ToS Compliance Notice:</strong> Excessive or non-stop automated form submission triggers bot defenses and risks account suspension on job portals like Naukri and Indeed. LinkedIn automation is completely excluded from JobPilot to guarantee 100% account safety. Daily limits of 20 to 30 submissions and randomized human intervals (8 to 15 seconds) are strictly enforced to protect your career accounts.
               </div>
             </div>
 
@@ -1242,13 +1242,10 @@
                     </div>
 
                     <div class="dossier-row" style="margin-top: 6px;">
-                      <span class="dossier-label">Online Profiles</span>
+                      <span class="dossier-label">Technical Profile</span>
                       <div style="display: flex; gap: 6px;">
-                        <a href="#" target="_blank" class="dossier-link-btn linkedin" id="dossier-linkedin-btn">
-                          <span>LinkedIn</span> <span>↗</span>
-                        </a>
-                        <a href="#" target="_blank" class="dossier-link-btn github" id="dossier-github-btn" style="display: none;">
-                          <span>GitHub</span> <span>↗</span>
+                        <a href="#" target="_blank" class="dossier-link-btn github" id="dossier-github-btn" style="display: inline-flex;">
+                          <span>GitHub Profile</span> <span>↗</span>
                         </a>
                       </div>
                     </div>
@@ -1398,7 +1395,7 @@
         <button class="email-modal-close" onclick="closePasteLeadModal()">✕</button>
       </div>
       <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5;">
-        Paste any job alert, recommended openings digest, or hiring email text from Indeed, LinkedIn, or Naukri. The parser will extract company, role, location, and application link.
+        Paste any job alert, recommended openings digest, or hiring email text from Indeed, Naukri, or Hirist. The parser will extract company, role, location, and application link.
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px;">
         <label style="font-size: 10.5px; color: var(--text-dim); font-weight: 600;">Receiving Inbox Account</label>
@@ -1654,7 +1651,7 @@
     // 20 Verified Platforms Dictionary
     const ALL_20_PORTALS = [
       { id: 'indeed', name: 'Indeed India', category: 'Tech Hub', badge: 'IN', bg: '#2557a7', url: 'https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B' },
-      { id: 'linkedin', name: 'LinkedIn', category: 'Tech Hub', badge: 'in', bg: '#0a66c2', url: 'https://www.linkedin.com/jobs/search/?keywords=AI%20Engineer&f_E=1%2C2&location=India' },
+      { id: 'nextgen', name: 'NextGen Hiring', category: 'Fast-Track', badge: 'NG', bg: '#0284c7', url: 'https://nextgenhiring.in' },
       { id: 'naukri', name: 'Naukri', category: 'Tech Hub', badge: 'N', bg: '#1d4ed8', url: 'https://www.naukri.com/ai-engineer-jobs?experience=0&experience=1' },
       { id: 'internshala', name: 'Internshala', category: 'Fresher / Intern', badge: 'IS', bg: '#008bdc', url: 'https://internshala.com/jobs/ai-jobs/' },
       { id: 'cuvette', name: 'Cuvette', category: 'Startup Fast-Track', badge: 'CV', bg: '#10b981', url: 'https://cuvette.tech/jobs' },
@@ -1810,7 +1807,7 @@
         if (info.company) company = info.company;
         const host = new URL(u).hostname.toLowerCase();
         if (host.includes('indeed')) portal = 'Indeed';
-        else if (host.includes('linkedin')) portal = 'LinkedIn';
+        else if (host.includes('nextgen')) portal = 'NextGen';
         else if (host.includes('naukri')) portal = 'Naukri';
         else if (host.includes('internshala')) portal = 'Internshala';
         else if (host.includes('cuvette')) portal = 'Cuvette';
@@ -2668,7 +2665,7 @@
     // =====================================================================
     const RADAR_PORTALS = [
       { id: 'indeed', name: 'Indeed India', iconText: 'IN', iconBg: '#2557a7', url: 'https://in.indeed.com/jobs?q=AI+Engineer&l=India&sc=0kf%3Aexplvl%28ENTRY_LEVEL%29%3B', quota: 25 },
-      { id: 'linkedin', name: 'LinkedIn', iconText: 'in', iconBg: '#0a66c2', url: 'https://www.linkedin.com/jobs/search/?keywords=AI%20Engineer&f_E=1%2C2&location=India', quota: 20 },
+      { id: 'nextgen', name: 'NextGen Hiring', iconText: 'NG', iconBg: '#0284c7', url: 'https://nextgenhiring.in', quota: 20 },
       { id: 'naukri', name: 'Naukri', iconText: 'N', iconBg: '#1d4ed8', url: 'https://www.naukri.com/ai-engineer-jobs', quota: 35 },
       { id: 'internshala', name: 'Internshala', iconText: 'IS', iconBg: '#008bdc', url: 'https://internshala.com/jobs/ai-jobs/', quota: 30 },
       { id: 'cuvette', name: 'Cuvette', iconText: 'CV', iconBg: '#10b981', url: 'https://cuvette.tech/app/jobs', quota: 20 },
@@ -2687,7 +2684,7 @@
       if (!urlStr) return 'indeed';
       const u = urlStr.toLowerCase();
       if (u.includes('indeed')) return 'indeed';
-      if (u.includes('linkedin')) return 'linkedin';
+      if (u.includes('nextgen')) return 'nextgen';
       if (u.includes('naukri')) return 'naukri';
       if (u.includes('internshala')) return 'internshala';
       if (u.includes('cuvette')) return 'cuvette';
@@ -4153,7 +4150,7 @@
 
     // 20-Platform Quotas
     const defaultQuotas = {
-      'LinkedIn': { applied_today: 25, limit: 25, url: 'https://www.linkedin.com/jobs' },
+      'NextGen': { applied_today: 20, limit: 20, url: 'https://nextgenhiring.in' },
       'Naukri': { applied_today: 50, limit: 50, url: 'https://www.naukri.com' },
       'Indeed': { applied_today: 50, limit: 50, url: 'https://in.indeed.com' },
       'Internshala': { applied_today: 20, limit: 20, url: 'https://internshala.com' },
@@ -5090,7 +5087,6 @@
       const email = document.getElementById('dossier-email');
       const hook = document.getElementById('dossier-hook-box');
       const skillsWrap = document.getElementById('dossier-skills-wrap');
-      const linkedinBtn = document.getElementById('dossier-linkedin-btn');
       const githubBtn = document.getElementById('dossier-github-btn');
 
       const initials = (person.name || 'P').split(' ').map(w => w[0]).slice(0, 2).join('');
@@ -5114,16 +5110,13 @@
         });
       }
 
-      if (linkedinBtn) {
-        linkedinBtn.href = person.linkedin || `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent((currentTalentGraphData?.company || '') + ' ' + person.name)}`;
-      }
-
       if (githubBtn) {
         if (person.github) {
           githubBtn.href = person.github;
           githubBtn.style.display = 'inline-flex';
         } else {
-          githubBtn.style.display = 'none';
+          githubBtn.href = `https://github.com/search?q=${encodeURIComponent((currentTalentGraphData?.company || '') + ' ' + (person.name || ''))}`;
+          githubBtn.style.display = 'inline-flex';
         }
       }
 

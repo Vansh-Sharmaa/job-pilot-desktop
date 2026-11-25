@@ -95,6 +95,12 @@ async function executeCommandInActiveTab(cmd) {
 
   const targetUrl = cmd.url || 'https://in.indeed.com/jobs?q=AI+Engineer&l=India';
 
+  if (targetUrl.toLowerCase().includes('linkedin.com')) {
+    console.warn('[JOBPILOT SAFETY] LinkedIn automation permanently blocked to protect user account from bans.');
+    sendTelemetry('SAFETY', 'LinkedIn automation blocked to protect user account from bans.');
+    return;
+  }
+
   // 1. Query all open tabs to check if an existing tab is already on targetUrl or same host
   let allTabs = [];
   try {

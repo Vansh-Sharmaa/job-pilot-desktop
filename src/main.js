@@ -210,7 +210,6 @@ const CANDIDATE_PROFILE = {
   currentCtc: '0',
   expectedCtc: '600000',
   expectedCtcLabel: 'Negotiable / 6 - 10 LPA',
-  linkedin: 'https://linkedin.com/in/vansh-sharma',
   github: 'https://github.com/Vansh-Sharmaa',
   portfolio: 'https://github.com/Vansh-Sharmaa',
   workAuthIndia: 'Yes',
@@ -478,7 +477,7 @@ function startExtensionBridgeServer() {
           originAllowed = true;
         } else {
           const allowedDomains = [
-            'indeed.com', 'linkedin.com', 'naukri.com', 'internshala.com',
+            'indeed.com', 'naukri.com', 'internshala.com',
             'cuvette.tech', 'unstop.com', 'hirist.tech', 'cutshort.io',
             'instahyre.com', 'wellfound.com', 'foundit.in', 'workatastartup.com',
             'glassdoor.com', 'glassdoor.co.in', 'shine.com', 'hasjob.co'
@@ -1578,7 +1577,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Bangalore, India',
       email: `priya.sundaram@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Priya Sundaram Recruiter')}`,
       github: '',
       skills: ['AI/ML Hiring', 'University Relations', 'Full-cycle Recruiting'],
       outreachHook: `Specializes in early-career AI and cloud infrastructure hiring at ${cName}.`
@@ -1590,7 +1588,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Gurgaon, India',
       email: `rahul.varma@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Rahul Varma Talent Acquisition')}`,
       github: '',
       skills: ['Campus Recruitment', 'Software Engineering Hiring', 'Interview Operations'],
       outreachHook: `Leads campus and fresher engineering hiring across Indian tech hubs.`
@@ -1602,7 +1599,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'San Francisco, CA / Remote',
       email: `jessica.m@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Jessica Miller Recruiter')}`,
       github: '',
       skills: ['Internship Programs', 'Early Career Talent', 'DEI Initiatives'],
       outreachHook: `Oversees new grad technical cohorts and Master degree hires.`
@@ -1614,7 +1610,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Hyderabad, India',
       email: `ananya.d@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Ananya Deshmukh Recruiter')}`,
       github: '',
       skills: ['PyTorch Sourcing', 'RAG Pipelines', 'ML Platform Hiring'],
       outreachHook: `Proactively sources candidates with strong GitHub codebases in PyTorch and LangChain.`
@@ -1626,7 +1621,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Seattle, WA / Remote',
       email: `david.chen@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' David Chen Talent')}`,
       github: '',
       skills: ['Executive Search', 'Talent Strategy', 'Workforce Planning'],
       outreachHook: `Architect of global developer hiring pipelines and university partnerships.`
@@ -1638,7 +1632,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Delhi NCR, India',
       email: `neha.kapoor@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Neha Kapoor Talent')}`,
       github: '',
       skills: ['Fast-track Screening', 'Technical Assessments', 'Candidate Experience'],
       outreachHook: `Coordinates fast-track interview scheduling for immediate joiners.`
@@ -1652,7 +1645,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Bangalore, India',
       email: `aditya.sen@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Aditya Sen Staff AI')}`,
       github: 'https://github.com/search?q=org%3A' + cName.toLowerCase() + '+aditya',
       skills: ['LangChain', 'Vector Search', 'PyTorch', 'Distributed Training'],
       outreachHook: `Builds production RAG infrastructure and vector retrieval pipelines.`
@@ -1664,7 +1656,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'London, UK / Remote',
       email: `elena.rostova@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Elena Rostova ML')}`,
       github: 'https://github.com/search?q=org%3A' + cName.toLowerCase() + '+elena',
       skills: ['Transformer Fine-tuning', 'ONNX Runtime', 'CUDA Optimization'],
       outreachHook: `Focuses on low-latency inference scaling and model quantization.`
@@ -1676,7 +1667,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Hyderabad, India',
       email: `karthik.r@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Karthik Ramanathan Engineering Manager')}`,
       github: 'https://github.com/search?q=org%3A' + cName.toLowerCase() + '+karthik',
       skills: ['FastAPI', 'Microservices Architecture', 'PostgreSQL', 'Docker'],
       outreachHook: `Manages teams building high-throughput asynchronous Python backends.`
@@ -1688,7 +1678,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Mountain View, CA',
       email: `michael.chang@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Michael Chang AI Software')}`,
       github: 'https://github.com/search?q=org%3A' + cName.toLowerCase() + '+michael',
       skills: ['Python', 'Docker', 'REST APIs', 'Agentic Workflows'],
       outreachHook: `Develops agentic tooling and autonomous workflow integrations.`
@@ -1700,7 +1689,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Pune, India',
       email: `pooja.nair@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Pooja Nair Data Architect')}`,
       github: 'https://github.com/search?q=org%3A' + cName.toLowerCase() + '+pooja',
       skills: ['Vector Databases', 'Data Pipelines', 'Embedding Indexing'],
       outreachHook: `Specializes in knowledge graph indexing and enterprise retrieval pipelines.`
@@ -1712,7 +1700,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Bangalore, India',
       email: `rohan.gupta@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Rohan Gupta Software Engineer')}`,
       github: 'https://github.com/search?q=org%3A' + cName.toLowerCase() + '+rohan',
       skills: ['Python', 'FastAPI', 'Redis', 'Kubernetes'],
       outreachHook: `Passionate about clean codebases, unit testing, and Dockerized microservices.`
@@ -1724,7 +1711,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'New York, NY / Remote',
       email: `sarah.connor@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Sarah Connor Research')}`,
       github: 'https://github.com/search?q=org%3A' + cName.toLowerCase() + '+sarah',
       skills: ['PyTorch', 'Evaluation Benchmarks', 'Synthetic Data'],
       outreachHook: `Researches multi-turn reasoning and agent evaluation frameworks.`
@@ -1736,7 +1722,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Gurgaon, India',
       email: `vikram.j@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Vikram Joshi Tech Lead')}`,
       github: 'https://github.com/search?q=org%3A' + cName.toLowerCase() + '+vikram',
       skills: ['Semantic Search', 'FastAPI', 'High Availability'],
       outreachHook: `Mentors junior engineers and actively reviews GitHub PRs for new hires.`
@@ -1750,7 +1735,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Bangalore, India / Global',
       email: `aravind.k@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Aravind Krishnan VP Engineering')}`,
       github: '',
       skills: ['Engineering Leadership', 'Scaling Teams', 'Strategic Vision'],
       outreachHook: `Champions university talent incubation and cutting-edge AI adoption.`
@@ -1762,7 +1746,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'San Francisco, CA',
       email: `marcus.v@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' CTO')}`,
       github: '',
       skills: ['Product Architecture', 'Technical Roadmap', 'Deep Tech'],
       outreachHook: `Leads technological strategy and sets foundational engineering culture.`
@@ -1774,7 +1757,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Mumbai, India',
       email: `deepika.rao@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Deepika Rao Director Talent')}`,
       github: '',
       skills: ['Talent Architecture', 'Campus Outreach', 'Executive Hiring'],
       outreachHook: `Architects strategic hiring quotas and national talent competitions.`
@@ -1786,7 +1768,6 @@ function generateBuiltinCompanyTalentGraph(companyName, domain) {
       location: 'Bangalore, India',
       email: `nikhil.mehta@${dom}`,
       emailStatus: 'pattern-verified',
-      linkedin: `https://linkedin.com/search/results/all/?keywords=${encodeURIComponent(cName + ' Nikhil Mehta Director AI')}`,
       github: '',
       skills: ['AI Strategy', 'Model Infrastructure', 'Team Mentorship'],
       outreachHook: `Passionate about discovering ambitious builders with demonstrated RAG and PyTorch skills.`
@@ -1930,7 +1911,6 @@ async function scrapeRealCompanyTalent(companyName, domain) {
               email: email,
               emailStatus: email.endsWith(`@${dom}`) ? 'live-commit-verified' : 'public-commit-verified',
               source: 'Live GitHub Commit (Verified)',
-              linkedin: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(name + ' ' + cName)}`,
               github: githubUrl,
               skills: ['Git', r.language || 'Python', 'Systems Engineering', 'Open Source Contributor'],
               outreachHook: `Active technical contributor to ${r.name} with verified public commit contributions.`
@@ -1959,7 +1939,6 @@ async function scrapeRealCompanyTalent(companyName, domain) {
                 email: mEmail,
                 emailStatus: uProfile.email ? 'public-verified' : 'pattern-verified',
                 source: 'GitHub Public Member (Verified)',
-                linkedin: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(mName + ' ' + cName)}`,
                 github: uProfile.html_url || `https://github.com/${m.login}`,
                 skills: ['Cloud & AI', 'GitHub Member', 'Open Source'],
                 outreachHook: `Confirmed public engineering member of ${cName} GitHub organization.`
@@ -2023,7 +2002,6 @@ async function scrapeRealCompanyTalent(companyName, domain) {
                 email: execEmail,
                 emailStatus: 'executive-pattern-verified',
                 source: 'Wikidata Leadership (Verified)',
-                linkedin: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(lName + ' ' + cName)}`,
                 github: '',
                 skills: ['Corporate Governance', 'Strategic Vision', 'Organizational Leadership'],
                 outreachHook: `Verified leadership executive of ${cName} recorded on global knowledge registries.`
@@ -2056,8 +2034,7 @@ async function scrapeRealCompanyTalent(companyName, domain) {
       location: 'India / Global',
       email: idx === 0 ? `recruiting@${dom}` : (idx === 1 ? `campus@${dom}` : (idx === 2 ? `talent@${dom}` : `careers@${dom}`)),
       emailStatus: 'corporate-gateway-verified',
-      source: 'LinkedIn People Directory (Targeted)',
-      linkedin: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(recSearchQuery)}`,
+      source: 'Official Corporate Careers Gateway',
       github: '',
       skills: [rec.focus, 'Technical Screening', 'Candidate Experience'],
       outreachHook: `Direct talent acquisition channel for ${rec.focus} at ${cName}.`
@@ -2107,7 +2084,7 @@ async function discoverCompanyTalentGraph(companyName, forceRefresh = false) {
   const domain = getCompanyDomain(rawClean);
   mainWindow?.webContents.send('task-log', `[TALENT GRAPH] Querying live OSINT intelligence and key contacts for ${rawClean} (${domain})...`);
 
-  // PRIMARY: Live Internet Scraping via GitHub Commits, Repos, Public Members, Wikidata Leadership & LinkedIn Gateways
+  // PRIMARY: Live Internet Scraping via GitHub Commits, Repos, Public Members & Wikidata Leadership Gateways
   let graphData = null;
   try {
     const liveScraped = await scrapeRealCompanyTalent(rawClean, domain);
@@ -2151,8 +2128,7 @@ Output strictly valid JSON matching this schema:
       "email": "verified.email@${domain}",
       "emailStatus": "pattern-verified",
       "source": "AI Intelligence",
-      "linkedin": "https://linkedin.com/search/results/people/?keywords=...",
-      "github": "https://github.com/...",
+            "github": "https://github.com/...",
       "skills": ["Skill1", "Skill2", "Skill3"],
       "outreachHook": "1-sentence hook to mention in cold email."
     }
@@ -2640,7 +2616,7 @@ const AGENT_TOOLS = [
     type: 'function',
     function: {
       name: 'browser_navigate',
-      description: 'Navigate the integrated Hiring Hub browser to a specified URL (e.g. Indeed, LinkedIn, Naukri).',
+      description: 'Navigate the integrated Hiring Hub browser to a specified URL (e.g. Indeed, Naukri, Hirist).',
       parameters: {
         type: 'object',
         properties: {
@@ -2964,7 +2940,7 @@ function generateOfflineAgentReply(prompt) {
     return `### Verified Applications Ledger Status
 
 - **Total Synchronized Applications:** ${rows.length} records in active tracker
-- **Monitored Platforms:** Indeed, LinkedIn, Naukri, Internshala, Cuvette, Wellfound, Unstop, Hirist
+- **Monitored Platforms:** Indeed, Naukri, Internshala, Cuvette, Wellfound, Unstop, Hirist
 - **Verification Engine:** Dual verification (HTTP status + DOM confirmation)
 - **Next Steps:** Navigate to **[JL Job Leads]** tab to inspect fresh recruitment recommendations.`;
   }

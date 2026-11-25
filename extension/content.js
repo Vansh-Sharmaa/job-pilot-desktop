@@ -1,6 +1,10 @@
 // JobPilot AI : Autonomous Career Agent Companion Content Script
 // Precision Form Autofill, Multi-Step Tab Automation, Scam Detector, and Ledger Sync
 (function() {
+  // STRICT SAFETY GUARD: Completely disable and ignore LinkedIn to guarantee zero risk of account ban
+  if (window.location.hostname && window.location.hostname.toLowerCase().includes('linkedin.com')) {
+    return;
+  }
   if (window.__JOBPILOT_COMPANION_ACTIVE) return;
   window.__JOBPILOT_COMPANION_ACTIVE = true;
 
@@ -56,7 +60,7 @@
     const host = window.location.hostname.toLowerCase();
     let portal = 'General Web';
     if (host.includes('indeed')) portal = 'Indeed';
-    else if (host.includes('linkedin')) portal = 'LinkedIn';
+    else if (host.includes('nextgen')) portal = 'NextGen';
     else if (host.includes('naukri')) portal = 'Naukri';
     else if (host.includes('internshala')) portal = 'Internshala';
     else if (host.includes('cuvette')) portal = 'Cuvette';
