@@ -5,6 +5,8 @@ let isConnected = false;
 let candidateProfile = null;
 let cachedBridgeToken = '';
 let lastContacts = { status: 'none' };
+let activeAgentTabId = null;
+let activeAgentCmd = null;
 
 async function getBridgeToken() {
   if (cachedBridgeToken) return cachedBridgeToken;
@@ -81,6 +83,8 @@ async function executeCommandInActiveTab(cmd) {
   }
 
   if (cmd.action === 'abort' || cmd.action === 'stop') {
+    activeAgentTabId = null;
+    activeAgentCmd = null;
     chrome.tabs.query({}, (tabs) => {
       if (tabs) {
         for (const t of tabs) {
@@ -186,6 +190,8 @@ async function executeCommandInActiveTab(cmd) {
 
 async function dispatchCommandToTab(tab, cmd) {
   if (!tab || !tab.id) return;
+  activeAgentTabId = tab.id;
+  activeAgentCmd = cmd;
 
   const sendMsg = () => {
     chrome.tabs.sendMessage(tab.id, {
@@ -371,6 +377,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'CHECK_ACTIVE_AGENT_SESSION') {
+    const isTabActive = sender.tab && (sender.tab.id === activeAgentTabId);
+    sendResponse({ active: !!(isTabActive && activeAgentCmd), cmd: activeAgentCmd });
+    return true;
+  }
+
   if (request.type === 'SEND_ACTIVE_JOB') {
     getBridgeToken().then(token => {
       fetch(`${BRIDGE_URL}/api/active-job`, {
@@ -384,6 +396,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ ok: true });
     });
     return true;
+  }
+});
+
+// Automatically continue multi-step application forms on step transitions
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (tabId === activeAgentTabId && changeInfo.status === 'complete') {
+    if (activeAgentCmd && tab.url && !isInternalBrowserUrl(tab.url)) {
+      setTimeout(() => {
+        dispatchCommandToTab(tab, activeAgentCmd);
+      }, 1000);
+    }
   }
 });
 

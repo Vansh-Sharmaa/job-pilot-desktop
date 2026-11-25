@@ -47,6 +47,7 @@ const activeProcesses = new Map(); // scriptName -> { proc, startTime, pid }
 // Browser Extension Bridge State & Auth Token
 let pendingExtensionCommands = [];
 let lastExtensionPing = 0;
+const pendingClarifications = new Map();
 
 const BRIDGE_TOKEN_FILE = path.join(__dirname, '..', 'extension', 'bridge-token.json');
 let bridgeAuthToken = '';

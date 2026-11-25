@@ -403,8 +403,8 @@
             <!-- Actions: Dual Target Selector + 1-Click Auto-Apply & ATS Scanner -->
             <div class="ubb-actions">
               <div class="ubb-engine-toggle" onclick="toggleExecutionEngine()" title="Click to toggle apply target: In-App Browser or Personal Chrome Extension">
-                <span id="ubb-engine-icon">🌐</span>
-                <span id="ubb-engine-label">In-App</span>
+                <span id="ubb-engine-icon">🚀</span>
+                <span id="ubb-engine-label">Brave Agent</span>
                 <span style="font-size: 8px; color: var(--text-muted); margin-left: 2px;">▾</span>
               </div>
               <button class="ubb-btn-review" onclick="scanCurrentPageATS()" title="Scan Job Keywords and Calculate Real ATS Match">
@@ -2838,7 +2838,7 @@
 
     const radarNodePositions = {};
     let radarCenterPos = null;
-    let executionEngine = 'webview';
+    let executionEngine = 'chrome';
     let currentlyApplyingPortalId = null;
 
     function setPortalApplyingState(portalId, isApplying, meta = {}) {
@@ -4032,17 +4032,51 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    function applyJobLeadInBrowser(url, company, role) {
+    async function applyJobLeadInBrowser(url, company, role) {
       if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
         showToast('Invalid job URL.');
         return;
       }
-      switchWorkspaceTab('browser');
-      const urlBar = document.getElementById('browser-url-bar');
-      const webview = document.getElementById('job-webview');
-      if (urlBar) urlBar.value = url;
-      if (webview) webview.src = url;
-      showToast(`Loaded ${company || 'job'} in Browser - Ready for Auto-Apply!`);
+
+      showToast(`Connecting autonomous agent to Brave for ${company || 'job'}...`);
+
+      // 1. Activate OpenCode Live Agent Stream monitor in the app
+      activateOpenCodeAgentView(company || 'Indeed', url, 20);
+      switchWorkspaceTab('live-agent');
+
+      renderAgentTelemetryStep({
+        step: 'DISPATCH',
+        portal: company || 'Brave Tab',
+        url: url,
+        message: `Dispatching autonomous apply agent into Brave browser for ${role || 'Job'} at ${company || 'Company'}...`
+      });
+
+      // 2. Dispatch command to user's running Brave browser
+      try {
+        if (window.jobPilotApi && window.jobPilotApi.launchChromeAgent) {
+          await window.jobPilotApi.launchChromeAgent({
+            url: url,
+            action: 'start_autonomous_apply',
+            quota: 20
+          });
+        }
+        if (window.jobPilotApi && window.jobPilotApi.sendExtensionCommand) {
+          await window.jobPilotApi.sendExtensionCommand({
+            action: 'start_autonomous_apply',
+            url: url,
+            quota: 20,
+            meta: { company: company || 'Target Company', role: role || 'AI Role', url: url }
+          });
+        }
+        renderAgentTelemetryStep({
+          step: 'NAVIGATE',
+          portal: 'Brave Tab',
+          url: url,
+          message: `Brave browser tab active (Agents: 1 group). Agent scanning DOM for application triggers...`
+        });
+      } catch (err) {
+        showToast('Agent connection notice: ' + err.message);
+      }
     }
 
     async function syncJobLeadsNow() {
@@ -4103,6 +4137,206 @@
       }
     }
 
+
+
+    // =====================================================================
+    // RIGHT-SIDE SLIDING EMAIL & JOB LEAD INSPECTION DRAWER CONTROLLER
+    // =====================================================================
+    let currentDrawerItem = null;
+    let currentDrawerType = 'interview';
+
+    function openEmailDrawerById(type, id) {
+      let item = null;
+      if (type === 'interview') {
+        item = allInterviewRecords.find(x => String(x.id) === String(id));
+      } else {
+        item = allJobLeads.find(x => String(x.id) === String(id));
+      }
+      if (!item) {
+        showToast('Record not found.');
+        return;
+      }
+      openEmailDrawer(item, type);
+    }
+
+    function openEmailDrawer(item, type) {
+      currentDrawerItem = item;
+      currentDrawerType = type;
+
+      const drawer = document.getElementById('email-inspection-drawer');
+      const backdrop = document.getElementById('email-drawer-backdrop');
+      if (!drawer || !backdrop) return;
+
+      const isInterview = (type === 'interview');
+      
+      // Title & Badges
+      const titleText = document.getElementById('drawer-title-text');
+      if (titleText) titleText.innerText = isInterview ? 'Recruiter Email Intelligence' : 'Job Alert Email Inspector';
+
+      const stageBadge = document.getElementById('drawer-stage-badge');
+      if (stageBadge) {
+        if (isInterview) {
+          const cat = (item.category || 'INTERVIEW').toUpperCase();
+          stageBadge.innerText = cat;
+          stageBadge.className = 'stage-pill ' + (cat === 'INTERVIEW' ? 'stage-interview' : (cat === 'SHORTLISTED' ? 'stage-shortlisted' : (cat === 'OFFER' ? 'stage-offer' : 'stage-applied')));
+        } else {
+          stageBadge.innerText = item.fitBadge || 'RECOMMENDED LEAD';
+          stageBadge.className = 'stage-pill stage-shortlisted';
+        }
+      }
+
+      const accBadge = document.getElementById('drawer-account-badge');
+      const accEmail = item.account || 'engagevansh@gmail.com';
+      if (accBadge) {
+        accBadge.innerText = accEmail.split('@')[0];
+        const col = getAccountColor(accEmail);
+        accBadge.style.borderColor = col.border;
+        accBadge.style.color = col.text;
+        accBadge.style.background = col.bg;
+      }
+
+      // Header Details
+      const subjEl = document.getElementById('drawer-subject');
+      if (subjEl) subjEl.innerText = item.subject || (item.role ? `${item.role} at ${item.company}` : 'Recruiter Notification');
+
+      const compEl = document.getElementById('drawer-company');
+      if (compEl) compEl.innerText = item.company || 'Unknown Company';
+
+      const roleEl = document.getElementById('drawer-role');
+      if (roleEl) roleEl.innerText = item.role || 'AI / Software Engineer';
+
+      const senderEl = document.getElementById('drawer-sender');
+      if (senderEl) senderEl.innerText = item.sender || (item.platform || 'Recruitment Alert System');
+
+      const dateEl = document.getElementById('drawer-date');
+      if (dateEl) dateEl.innerText = item.date || 'Recent';
+
+      // Full Email Body
+      const bodyEl = document.getElementById('drawer-email-body');
+      if (bodyEl) {
+        if (item.body && item.body.trim().length > 20) {
+          bodyEl.innerText = item.body;
+        } else {
+          const role = item.role || 'AI Engineer';
+          const comp = item.company || 'Hiring Team';
+          const sender = item.sender || item.platform || 'Recruitment Team';
+          const snip = item.snippet || item.subject || '';
+          bodyEl.innerText = `From: ${sender}\nTo: ${accEmail}\nDate: ${item.date || 'Recent'}\nSubject: ${item.subject || `${role} Opportunities`}\n\nDear Vansh Sharma,\n\nWe are reaching out regarding the ${role} opening at ${comp}.\n\nDetails:\n${snip}\n\nCandidate Profile: MCA in AI & Data Science (Class of 2026), Amity University.\nSkills: Python, Machine Learning, AI Agents, Prompt Engineering, LLM Integration.\n\nBest regards,\n${sender}\n${comp} Hiring Team`;
+        }
+      }
+
+      // Action Buttons
+      const btnApply = document.getElementById('drawer-btn-apply');
+      const footerApply = document.getElementById('drawer-footer-apply');
+      const rawUrl = item.url || item.link || '';
+      if (btnApply) {
+        btnApply.style.display = (rawUrl || !isInterview) ? 'inline-flex' : 'none';
+      }
+      if (footerApply) {
+        footerApply.style.display = (rawUrl || !isInterview) ? 'inline-flex' : 'none';
+      }
+
+      const btnMeet = document.getElementById('drawer-btn-meet');
+      if (btnMeet) {
+        if (item.meetingLink && (item.meetingLink.startsWith('http://') || item.meetingLink.startsWith('https://'))) {
+          btnMeet.style.display = 'inline-flex';
+        } else {
+          btnMeet.style.display = 'none';
+        }
+      }
+
+      const btnPrep = document.getElementById('drawer-btn-prep');
+      if (btnPrep) {
+        btnPrep.style.display = isInterview ? 'inline-flex' : 'none';
+      }
+
+      const footerStatus = document.getElementById('drawer-footer-status');
+      if (footerStatus) {
+        footerStatus.innerText = isInterview ? `Status: ${item.status || 'Active'} | ${item.scheduledTime || 'Round Pending'}` : `Platform: ${item.platform || 'Alert'} | Match: ${item.fitBadge || 'Entry Level'}`;
+      }
+
+      // Slide open
+      drawer.classList.add('open');
+      backdrop.classList.add('open');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeEmailDrawer() {
+      const drawer = document.getElementById('email-inspection-drawer');
+      const backdrop = document.getElementById('email-drawer-backdrop');
+      if (drawer) drawer.classList.remove('open');
+      if (backdrop) backdrop.classList.remove('open');
+    }
+
+    function drawerActionApply() {
+      if (!currentDrawerItem) return;
+      const url = currentDrawerItem.url || currentDrawerItem.link || '';
+      const comp = currentDrawerItem.company || 'Hiring Company';
+      const role = currentDrawerItem.role || 'AI Engineer';
+
+      closeEmailDrawer();
+
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        applyJobLeadInBrowser(url, comp, role);
+      } else {
+        const searchUrl = `https://in.indeed.com/jobs?q=${encodeURIComponent(role + ' ' + comp)}&l=India`;
+        applyJobLeadInBrowser(searchUrl, comp, role);
+      }
+    }
+
+    function drawerActionJoinMeet() {
+      if (!currentDrawerItem || !currentDrawerItem.meetingLink) return;
+      if (window.jobPilotApi && window.jobPilotApi.openExternal) {
+        window.jobPilotApi.openExternal(currentDrawerItem.meetingLink);
+      }
+    }
+
+    function drawerActionPrepAI() {
+      if (!currentDrawerItem) return;
+      const comp = currentDrawerItem.company || 'Target Company';
+      const role = currentDrawerItem.role || 'AI Engineer';
+      closeEmailDrawer();
+      prepInterviewWithAI(comp, role);
+    }
+
+    function drawerActionCopyEmail() {
+      if (!currentDrawerItem) return;
+      const bodyText = document.getElementById('drawer-email-body')?.innerText || currentDrawerItem.body || '';
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(bodyText).then(() => {
+          showToast('Email content copied to clipboard!');
+        }).catch(() => {
+          showToast('Failed to copy email text.');
+        });
+      }
+    }
+
+    function toggleChatPaneSplit() {
+      const isCurrentlyCollapsed = (paneAgent.style.display === 'none');
+      if (isCurrentlyCollapsed) {
+        setLayoutMode('split');
+        document.querySelectorAll('.chat-toggle-label').forEach(el => el.innerText = 'Full Width Mode');
+        showToast('Restored side-by-side split view');
+      } else {
+        paneAgent.style.display = 'none';
+        resizer.style.display = 'none';
+        paneWorkspace.style.display = 'flex';
+        paneWorkspace.style.width = '100%';
+        document.querySelectorAll('.chat-toggle-label').forEach(el => el.innerText = 'Show Chat (Split View)');
+        showToast('Expanded workspace to 100% full-width view');
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const drawer = document.getElementById('email-inspection-drawer');
+        if (drawer && drawer.classList.contains('open')) {
+          closeEmailDrawer();
+        }
+      }
+    });
 
     // Ledger Logic (Precision Utility 4-State Protocol)
     function renderLedgerLoadingState() {

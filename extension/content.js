@@ -21,6 +21,17 @@
     }
   });
 
+  // Auto-resume agent on multi-step application pages (Indeed smartapply, questions module, Greenhouse, Lever)
+  setTimeout(() => {
+    try {
+      chrome.runtime.sendMessage({ type: 'CHECK_ACTIVE_AGENT_SESSION' }, (res) => {
+        if (res && res.active && !isAgentRunning) {
+          runAutonomousApplyAgent();
+        }
+      });
+    } catch (e) {}
+  }, 1000);
+
   async function getBridgeToken() {
     if (cachedBridgeToken) return cachedBridgeToken;
     return new Promise((resolve) => {
@@ -854,24 +865,24 @@
       const explicitLabel = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
       if (explicitLabel && explicitLabel.innerText.trim()) return explicitLabel.innerText.trim();
     }
-    // 2. Wrapping <label>
+    // 2. Wrapping <label> only if it's descriptive (not just "Yes" or "No")
     const parentLabel = el.closest('label');
-    if (parentLabel && parentLabel.innerText.trim()) return parentLabel.innerText.trim();
+    if (parentLabel && parentLabel.innerText.trim().length > 25) return parentLabel.innerText.trim();
 
-    // 3. Google Forms question container
+    // 3. Question container in Indeed SmartApply, Google Forms, or standard ATS
+    const group = el.closest('[data-testid*="question"], [class*="Questions"], fieldset, .ia-Questions-item, .form-group, .field, [role="group"]');
+    if (group) {
+      const header = group.querySelector('[data-testid*="header"], [class*="header"], [class*="title"], [class*="legend"], legend, [role="heading"], h2, h3, h4, .ia-Questions-itemHeading, span, p');
+      if (header && header !== el && !header.contains(el) && header.innerText.trim().length > 3) {
+        return header.innerText.trim();
+      }
+    }
+
+    // 4. Google Forms question container
     const gFormItem = el.closest('[role="listitem"]');
     if (gFormItem) {
       const heading = gFormItem.querySelector('[role="heading"], .M7eMe');
       if (heading && heading.innerText.trim()) return heading.innerText.trim();
-    }
-
-    // 4. Standard ATS / React form group containers
-    const group = el.closest('.form-group, .field, .question, .form-field, fieldset, [class*="question"], [class*="field"]');
-    if (group) {
-      const lbl = group.querySelector('label, legend, p, span, h3, h4, .label');
-      if (lbl && lbl !== el && lbl.innerText.trim().length > 2 && lbl.innerText.trim().length < 300) {
-        return lbl.innerText.trim();
-      }
     }
 
     // 5. Fallback to aria-label or placeholder
@@ -978,30 +989,58 @@
       // 1. Radio Buttons & Checkboxes
       if (type === 'radio' || type === 'checkbox') {
         const labelEl = el.closest('label') || (el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null);
-        const labelText = ((labelEl ? labelEl.innerText : '') + ' ' + identifier).toLowerCase();
+        const qHeading = extractFieldQuestion(el);
+        const labelText = ((labelEl ? labelEl.innerText : '') + ' ' + qHeading + ' ' + identifier).toLowerCase();
+        const optVal = ((labelEl ? labelEl.innerText : '') + ' ' + (el.value || '')).toLowerCase();
 
         if (labelText.includes('gender') || labelText.includes('sex') || identifier.includes('gender')) {
           if ((labelText.includes('male') && !labelText.includes('female')) || el.value.toLowerCase() === 'male') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
+        } else if (labelText.includes('u.s. citizen') || labelText.includes('us citizen') || labelText.includes('united states citizen')) {
+          // Indian citizen candidate in India: not a US citizen
+          if (optVal.includes('no') || optVal === 'no') {
+            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+          }
+          continue;
+        } else if (labelText.includes('master') && (labelText.includes('degree') || type === 'checkbox' || labelText.includes('mca') || labelText.includes('or higher'))) {
+          // Candidate possesses MCA (Master of Computer Applications)
+          el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+          continue;
+        } else if (labelText.includes('training development') || labelText.includes('instructional') || labelText.includes('facilitation')) {
+          if (optVal.includes('yes') || optVal === 'yes') {
+            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+          }
+          continue;
+        } else if (labelText.includes('spanish') && (labelText.includes('bilingual') || labelText.includes('fluent'))) {
+          // English and Hindi speaker, not bilingual in Spanish
+          if (optVal.includes('no') || optVal === 'no') {
+            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+          }
+          continue;
+        } else if (labelText.includes('internet') || labelText.includes('power solution') || labelText.includes('power outage') || labelText.includes('quiet') || labelText.includes('workspace')) {
+          if (optVal.includes('yes') || optVal === 'yes' || type === 'checkbox') {
+            el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
+          }
+          continue;
         } else if ((labelText.includes('authorized') || labelText.includes('legally authorized') || labelText.includes('eligible to work')) && !labelText.includes('sponsorship') && !labelText.includes('u.s.') && !labelText.includes('us citizen')) {
-          if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
+          if (optVal.includes('yes') || optVal === 'yes') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (labelText.includes('sponsorship') || labelText.includes('require visa')) {
-          if (labelText.includes('no') || el.value.toLowerCase() === 'no') {
+          if (optVal.includes('no') || optVal === 'no') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (labelText.includes('relocate') || labelText.includes('comfortable working') || labelText.includes('willing to travel')) {
-          if (labelText.includes('yes') || el.value.toLowerCase() === 'yes') {
+          if (optVal.includes('yes') || optVal === 'yes') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
         } else if (labelText.includes('immediate') || labelText.includes('join immediately')) {
-          if (labelText.includes('yes') || el.value.toLowerCase() === 'yes' || type === 'checkbox') {
+          if (optVal.includes('yes') || optVal === 'yes' || type === 'checkbox') {
             el.checked = true; triggerEvents(el); el.classList.add('jobpilot-filled-review'); filledCount++;
           }
           continue;
