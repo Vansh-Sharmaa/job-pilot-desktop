@@ -1,4 +1,11 @@
 const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
+
+// Friendly startup check for direct node invocation
+if (!app || typeof app.requestSingleInstanceLock !== 'function') {
+  console.error("JobPilot must be launched via 'npm start' or 'electron .' (not node).");
+  process.exit(1);
+}
+
 const path = require('path');
 const fs = require('fs');
 const { spawn, exec, execSync } = require('child_process');
@@ -77,6 +84,45 @@ function rpc(action, params = {}, timeoutMs = 30000, sessionId = '') {
   });
 }
 
+// Consequential Action & Submission Human Approval Gate
+const pendingApprovals = new Map(); // id -> { resolve, timer }
+
+function requestHumanApproval({ title, preview, action = 'submit', timeoutMs = 60000 }) {
+  const id = crypto.randomUUID();
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      pendingApprovals.delete(id);
+      resolve({ approved: false, reason: 'timeout' });
+    }, timeoutMs);
+
+    pendingApprovals.set(id, { resolve, timer });
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('human-approval-request', {
+        id,
+        title: title || 'Application Submission Approval Required',
+        preview: preview || {},
+        action
+      });
+    } else {
+      clearTimeout(timer);
+      pendingApprovals.delete(id);
+      resolve({ approved: false, reason: 'no_window' });
+    }
+  });
+}
+
+ipcMain.handle('resolve-human-approval', (event, { id, approved }) => {
+  if (pendingApprovals.has(id)) {
+    const { resolve, timer } = pendingApprovals.get(id);
+    clearTimeout(timer);
+    pendingApprovals.delete(id);
+    resolve({ approved: !!approved, reason: approved ? 'approved' : 'denied' });
+    return { ok: true };
+  }
+  return { ok: false, error: 'Approval request not found or expired' };
+});
+
 const BRIDGE_TOKEN_FILE = path.join(__dirname, '..', 'extension', 'bridge-token.json');
 let bridgeAuthToken = '';
 
@@ -103,20 +149,43 @@ const RESUME_PDF_PATH = path.join(RESUME_DIR, 'Vansh_Sharma_Resume.pdf');
 const RESUME_MD_PATH = path.join(RESUME_DIR, 'Vansh_Sharma_Resume.md');
 const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
 
-// Default model configuration without hardcoded secret token
+// Default model configuration with per-task routing
 let config = {
   provider: '9router',
   routerUrl: 'http://127.0.0.1:20128/v1',
-  routerToken: process.env.ROUTER_TOKEN || '',
-  model: 'Fable5'
+  model: 'Fable5',
+  routing: {
+    planning: 'Fable5',
+    extraction: 'Fable5',
+    qa: 'Fable5'
+  }
 };
+
+let activeRouterToken = process.env.ROUTER_TOKEN || '';
 
 // Load persisted configuration if present
 try {
   if (fs.existsSync(CONFIG_PATH)) {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
     const parsed = JSON.parse(raw);
+    if (parsed.routerToken) {
+      if (!activeRouterToken) {
+        activeRouterToken = parsed.routerToken;
+      }
+      console.warn('Notice: routerToken migrated from config.json to memory. config.json sanitized.');
+      delete parsed.routerToken;
+      try {
+        fs.writeFileSync(CONFIG_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
+      } catch (e) {}
+    }
     config = { ...config, ...parsed };
+    if (!config.routing) {
+      config.routing = {
+        planning: config.model || 'Fable5',
+        extraction: config.model || 'Fable5',
+        qa: config.model || 'Fable5'
+      };
+    }
   }
 } catch (e) {
   console.warn('Failed to load config.json, using defaults:', e.message);
@@ -124,7 +193,9 @@ try {
 
 function saveConfig() {
   try {
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+    const toSave = { ...config };
+    delete toSave.routerToken; // Never persist routerToken to disk
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(toSave, null, 2), 'utf-8');
   } catch (e) {
     console.error('Failed to save config.json:', e.message);
   }
@@ -250,24 +321,7 @@ const CANDIDATE_PROFILE = {
   needSponsorship: 'No',
   willingToRelocate: 'Yes',
   skills: ['Python', 'C++', 'SQL', 'LangChain', 'LangGraph', 'PyTorch', 'Hugging Face', 'Scikit-learn', 'XGBoost', 'RAG Pipelines', 'Multi-Agent Systems', 'FAISS', 'FastAPI', 'Docker', 'Streamlit'],
-  skillsExperience: {
-    'python': 2,
-    'machine learning': 2,
-    'ai': 2,
-    'deep learning': 2,
-    'pytorch': 1,
-    'tensorflow': 1,
-    'langchain': 1,
-    'langgraph': 1,
-    'rag': 1,
-    'vector database': 1,
-    'fastapi': 1,
-    'sql': 2,
-    'postgresql': 2,
-    'mongodb': 1,
-    'docker': 1,
-    'git': 2
-  },
+  skillsExperience: {},
   pitch: 'AI/ML Engineer (MCA in AI & Data Science, Class of 2026, Graphic Era Hill University). Specialized in RAG pipelines, multi-agent orchestration with LangGraph, FAISS vector search, and production FastAPI ML microservices. Immediate joiner.'
 };
 
@@ -386,17 +440,17 @@ async function answerQuestionWithAI(question, company = '', role = '', fieldType
       return { ok: true, answer: fieldType === 'number' ? '600000' : 'Negotiable around 6 to 10 LPA depending on the role' };
     }
     if (qClean.includes('experience with python')) {
-      return { ok: true, answer: fieldType === 'number' ? '2' : 'Around 2 years of hands on experience building Python backends and ML scripts' };
+      return { ok: true, answer: fieldType === 'number' ? '0' : 'Fresher with hands on academic and project experience building Python backends and ML scripts' };
     }
     if (qClean.includes('experience with pytorch') || qClean.includes('experience with deep learning')) {
-      return { ok: true, answer: fieldType === 'number' ? '1' : 'About 1 year working with PyTorch for model training and fine tuning' };
+      return { ok: true, answer: fieldType === 'number' ? '0' : 'Fresher with project experience working with PyTorch for model training and fine tuning' };
     }
     if (qClean.includes('rag') || qClean.includes('langchain')) {
-      return { ok: true, answer: fieldType === 'number' ? '1' : 'About 1 year building RAG pipelines with LangChain and vector databases' };
+      return { ok: true, answer: fieldType === 'number' ? '0' : 'Fresher with project experience building RAG pipelines with LangChain and vector databases' };
     }
   }
 
-  // Query local Fable5 AI gateway on port 20128 with full candidate resume context
+  // Query local AI gateway with full candidate resume context
   try {
     const isAlive = await isRouterAlive();
     if (!isAlive) await ensureRouter(4000);
@@ -413,25 +467,28 @@ async function answerQuestionWithAI(question, company = '', role = '', fieldType
       'Availability: Immediate joiner (0 days notice), authorized to work in India, no sponsorship needed'
     ].join('\n');
 
-    let systemPrompt = 'You are Vansh Sharma filling out a job application form yourself. Write in a completely natural, casual yet professional human way, like a real developer typing directly into a form box. Keep answers concise (1 to 2 simple sentences). Do NOT use robotic AI phrases like "I am thrilled", "leverage my expertise", "delve into", or "testament". Do NOT use em-dashes, en-dashes, semicolons, bullet points, or heavy punctuation. Use plain everyday sentences with minimal punctuation.';
+    let systemPrompt = 'You are Vansh Sharma filling out a job application form yourself. Write in a completely natural, casual yet professional human way, like a real developer typing directly into a form box. Keep answers concise (1 to 2 simple sentences). Do NOT use robotic AI phrases like "I am thrilled", "leverage my expertise", "delve into", or "testament". Do NOT use em-dashes, en-dashes, semicolons, bullet points, or heavy punctuation. Use plain everyday sentences with minimal punctuation. If the answer is not explicitly supported by the candidate facts I provided, reply with exactly UNKNOWN. Never guess, never pick a convenient option.';
     let userContent = `My Resume:\n${resumeContext}\n\nTarget Company: ${company || 'this company'}\nTarget Role: ${role || 'AI Engineer'}\nField Type: ${fieldType}\nQuestion: ${question}`;
 
     if (fieldType === 'number') {
-      systemPrompt += ' Since this is a number field, reply ONLY with a single integer number (for example 1 or 2 or 0) and nothing else.';
+      systemPrompt += ' Since this is a number field, reply ONLY with a single integer number (for example 0) and nothing else.';
     } else if (hasOptions) {
-      systemPrompt += ` Since this is a multiple choice or dropdown question, pick the single best option from the provided list and reply ONLY with that exact option text.`;
+      systemPrompt += ` Since this is a multiple choice or dropdown question, pick the single best option from the provided list and reply ONLY with that exact option text. If no option matches candidate facts, reply UNKNOWN.`;
       userContent += `\nAvailable Options: ${JSON.stringify(options)}`;
     } else {
       userContent += '\n\nWrite my direct human answer:';
     }
 
+    const qaModel = (config.routing && config.routing.qa) || config.model || 'Fable5';
+    debugLog(`[MODEL CALL] Task: qa, Model: ${qaModel}`);
+
     const payload = JSON.stringify({
-      model: config.model || 'Fable5',
+      model: qaModel,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent }
       ],
-      temperature: 0.3
+      temperature: 0.1
     });
 
     const chatUrl = `${config.routerUrl.replace(/\/$/, '')}/chat/completions`;
@@ -439,7 +496,7 @@ async function answerQuestionWithAI(question, company = '', role = '', fieldType
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.routerToken}`
+        'Authorization': `Bearer ${activeRouterToken}`
       },
       body: payload,
       signal: AbortSignal.timeout(12000)
@@ -448,27 +505,103 @@ async function answerQuestionWithAI(question, company = '', role = '', fieldType
     if (res.ok) {
       const data = await res.json();
       const rawAns = data?.choices?.[0]?.message?.content?.trim() || '';
-      const ans = hasOptions ? rawAns : sanitizeHumanAnswer(rawAns);
-      if (ans) {
-        qaCache[cacheKey] = ans;
-        try { fs.writeFileSync(QA_CACHE_PATH, JSON.stringify(qaCache, null, 2), 'utf-8'); } catch (e) {}
-        return { ok: true, answer: ans, cached: false };
+      if (!rawAns || rawAns.toUpperCase() === 'UNKNOWN') {
+        return triggerPendingClarification(question, fieldType, options);
       }
+
+      let finalAns = rawAns;
+      if (hasOptions) {
+        const match = options.find(o => o.trim().toLowerCase() === rawAns.toLowerCase());
+        if (!match) {
+          return triggerPendingClarification(question, fieldType, options);
+        }
+        finalAns = match;
+      } else {
+        finalAns = sanitizeHumanAnswer(rawAns);
+      }
+
+      if (!validateAnswerSanity(finalAns, fieldType, options)) {
+        return triggerPendingClarification(question, fieldType, options);
+      }
+
+      qaCache[cacheKey] = finalAns;
+      try { fs.writeFileSync(QA_CACHE_PATH, JSON.stringify(qaCache, null, 2), 'utf-8'); } catch (e) {}
+      return { ok: true, answer: finalAns, cached: false };
     }
   } catch (e) {
-    console.error('AI QA failed:', e.message);
+    debugLog(`AI QA error: ${e.message}`);
   }
 
-  if (fieldType === 'number') {
-    return { ok: true, answer: '1', fallback: true };
-  }
+  // On UNKNOWN, format rejection, error, or offline router: escalate to human
+  return triggerPendingClarification(question, fieldType, options);
+}
+
+function validateAnswerSanity(ans, fieldType, options = []) {
+  if (!ans || typeof ans !== 'string') return false;
+  const trimmed = ans.trim();
+  if (!trimmed || trimmed.toUpperCase() === 'UNKNOWN') return false;
+
+  const type = (fieldType || 'text').toLowerCase();
+  const hasOptions = Array.isArray(options) && options.length > 0;
+
   if (hasOptions) {
-    const yesOpt = options.find(o => o.toLowerCase().includes('yes') || o.toLowerCase().includes('immediate') || o.toLowerCase().includes('india'));
-    return { ok: true, answer: yesOpt || options[0], fallback: true };
+    return options.some(opt => opt.trim().toLowerCase() === trimmed.toLowerCase());
   }
 
-  const fallback = 'I am completing my MCA in AI and Data Science and have hands on experience building RAG pipelines with LangChain PyTorch models and FastAPI backends and I can join immediately';
-  return { ok: true, answer: fallback, fallback: true };
+  if (type === 'number') {
+    return /^\d+$/.test(trimmed);
+  }
+
+  if (type === 'date') {
+    if (trimmed.length > 35 || trimmed.includes('\n')) return false;
+    if (/\b(degree|university|experience|college|graduated|studied|skills|engineer|developer|science)\b/i.test(trimmed)) {
+      return false;
+    }
+    const datePatterns = [
+      /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/,
+      /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}$/,
+      /^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}$/i,
+      /^\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}$/i,
+      /^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}$/i,
+      /^\d{4}$/
+    ];
+    return datePatterns.some(p => p.test(trimmed)) || (!isNaN(Date.parse(trimmed)) && trimmed.length <= 25);
+  }
+
+  if (type === 'email') {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  }
+
+  if (type === 'phone' || type === 'tel') {
+    return /^\+?[\d\s\-()]{7,16}$/.test(trimmed);
+  }
+
+  if (type === 'url') {
+    return /^https?:\/\/[^\s]+$/i.test(trimmed);
+  }
+
+  return true;
+}
+
+function triggerPendingClarification(question, fieldType, options = []) {
+  const reqId = `clarify_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('agent-clarification-request', {
+      id: reqId,
+      question,
+      fieldType,
+      options: options || [],
+      title: 'Clarification Needed'
+    });
+  }
+  return {
+    ok: false,
+    needsHuman: true,
+    question,
+    fieldType,
+    options: options || [],
+    clarificationId: reqId
+  };
 }
 
 // Fraud & Consultancy Fee Detection Helper
@@ -550,25 +683,28 @@ function startExtensionBridgeServer() {
     const providedToken = authHeader.replace(/^Bearer\s+/i, '') || tokenHeader;
     const isAuthed = !!(providedToken && bridgeAuthToken && providedToken === bridgeAuthToken);
 
+    if (parsedUrl.pathname === '/api/status' || parsedUrl.pathname === '/health') {
+      if (isAuthed) {
+        lastExtensionPing = Date.now();
+        mainWindow?.webContents.send('extension-status-changed', { connected: true });
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        ok: true,
+        app: 'JobPilot AI Operator',
+        candidate: CANDIDATE_PROFILE,
+        pendingCommandCount: pendingExtensionCommands.length,
+        authenticated: isAuthed
+      }));
+      return;
+    }
+
     if (parsedUrl.pathname.startsWith('/api/')) {
       if (!isAuthed) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, error: 'Unauthorized: valid bridge token required.' }));
         return;
       }
-    }
-
-    if (parsedUrl.pathname === '/api/status') {
-      lastExtensionPing = Date.now();
-      mainWindow?.webContents.send('extension-status-changed', { connected: true });
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        ok: true,
-        app: 'JobPilot AI Operator',
-        candidate: CANDIDATE_PROFILE,
-        pendingCommandCount: pendingExtensionCommands.length
-      }));
-      return;
     }
 
     if (parsedUrl.pathname === '/api/candidate-profile') {
@@ -1001,7 +1137,7 @@ async function isRouterAlive() {
     const res = await fetch(modelsUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${config.routerToken}`
+        'Authorization': `Bearer ${activeRouterToken}`
       },
       signal: AbortSignal.timeout(8000)
     });
@@ -2369,7 +2505,7 @@ Ensure all emails follow realistic company formats (e.g. first.last@${domain} or
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.routerToken}`
+          'Authorization': `Bearer ${activeRouterToken}`
         },
         body: payload,
         signal: AbortSignal.timeout(35000)
@@ -2446,7 +2582,7 @@ Guidelines:
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.routerToken}`
+        'Authorization': `Bearer ${activeRouterToken}`
       },
       body: payload,
       signal: AbortSignal.timeout(20000)
@@ -2748,7 +2884,7 @@ ipcMain.handle('get-model-config', async () => {
     provider: config.provider,
     routerUrl: config.routerUrl,
     model: config.model,
-    routerToken: config.routerToken,
+    routerToken: activeRouterToken ? '***' : '',
     isAlive: alive
   };
 });
@@ -2757,7 +2893,10 @@ ipcMain.handle('set-model-config', async (event, { provider, model, routerUrl, t
   if (provider) config.provider = provider;
   if (model) config.model = model;
   if (routerUrl) config.routerUrl = routerUrl.replace(/\/$/, '');
-  if (token !== undefined) config.routerToken = token;
+  if (token !== undefined) {
+    activeRouterToken = token;
+    process.env.ROUTER_TOKEN = token;
+  }
   
   saveConfig();
   const alive = await isRouterAlive();
@@ -2772,7 +2911,7 @@ ipcMain.handle('restart-router', async () => {
 
 ipcMain.handle('test-connection', async (event, { routerUrl, token, model }) => {
   const targetUrl = (routerUrl || config.routerUrl).replace(/\/$/, '');
-  const targetToken = token !== undefined ? token : config.routerToken;
+  const targetToken = token !== undefined ? token : activeRouterToken;
   const start = Date.now();
 
   try {
@@ -2803,7 +2942,7 @@ ipcMain.handle('get-available-models', async () => {
   try {
     const res = await fetch(`${config.routerUrl.replace(/\/$/, '')}/models`, {
       method: 'GET',
-      headers: { 'Authorization': `Bearer ${config.routerToken}` },
+      headers: { 'Authorization': `Bearer ${activeRouterToken}` },
       signal: AbortSignal.timeout(4000)
     });
     if (res.ok) {
@@ -3086,6 +3225,23 @@ async function executeAgentTool(name, args) {
     }
 
     case 'browser_act': {
+      const isConsequential = /submit|apply|send|publish|delete|confirm application/i.test(args.text || args.value || '') ||
+                              /privacy|security|billing|account/i.test(args.ref || args.value || '');
+      if (isConsequential) {
+        const approval = await requestHumanApproval({
+          title: 'Action Approval Required',
+          preview: {
+            action: 'browser_act',
+            op: args.op,
+            ref: args.ref,
+            target: args.text || args.value || args.ref
+          },
+          action: 'browser_act'
+        });
+        if (!approval.approved) {
+          return { ok: false, error: 'Approval required - action cancelled' };
+        }
+      }
       try {
         const res = await rpc('act', { ref: args.ref, op: args.op, value: args.value }, 30000);
         return res.data || res;
@@ -3122,8 +3278,43 @@ async function executeAgentTool(name, args) {
     }
 
     case 'browser_submit': {
+      let pageData = {};
       try {
-        const res = await rpc('act', { ref: args.ref, op: 'submit' }, 30000);
+        const obs = await rpc('observe', { maxElements: 60 }, 5000);
+        pageData = obs?.data || obs || {};
+      } catch (e) {}
+
+      const preview = {
+        company: pageData.title || args.company || 'Active Job Portal Tab',
+        role: args.role || 'AI / Software Engineer',
+        url: pageData.url || args.url || 'Active Job Portal Tab',
+        fields: {
+          name: CANDIDATE_PROFILE.name,
+          email: CANDIDATE_PROFILE.email,
+          phone: CANDIDATE_PROFILE.phone,
+          education: `${CANDIDATE_PROFILE.education} (${CANDIDATE_PROFILE.college})`,
+          experience: CANDIDATE_PROFILE.experienceLabel,
+          resume: RESUME_PDF_PATH
+        }
+      };
+
+      const approval = await requestHumanApproval({
+        title: 'Application Submission Approval Required',
+        preview,
+        action: 'submit'
+      });
+
+      if (!approval.approved) {
+        return { ok: false, error: 'Approval required - submission cancelled' };
+      }
+
+      const approvalToken = crypto.randomUUID();
+      try {
+        await rpc('grant_approval_token', { token: approvalToken }, 10000);
+      } catch (e) {}
+
+      try {
+        const res = await rpc('act', { ref: args.ref, op: 'submit', approvalToken }, 30000);
         return res.data || res;
       } catch (e) {
         return { ok: false, error: e.message };
@@ -3311,7 +3502,7 @@ async function executeAgentTool(name, args) {
           return stats;
         }
       } catch (e) {}
-      return { total_all_time: 311, is_capped: true, note: 'Autopilot daemon running' };
+      return { ok: false, error: 'Router offline - no live data available' };
     }
 
     case 'get_candidate_profile': {
@@ -3326,78 +3517,8 @@ async function executeAgentTool(name, args) {
 // =====================================================================
 // AUTONOMOUS LOCAL OFFLINE INTELLIGENCE ENGINE
 // =====================================================================
-function generateOfflineAgentReply(prompt) {
-  const p = (prompt || '').toLowerCase();
-
-  if (p.includes('roadmap') || p.includes('prep') || p.includes('interview') || p.includes('screening') || p.includes('fresher')) {
-    return `### Technical Screening & Interview Prep Roadmap: AI Engineer (Fresher)
-
-**Target Candidate:** Vansh Sharma (MCA in AI & Data Science, Class of 2026, 0-2 YOE)
-**Core Competencies:** Python, PyTorch, LangChain, RAG Architectures, FastAPI, Docker
-
----
-
-#### Phase 1: Advanced Python & Systems Fundamentals (Week 1)
-- **Object-Oriented Design:** Inheritance, dataclasses, dunder methods, generator pipelines, clean typing.
-- **Concurrency & I/O:** AsyncIO event loop patterns, task pools, async HTTP clients with aiohttp / httpx.
-- **Data Structures & Algorithms:** Two-pointers, hash tables, sliding windows, graph BFS/DFS, binary search.
-- **Production Standards:** PyTest unit tests, parameterized testing, clean logging, environment configurations.
-
-#### Phase 2: Machine Learning & PyTorch Core (Week 2)
-- **Deep Learning Architectures:** Multi-layer perceptrons, convolutional layers, recurrent blocks, self-attention mechanisms.
-- **PyTorch Engineering:** Custom Dataset and DataLoader pipelines, autograd mechanics, training loops, gradient clipping, learning rate schedulers.
-- **Model Evaluation:** Precision, recall, F1-score, ROC-AUC, cross-validation, confusion matrices, bias-variance tradeoffs.
-
-#### Phase 3: GenAI, RAG Architectures & LLM Engineering (Week 3)
-- **Retrieval-Augmented Generation (RAG):** Document parsing, recursive character chunking, embedding generation, vector similarity metrics.
-- **Vector Stores:** ChromaDB, FAISS, PGVector, indexing strategies (HNSW, IVFFlat).
-- **Frameworks & Agents:** LangChain Expression Language (LCEL), multi-step autonomous agent tools, prompt engineering.
-- **Reranking & Quality:** Cohere re-ranking, BM25 hybrid search, context compression, hallucination reduction.
-
-#### Phase 4: Production Deployment & Backend Microservices (Week 4)
-- **API Development:** FastAPI asynchronous endpoints, Pydantic schemas, dependency injection, streaming responses.
-- **Containerization:** Multi-stage Docker builds, container optimization, Docker Compose orchestration.
-- **MLOps & Monitoring:** Model latency profiling, token metrics, structured error handling.
-
----
-
-#### Verified Screening Answers for Vansh Sharma:
-- **Expected Salary:** "Negotiable as per company compensation standards for entry-level AI roles (6 to 10 LPA)."
-- **Notice Period / Availability:** "Immediate joiner."
-- **Key Projects:** Autonomous multi-platform job application agent, live RAG question-answering system, fine-tuned PyTorch classifiers.`;
-  }
-
-  if (p.includes('ledger') || p.includes('application') || p.includes('status') || p.includes('count') || p.includes('quota')) {
-    const rows = parseTrackerCsv();
-    return `### Verified Applications Ledger Status
-
-- **Total Synchronized Applications:** ${rows.length} records in active tracker
-- **Monitored Platforms:** Indeed, Naukri, Internshala, Cuvette, Wellfound, Unstop, Hirist
-- **Verification Engine:** Dual verification (HTTP status + DOM confirmation)
-- **Next Steps:** Navigate to **[JL Job Leads]** tab to inspect fresh recruitment recommendations.`;
-  }
-
-  if (p.includes('resume') || p.includes('tailor') || p.includes('ats')) {
-    return `### Dynamic ATS Resume Engine
-
-- **Candidate:** Vansh Sharma (MCA AI & Data Science, Class of 2026)
-- **Active Document:** \`Vansh_Sharma_Resume.pdf\`
-- **Keyword Alignment:** 90%+ match score across AI Engineer, ML Engineer, and GenAI job descriptions.
-- **Core Skills Highlighted:** Python, PyTorch, LangChain, RAG architectures, FastAPI, Docker, PostgreSQL.
-- **Action:** Load any job posting in the **Browser** tab and click **Scan ATS** to verify real-time keyword match.`;
-  }
-
-  return `### JobPilot Autonomous Operator (Local Mode)
-
-Workstation is active and monitoring your job search pipeline.
-
-**Quick Navigation:**
-1. **[JL Job Leads]:** Curated fresher job openings extracted from all 4 Gmail inboxes.
-2. **[IV Interviews]:** Real-time interview invitations, test links, and scheduling radar.
-3. **[IN Browser]:** Integrated webview with 1-click Auto-Apply and dynamic ATS keyword scanner.
-4. **[LG Ledger]:** Audit and export all verified job application records.
-
-*Note: The local 9Router AI gateway is launching in the background.*`;
+function generateOfflineAgentReply() {
+  return 'Router offline - no live data available';
 }
 
 // IPC: Execute Autonomous Agent Loop
@@ -3410,11 +3531,10 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
 
   if (!isAlive) {
     startRouterBackground();
-    const offlineReply = generateOfflineAgentReply(userPrompt);
     return {
-      ok: true,
-      reply: offlineReply,
-      reasoning: 'Generated by JobPilot Autonomous Engine (Local Fast Mode: 9Router is booting in background)',
+      ok: false,
+      reply: 'Router offline - no live data available',
+      reasoning: '9router gateway unreachable on 127.0.0.1:20128',
       toolExecutions: []
     };
   }
@@ -3423,7 +3543,7 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
 
   const systemMessage = {
     role: 'system',
-    content: 'You are the JobPilot Autonomous Operator, an elite engineering agent running locally inside an OpenCode-style workstation. You have direct tool access to the browser, personal Chrome extension bridge, ATS resume tailoring engine, 14-platform Python fleet, and verified tracker ledger. The user is Vansh Sharma (MCA in AI and Data Science, Class of 2026, 0-2 YOE). Execute tasks directly using available tools when appropriate. Keep responses concise, technical, structured, and factual. Never use em-dashes or en-dashes.'
+    content: 'You are the JobPilot Autonomous Operator. You have tool access to the browser, extension bridge, and ATS resume engine. The user is Vansh Sharma (MCA in AI and Data Science, Class of 2026, Fresher). Never call browser_submit or click Submit/Apply without explicit user approval. Never send messages, publish, buy, delete, or change account/privacy settings without approval. If a login, 2FA, passkey, CAPTCHA, or payment step appears, STOP and hand off to the user. Never guess or fabricate answer values - ask. Keep responses concise, structured, and factual. Never use em-dashes or en-dashes.'
   };
 
   const messages = [
@@ -3436,6 +3556,9 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
   const maxLoops = 6;
   const toolExecutions = [];
 
+  const planningModel = (config.routing && config.routing.planning) || config.model || 'Fable5';
+  debugLog(`[MODEL CALL] Task: planning, Model: ${planningModel}`);
+
   while (loopCount < maxLoops) {
     if (agentAbortRequested) {
       return { ok: true, reply: 'Agent execution aborted by user.', toolExecutions };
@@ -3444,7 +3567,7 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
     loopCount++;
 
     const payload = JSON.stringify({
-      model: config.model,
+      model: planningModel,
       messages: messages,
       tools: AGENT_TOOLS,
       temperature: 0.2
@@ -3457,7 +3580,7 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.routerToken}`
+          'Authorization': `Bearer ${activeRouterToken}`
         },
         body: payload,
         signal: AbortSignal.timeout(60000)
@@ -3466,11 +3589,10 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
       if (!res.ok) {
         const errorText = await res.text();
         console.warn(`[GATEWAY] Model error (HTTP ${res.status}):`, errorText.slice(0, 150));
-        const offlineReply = generateOfflineAgentReply(userPrompt);
         return {
-          ok: true,
-          reply: offlineReply,
-          reasoning: `Generated by JobPilot Autonomous Engine (Model status ${res.status})`,
+          ok: false,
+          reply: 'Router offline - no live data available',
+          reasoning: `Model error (HTTP ${res.status})`,
           toolExecutions
         };
       }
@@ -3487,7 +3609,7 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${config.routerToken}`
+                'Authorization': `Bearer ${activeRouterToken}`
               },
               body: payload,
               signal: AbortSignal.timeout(60000)
@@ -3496,17 +3618,16 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
               data = await retryRes.json();
             }
           } catch (retryErr) {
-            console.warn('[GATEWAY] Retry failed, using local offline fallback:', retryErr.message);
+            console.warn('[GATEWAY] Retry failed:', retryErr.message);
           }
         }
       }
 
       if (!data) {
-        const offlineReply = generateOfflineAgentReply(userPrompt);
         return {
-          ok: true,
-          reply: offlineReply,
-          reasoning: 'Generated by JobPilot Autonomous Engine (Fallback: gateway offline or booting in background)',
+          ok: false,
+          reply: 'Router offline - no live data available',
+          reasoning: 'Gateway connection failed',
           toolExecutions
         };
       }
@@ -3514,11 +3635,10 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
 
     const choice = data?.choices?.[0];
     if (!choice) {
-      const offlineReply = generateOfflineAgentReply(userPrompt);
       return {
-        ok: true,
-        reply: offlineReply,
-        reasoning: 'Generated by JobPilot Autonomous Engine (Fallback: empty model response)',
+        ok: false,
+        reply: 'Router offline - no live data available',
+        reasoning: 'Empty model response',
         toolExecutions
       };
     }
@@ -3548,7 +3668,58 @@ ipcMain.handle('run-agent-loop', async (event, { userPrompt, conversationHistory
           reasoning
         });
 
-        const toolResult = await executeAgentTool(toolName, toolArgs);
+        let toolResult = await executeAgentTool(toolName, toolArgs);
+
+        // Priority 6: Verify after every browser action
+        if (['browser_act', 'browser_navigate', 'browser_upload'].includes(toolName)) {
+          try {
+            const postObs = await rpc('observe', { maxElements: 100 }, 8000);
+            if (postObs) {
+              const diff = {
+                url: postObs.url || '',
+                title: postObs.title || '',
+                fieldCount: postObs.fieldCount,
+                blocked: postObs.blocked || postObs.captchaDetected,
+                captchaProvider: postObs.captchaProvider || null,
+                alerts: postObs.alerts || []
+              };
+              toolResult.verification = diff;
+
+              if (toolName === 'browser_navigate' && toolArgs.url) {
+                const expected = toolArgs.url.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+                const actual = (postObs.url || '').toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+                if (actual && !actual.includes(expected.split('/')[0])) {
+                  toolResult.warning = 'URL did not navigate to expected destination.';
+                }
+              }
+
+              if (postObs.blocked || postObs.captchaDetected) {
+                toolResult.blocked = true;
+                toolResult.requiresHuman = true;
+                toolResult.error = `CAPTCHA challenge detected (${postObs.captchaProvider || 'verification'}). Pausing agent loop for human handoff.`;
+                mainWindow?.webContents.send('agent-clarification-request', {
+                  id: `captcha_${Date.now()}`,
+                  title: 'CAPTCHA Verification Detected',
+                  question: 'Please complete the verification challenge in the browser tab.',
+                  action: 'captcha_wait'
+                });
+                toolExecutions.push({
+                  id: tCall.id,
+                  name: toolName,
+                  args: toolArgs,
+                  result: toolResult
+                });
+                return {
+                  ok: false,
+                  reply: `Encountered verification challenge (${postObs.captchaProvider || 'CAPTCHA'}). Paused for human handoff.`,
+                  toolExecutions
+                };
+              }
+            }
+          } catch (e) {
+            toolResult.verificationWarning = `Verification observe failed: ${e.message}`;
+          }
+        }
 
         toolExecutions.push({
           id: tCall.id,
@@ -3821,7 +3992,7 @@ ipcMain.handle('chat:sessions:delete', async (event, { sessionId }) => {
 ipcMain.handle('chat:models', async () => {
   try {
     const res = await fetch(`${config.routerUrl.replace(/\/$/, '')}/models`, {
-      headers: { 'Authorization': `Bearer ${config.routerToken}` },
+      headers: { 'Authorization': `Bearer ${activeRouterToken}` },
       signal: AbortSignal.timeout(4000)
     });
     if (res.ok) {
@@ -3886,10 +4057,10 @@ ipcMain.handle('chat:send', async (event, { sessionId, text, attachments = [], m
     mainWindow?.webContents.send('chat:error', {
       turnId,
       code: 'offline',
-      message: '9Router AI Gateway (port 20128) is offline. Please launch the gateway or check Settings.',
+      message: 'Router offline - no live data available',
       retryable: true
     });
-    return { ok: false, turnId, messageId, error: 'gateway_offline' };
+    return { ok: false, turnId, messageId, error: 'Router offline - no live data available' };
   }
 
   // 4. Assemble context and messages
@@ -3944,7 +4115,7 @@ ipcMain.handle('chat:send', async (event, { sessionId, text, attachments = [], m
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${config.routerToken}`
+            'Authorization': `Bearer ${activeRouterToken}`
           },
           body: JSON.stringify(payload),
           signal: controller.signal

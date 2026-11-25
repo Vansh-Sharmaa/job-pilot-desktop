@@ -52,7 +52,7 @@
       </div>
       <div class="oc-tab" id="tab-fleet" onclick="switchWorkspaceTab('fleet')" title="Autonomous Multi-Platform Fleet">
         <span class="oc-tab-badge">AP</span>
-        <span class="oc-tab-title">Autopilot</span>
+        <span class="oc-tab-title">Assisted Run</span>
       </div>
       <div class="oc-tab" id="tab-resume" onclick="switchWorkspaceTab('resume')" title="Candidate Qualifications & Resume Studio">
         <span class="oc-tab-badge">CV</span>
@@ -133,7 +133,7 @@
     </div>
     <div style="display: flex; gap: 6px;">
       <button class="browser-btn primary" style="font-size: 10px; padding: 2px 7px;"
-        onclick="applyToActiveChromeJob()">⚡ Auto-Apply on Tab</button>
+        onclick="applyToActiveChromeJob()">⚡ Fill & Review Tab</button>
       <button class="browser-btn" style="font-size: 10px; padding: 2px 7px;" onclick="pitchActiveChromeJob()">📄 Inject
         Pitch</button>
       <button class="browser-btn" style="font-size: 10px; padding: 2px 7px;" onclick="saveActiveChromeJobToLedger()">+
@@ -217,11 +217,11 @@
             </div>
           </div>
 
-          <!-- Project 4: Autopilot Fleet -->
+          <!-- Project 4: Assisted Run Fleet -->
           <div class="ag-project-group">
             <div class="ag-project-header" onclick="switchWorkspaceTab('fleet')">
               <span>📁</span>
-              <span>autopilot fleet</span>
+              <span>assisted run fleet</span>
             </div>
             <div class="ag-chat-item" onclick="switchWorkspaceTab('fleet')">
               <span class="ag-chat-title">14-Platform Python Workers</span>
@@ -431,9 +431,9 @@
                 <i data-lucide="search" class="lucide-icon-sm"></i>
                 <span>Direct Source</span>
               </button>
-              <button class="ubb-btn-apply" onclick="autoApplyWithCurrentATS()" title="Automatic 1-Click Form Apply with verified candidate profile">
+              <button class="ubb-btn-apply" onclick="autoApplyWithCurrentATS()" title="Form Fill & Review with verified candidate profile">
                 <i data-lucide="zap" class="lucide-icon-sm"></i>
-                <span id="ubb-apply-btn-label">Auto-Apply</span>
+                <span id="ubb-apply-btn-label">Fill & Review</span>
               </button>
               <button class="ubb-btn-stop" id="ubb-btn-stop-agent" onclick="stopActiveAgentExecution()" title="Stop running agent immediately" style="display: none; background: #ef4444; color: #fff; border: 1px solid #f87171; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; align-items: center; gap: 4px;">
                 <span>■</span>
@@ -551,7 +551,7 @@
                 <div style="display: flex; gap: 6px;">
                   <button class="browser-btn" style="flex: 1; font-size: 11px; padding: 5px;" onclick="openActivePortalFromRadar()">Open Portal</button>
                   <button class="browser-btn primary" style="flex: 1; font-size: 11px; padding: 5px;" onclick="quickSmartApplyActivePortal()">
-                    <span id="radar-run-btn-text">⚡ Auto-Apply Now</span>
+                    <span id="radar-run-btn-text">⚡ Fill & Review Now</span>
                   </button>
                 </div>
                 <button class="browser-btn primary" style="width: 100%; font-size: 11px; padding: 6px 10px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; font-weight: 700; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="launchActivePortalInExternalAgent()" title="Launch external browser in autonomous agentic mode to fill daily safe quota on this portal">
@@ -1457,6 +1457,50 @@
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="browser-btn" onclick="closePasteLeadModal()">Cancel</button>
         <button class="browser-btn primary" onclick="submitManualLeadPaste()">Parse & Add to Leads</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Human Approval Gate Modal (Priority 1) -->
+  <div id="human-approval-modal" class="email-modal-overlay" style="display: none; z-index: 99999;">
+    <div class="email-modal-box" style="max-width: 620px; width: 95%; border: 1px solid #f59e0b; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+      <div class="email-modal-header" style="border-bottom: 1px solid rgba(245, 158, 11, 0.3);">
+        <div class="email-modal-title" style="color: #fbbf24;">
+          <span>🛡️</span>
+          <span id="approval-modal-title">Human Approval Required</span>
+        </div>
+        <button class="email-modal-close" onclick="rejectCurrentApproval()">✕</button>
+      </div>
+      <div style="font-size: 12px; color: #cbd5e1; margin-top: 8px; line-height: 1.5;">
+        The agent has prepared this submission. Please verify all details before granting approval to submit:
+      </div>
+
+      <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; font-size: 12px;">
+          <span style="color: #94a3b8;">Company:</span>
+          <strong id="approval-company" style="color: #f8fafc;"></strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px;">
+          <span style="color: #94a3b8;">Role:</span>
+          <strong id="approval-role" style="color: #38bdf8;"></strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px;">
+          <span style="color: #94a3b8;">Job URL:</span>
+          <span id="approval-url" style="color: #a5b4fc; font-family: var(--font-mono); font-size: 11px; max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+        </div>
+        <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px; margin-top: 4px;">
+          <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Fields / Payload to be sent:</span>
+          <div id="approval-fields-list" style="font-size: 11.5px; color: #e2e8f0; margin-top: 6px; max-height: 160px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; font-family: var(--font-mono); white-space: pre-wrap;"></div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+        <button class="browser-btn" onclick="rejectCurrentApproval()" style="padding: 6px 14px; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);">
+          <span>✕ Deny / Cancel</span>
+        </button>
+        <button class="browser-btn primary" onclick="approveCurrentApproval()" style="padding: 6px 18px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-weight: 600; border: none;">
+          <span>✓ Approve & Submit</span>
+        </button>
       </div>
     </div>
   </div>
@@ -3279,12 +3323,12 @@
 
       const radarRunBtnText = document.getElementById('radar-run-btn-text');
       if (radarRunBtnText) {
-        radarRunBtnText.innerText = mode === 'chrome' ? '⚡ Inject in Chrome' : '⚡ Auto-Apply Now';
+        radarRunBtnText.innerText = mode === 'chrome' ? '⚡ Inject in Chrome' : '⚡ Fill & Review Now';
       }
 
       const ubbApplyBtnLabel = document.getElementById('ubb-apply-btn-label');
       if (ubbApplyBtnLabel) {
-        ubbApplyBtnLabel.innerText = mode === 'chrome' ? 'Chrome Apply' : 'Auto-Apply';
+        ubbApplyBtnLabel.innerText = mode === 'chrome' ? 'Chrome Apply' : 'Fill & Review';
       }
 
       logRadarTelemetry('ENGINE', `Execution engine switched to: ${mode === 'chrome' ? 'Personal Chrome Extension' : 'In-App Desktop Browser'}`);
@@ -5657,6 +5701,53 @@
         dismissClarification(cardId, reqId);
       }
     });
+
+    let currentApprovalId = null;
+
+    function handleHumanApprovalRequest(data) {
+      currentApprovalId = data.id;
+      const modal = document.getElementById('human-approval-modal');
+      if (modal) {
+        document.getElementById('approval-modal-title').innerText = data.title || 'Human Approval Required';
+        document.getElementById('approval-company').innerText = data.preview?.company || 'Target Company';
+        document.getElementById('approval-role').innerText = data.preview?.role || 'Position';
+        document.getElementById('approval-url').innerText = data.preview?.url || 'Active Tab';
+        
+        const fieldsEl = document.getElementById('approval-fields-list');
+        if (fieldsEl) {
+          if (typeof data.preview?.fields === 'object') {
+            fieldsEl.innerText = JSON.stringify(data.preview.fields, null, 2);
+          } else {
+            fieldsEl.innerText = JSON.stringify(data.preview || {}, null, 2);
+          }
+        }
+        modal.style.display = 'flex';
+      }
+    }
+
+    function approveCurrentApproval() {
+      const modal = document.getElementById('human-approval-modal');
+      if (modal) modal.style.display = 'none';
+      if (currentApprovalId && window.jobPilotApi && window.jobPilotApi.resolveHumanApproval) {
+        window.jobPilotApi.resolveHumanApproval({ id: currentApprovalId, approved: true });
+        showToast('✓ Submission approved by candidate.');
+      }
+      currentApprovalId = null;
+    }
+
+    function rejectCurrentApproval() {
+      const modal = document.getElementById('human-approval-modal');
+      if (modal) modal.style.display = 'none';
+      if (currentApprovalId && window.jobPilotApi && window.jobPilotApi.resolveHumanApproval) {
+        window.jobPilotApi.resolveHumanApproval({ id: currentApprovalId, approved: false });
+        showToast('Submission cancelled by candidate.');
+      }
+      currentApprovalId = null;
+    }
+
+    if (window.jobPilotApi && window.jobPilotApi.onHumanApprovalRequest) {
+      window.jobPilotApi.onHumanApprovalRequest(handleHumanApprovalRequest);
+    }
 
     if (window.jobPilotApi && window.jobPilotApi.onClarificationRequest) {
       window.jobPilotApi.onClarificationRequest((req) => {

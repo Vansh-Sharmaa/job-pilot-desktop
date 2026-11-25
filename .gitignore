@@ -11,3 +11,5 @@ start_app*.py
 check_*.py
 run_*.py
 app_debug.log
+__pycache__/
+*.pyc

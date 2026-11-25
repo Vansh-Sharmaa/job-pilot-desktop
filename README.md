@@ -1,38 +1,44 @@
-# JobPilot AI - Autonomous Desktop Workspace
+# JobPilot AI - Assisted Job Application Workspace
 
-> Next-Generation AI Developer & Multi-Platform Job Application Workspace built with Electron, Chrome DevTools Protocol, and Unlimited Local Model Routing.
+JobPilot AI is a local Electron engineering workstation paired with a companion Brave/Chrome extension bridge to help developers discover, inspect, fill, and track job applications with human oversight.
 
 ---
 
 ## Architecture Overview
 
-JobPilot AI is an integrated desktop environment that combines an **Agent Mission Control** on the left with an **Embedded Interactive Browser** on the right:
-
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    JOBPILOT DESKTOP APP                     │
-│  (Electron + Webview + Chrome DevTools Protocol)            │
+│  (Electron Workstation + Local HTTP Bridge :5056)           │
 ├──────────────────────────────┬──────────────────────────────┤
-│       LEFT PANE: AGENT       │      RIGHT PANE: BROWSER     │
-│  - Live Platform Quotas      │  - Chromium Webview Session  │
-│  - 24/7 Autopilot Daemon     │  - Live LinkedIn & Naukri    │
-│  - Inbound Alert Runner      │  - 1-Click "⚡ Auto-Apply"   │
-│  - Fable5 Copilot Chat       │  - Persistent User Cookies   │
+│       LEFT PANE: AGENT       │     RIGHT PANE: WEBVIEW      │
+│  - Copilot Streaming Chat    │  - Target Portal Navigation  │
+│  - Candidate Master Profile  │  - Form Fill & Review Flow   │
+│  - Screening Q&A Engine      │  - DOM Observe & Inspection  │
+│  - Verified Ledger & Tracker │  - Real-time Verification    │
 ├──────────────────────────────┴──────────────────────────────┤
-│                    BACKGROUND ENGINE                        │
-│  - Multi-Platform Python Swarms (14 portals)                │
-│  - Local AI Router Bridge -> http://localhost:20128 (Fable5)│
+│                    CORE INTEGRATIONS                        │
+│  - Companion Brave Extension Bridge (Port 5056, Token Auth) │
+│  - Local 9router Gateway (127.0.0.1:20128)                  │
+│  - Human Approval Gate (Defense in Depth before Submit)     │
+│  - CAPTCHA / Cloudflare Challenge Halt Detection            │
+│  - Dual Ledger Duplicate Checking & Recruitment Scam Alert  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Key Features
+## Implemented Core Behaviors
 
-1. **Split-Screen Workspace:** Left side controls agents, quotas, and logs; right side provides a live Chromium browser with persistent sessions and bookmarks for all major hiring portals.
-2. **1-Click Smart Auto-Apply:** An overlay action button inspects the active webview page and contextually fills out job applications with candidate profile data.
-3. **Local AI Router Binding:** Integrates directly with `http://127.0.0.1:20128/v1` (`Fable5`) for unlimited screening question answering at zero token cost.
-4. **Python Autopilot Bridge:** Executes background daemons, Gmail alert scanners, and Google calendar runners in real time with live streamed terminal output.
+1. **Companion Extension Bridge:** Connects to the user's real Brave/Chrome profile over an authenticated local bridge (`http://127.0.0.1:5056`). Preserves existing logins, cookies, and session state.
+2. **Local Model Routing:** Routes LLM calls exclusively through the local 9router gateway (`http://127.0.0.1:20128/v1`) using per-task model keys (`planning`, `extraction`, `qa`).
+3. **Fill & Review Workflow:** Forms are parsed and filled using verified candidate facts. An interactive review drawer lets the candidate audit or edit every field before submission.
+4. **Human Approval Gate:** Consequential actions and final submissions require explicit user confirmation via an approval card. Submissions cannot proceed without a single-use token consumed on use.
+5. **CAPTCHA & Verification Halt:** If Turnstile, reCAPTCHA, or a security challenge appears, the agent halts immediately and hands control over to the candidate.
+6. **Integrity & Sanity Checks:** Screening questions only answer from verified profile facts; unverified queries escalate to `needsHuman`. Numbers, dates, and dropdown selections undergo format sanity validation.
+7. **Ledger & Scam Guard:** Checks incoming leads against previous applications in `job_applications_tracker.csv` and flags suspicious recruitment fees or deposit requests.
 
-## Quick Start
+## Requirements & Launch
+
+Launching JobPilot requires Electron (`npm start`). Direct execution with `node src/main.js` is not supported because Electron runtime APIs are required.
 
 ```bash
 # Clone the repository
@@ -42,6 +48,6 @@ cd job-pilot-desktop
 # Install dependencies
 npm install
 
-# Launch JobPilot AI Workspace
+# Launch JobPilot AI Workspace (Electron required)
 npm start
 ```

@@ -2069,6 +2069,7 @@
       revision: pageDomRevision,
       captchaDetected: !!captcha,
       captchaProvider: captcha,
+      blocked: !!captcha,
       loginWall,
       alerts,
       fieldCount: elements.length,
@@ -2174,6 +2175,11 @@
     }
 
     if (op === 'submit') {
+      const token = params.approvalToken;
+      if (!token || !activeApprovalTokens.has(token)) {
+        return { ok: false, error: 'Approval required' };
+      }
+      activeApprovalTokens.delete(token); // Single-use: consumed on use
       simulateRealisticClick(el);
       setTimeout(syncJobToDesktop, 1500);
       return { ok: true, submitted: true };
@@ -2181,6 +2187,9 @@
 
     return { ok: false, error: `Unknown op: ${op}` };
   }
+
+  // Set of valid single-use human approval tokens
+  const activeApprovalTokens = new Set();
 
   // Listen for commands dispatched from desktop agent via background worker
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -2191,6 +2200,15 @@
     } else if (request.action === 'act') {
       const actRes = executePageAct(request.params || {});
       sendResponse(actRes);
+      return true;
+    } else if (request.action === 'grant_approval_token') {
+      const token = request.params?.token;
+      if (token) {
+        activeApprovalTokens.add(token);
+        sendResponse({ ok: true, token });
+      } else {
+        sendResponse({ ok: false, error: 'Missing token' });
+      }
       return true;
     } else if (request.action === 'wait_for') {
       const cond = request.params?.condition || '';

@@ -170,5 +170,13 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
     const handler = (event, data) => callback(data);
     ipcRenderer.on('chat:error', handler);
     return () => ipcRenderer.removeListener('chat:error', handler);
-  }
+  },
+
+  // Human Approval Gate APIs
+  onHumanApprovalRequest: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('human-approval-request', handler);
+    return () => ipcRenderer.removeListener('human-approval-request', handler);
+  },
+  resolveHumanApproval: (payload) => ipcRenderer.invoke('resolve-human-approval', payload)
 });
