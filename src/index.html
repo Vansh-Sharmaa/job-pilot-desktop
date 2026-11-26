@@ -165,6 +165,20 @@
         </div>
       </div>
 
+      <div class="ag-sidebar-section" style="border-bottom: 1px solid var(--border-hairline); padding-bottom: 10px; margin-bottom: 10px;">
+        <div class="ag-section-header">
+          <span class="ag-section-title">Conversations</span>
+          <div class="ag-section-actions">
+            <span class="ag-action-icon" title="New Chat" onclick="startNewSession()">+</span>
+          </div>
+        </div>
+        <div style="padding: 0 10px 6px 10px;">
+          <input type="text" id="sidebar-session-search" placeholder="Search sessions..." oninput="filterSidebarSessions(this.value)"
+            style="width: 100%; background: #0c0e14; border: 1px solid var(--border-hairline); border-radius: 4px; padding: 3px 6px; font-size: 11px; color: #fff;">
+        </div>
+        <div id="ag-sessions-list" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;"></div>
+      </div>
+
       <div class="ag-sidebar-section">
         <div class="ag-section-header">
           <span class="ag-section-title">Projects</span>
@@ -1875,7 +1889,125 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    // Sessions & Clear
+    // Dynamic Sessions Management
+    let allSessions = [];
+
+    async function loadSidebarSessions() {
+      if (!window.jobPilotApi || !window.jobPilotApi.chatSessionsList) return;
+      try {
+        const res = await window.jobPilotApi.chatSessionsList();
+        if (res && res.ok && Array.isArray(res.sessions)) {
+          allSessions = res.sessions;
+          renderSidebarSessions(allSessions);
+        }
+      } catch (err) {}
+    }
+
+    function renderSidebarSessions(sessions) {
+      const container = document.getElementById('ag-sessions-list');
+      if (!container) return;
+      container.innerHTML = '';
+      if (!sessions || sessions.length === 0) {
+        container.innerHTML = '<div style="padding: 6px 10px; font-size: 11px; color: var(--text-muted);">No active sessions</div>';
+        return;
+      }
+      sessions.forEach(sess => {
+        const item = document.createElement('div');
+        item.className = 'ag-chat-item' + (sess.id === currentChatSessionId ? ' active' : '');
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.justifyContent = 'space-between';
+        item.style.padding = '5px 8px';
+        item.style.cursor = 'pointer';
+        item.style.borderRadius = '4px';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'ag-chat-title';
+        titleSpan.style.flex = '1';
+        titleSpan.style.overflow = 'hidden';
+        titleSpan.style.textOverflow = 'ellipsis';
+        titleSpan.style.whiteSpace = 'nowrap';
+        titleSpan.innerText = sess.title || 'Conversation';
+        titleSpan.onclick = () => loadSessionById(sess.id);
+
+        const actions = document.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.gap = '4px';
+
+        const delBtn = document.createElement('span');
+        delBtn.innerHTML = '×';
+        delBtn.style.fontSize = '14px';
+        delBtn.style.color = 'var(--text-muted)';
+        delBtn.style.padding = '0 4px';
+        delBtn.title = 'Delete Session';
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteSessionById(sess.id);
+        };
+        actions.appendChild(delBtn);
+
+        item.appendChild(titleSpan);
+        item.appendChild(actions);
+        container.appendChild(item);
+      });
+    }
+
+    function filterSidebarSessions(query) {
+      if (!query || !query.trim()) {
+        renderSidebarSessions(allSessions);
+        return;
+      }
+      const q = query.toLowerCase().trim();
+      const filtered = allSessions.filter(s => (s.title || '').toLowerCase().includes(q));
+      renderSidebarSessions(filtered);
+    }
+
+    async function loadSessionById(sessionId) {
+      if (!window.jobPilotApi || !window.jobPilotApi.chatSessionsLoad) return;
+      try {
+        const res = await window.jobPilotApi.chatSessionsLoad(sessionId);
+        if (res && res.session) {
+          currentChatSessionId = res.session.id;
+          conversationHistory = [];
+          agentStream.innerHTML = '';
+          const hero = document.getElementById('ag-hero-center');
+          if (hero) hero.style.display = 'none';
+          agentStream.style.display = 'flex';
+
+          (res.session.messages || []).forEach(msg => {
+            if (msg.role === 'user') {
+              const uEl = document.createElement('div');
+              uEl.className = 'agent-user-command';
+              uEl.innerText = msg.content || '';
+              agentStream.appendChild(uEl);
+            } else if (msg.role === 'assistant') {
+              const aEl = document.createElement('div');
+              aEl.className = 'agent-output-block';
+              aEl.innerHTML = formatMarkdown(msg.content || '');
+              agentStream.appendChild(aEl);
+            }
+          });
+          const scrollContainer = document.getElementById('ag-canvas-scroll');
+          if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+          renderSidebarSessions(allSessions);
+        }
+      } catch (err) {}
+    }
+
+    async function deleteSessionById(sessionId) {
+      if (!window.jobPilotApi || !window.jobPilotApi.chatSessionsDelete) return;
+      try {
+        await window.jobPilotApi.chatSessionsDelete(sessionId);
+        allSessions = allSessions.filter(s => s.id !== sessionId);
+        if (currentChatSessionId === sessionId) {
+          startNewSession();
+        } else {
+          renderSidebarSessions(allSessions);
+        }
+        showToast('Session deleted');
+      } catch (err) {}
+    }
+
     function startNewSession() {
       conversationHistory = [];
       agentStream.innerHTML = '';
@@ -1883,6 +2015,14 @@
       const hero = document.getElementById('ag-hero-center');
       if (hero) hero.style.display = 'flex';
       document.getElementById('agent-prompt-input').value = '';
+      if (window.jobPilotApi && window.jobPilotApi.chatSessionsCreate) {
+        window.jobPilotApi.chatSessionsCreate('New Conversation').then(res => {
+          if (res && res.ok && res.session) {
+            currentChatSessionId = res.session.id;
+            loadSidebarSessions();
+          }
+        });
+      }
       showToast('New conversation initialized');
     }
 
@@ -1891,24 +2031,6 @@
       const topicEl = document.getElementById('oc-current-topic');
       if (topicEl) topicEl.innerText = title;
       showToast('Loaded: ' + title);
-    }
-
-    function switchSessionTab(idx, title) {
-      document.querySelectorAll('.oc-tab').forEach((tab, i) => {
-        if (i === idx) {
-          tab.classList.add('active');
-        } else {
-          tab.classList.remove('active');
-        }
-      });
-      const topicEl = document.getElementById('oc-current-topic');
-      if (topicEl) topicEl.innerText = title;
-      setAgentSession(title);
-    }
-
-    function closeSessionTab(e, idx) {
-      if (e) e.stopPropagation();
-      showToast('Session tab archived');
     }
 
     // 20 Verified Platforms Dictionary
@@ -2999,6 +3121,12 @@
             activeTurnContainer.appendChild(errCard);
           }
           finalizeChatTurnUI();
+        });
+      }
+
+      if (window.jobPilotApi.onChatSessionUpdated) {
+        window.jobPilotApi.onChatSessionUpdated(() => {
+          loadSidebarSessions();
         });
       }
 
@@ -6957,6 +7085,7 @@
     loadSettingsToUI();
     initPortalDropdown();
     initChatEventListeners();
+    loadSidebarSessions();
 
     if (webview) {
       webview.addEventListener('did-navigate', (e) => {

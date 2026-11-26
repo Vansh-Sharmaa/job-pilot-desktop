@@ -171,6 +171,11 @@ contextBridge.exposeInMainWorld('jobPilotApi', {
     ipcRenderer.on('chat:error', handler);
     return () => ipcRenderer.removeListener('chat:error', handler);
   },
+  onChatSessionUpdated: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('chat:session-updated', handler);
+    return () => ipcRenderer.removeListener('chat:session-updated', handler);
+  },
 
   // Human Approval Gate APIs
   onHumanApprovalRequest: (callback) => {

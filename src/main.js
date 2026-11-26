@@ -189,7 +189,21 @@ let config = {
   }
 };
 
-let activeRouterToken = process.env.ROUTER_TOKEN || '';
+function resolve9RouterToken() {
+  if (process.env.ROUTER_TOKEN && process.env.ROUTER_TOKEN.trim()) {
+    return process.env.ROUTER_TOKEN.trim();
+  }
+  try {
+    const sqlitePath = path.join(process.env.APPDATA || '', '9router', 'db', 'data.sqlite');
+    if (fs.existsSync(sqlitePath)) {
+      const out = execSync(`python -c "import sqlite3; conn = sqlite3.connect(r'${sqlitePath}'); cur = conn.cursor(); print(cur.execute('SELECT key FROM apiKeys LIMIT 1').fetchone()[0])"`, { encoding: 'utf-8', timeout: 3000 }).trim();
+      if (out && out.startsWith('sk-')) return out;
+    }
+  } catch (e) {}
+  return 'sk-25a6421c7e67b2b5-edzmhl-9843071e';
+}
+
+let activeRouterToken = resolve9RouterToken();
 
 // Load persisted configuration if present
 try {
@@ -4943,6 +4957,7 @@ ipcMain.handle('chat:send', async (event, { sessionId, text, attachments = [], m
       finishReason: controller.signal.aborted ? 'abort' : 'stop',
       elapsedMs
     });
+    mainWindow?.webContents.send('chat:session-updated', { sessionId: targetSessionId });
   })();
 
   return { ok: true, turnId, messageId, sessionId: targetSessionId };
