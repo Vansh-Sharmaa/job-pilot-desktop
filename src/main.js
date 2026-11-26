@@ -82,6 +82,7 @@ const activeProcesses = new Map(); // scriptName -> { proc, startTime, pid }
 // Browser Extension Bridge State & Auth Token
 let pendingExtensionCommands = [];
 let lastExtensionPing = 0;
+let lastExtensionActiveJob = null;
 const pendingClarifications = new Map();
 const pendingRpc = new Map(); // id -> { resolve, reject, timer, action, startTime }
 const pendingPollWaiters = []; // [{ res, timer }]
@@ -943,6 +944,7 @@ function startExtensionBridgeServer() {
         try {
           const payload = JSON.parse(body);
           lastExtensionPing = Date.now();
+          lastExtensionActiveJob = payload;
           mainWindow?.webContents.send('extension-active-job', payload);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -4615,7 +4617,7 @@ function buildSystemContext() {
   }
 
   // ACTIVE BROWSER JOB CONTEXT BLOCK
-  if (lastExtensionActiveJob && (lastExtensionActiveJob.company || lastExtensionActiveJob.role)) {
+  if (typeof lastExtensionActiveJob !== 'undefined' && lastExtensionActiveJob && (lastExtensionActiveJob.company || lastExtensionActiveJob.role)) {
     lines.push('=== ACTIVE BROWSER JOB CONTEXT ===');
     lines.push(`Company: ${lastExtensionActiveJob.company || 'Unknown'}`);
     lines.push(`Role: ${lastExtensionActiveJob.role || 'Job'}`);
